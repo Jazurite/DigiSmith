@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-683 Castle: the herdr-ws scope — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .2em}table{border-collapse:collapse}td,th{border:1px solid #8886;padding:.3rem .5rem;text-align:left}</style></head><body>
+<h1>DGS-683 Castle: the herdr-ws scope — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-683</strong> (part 2: T10, T11, T12)</span> · <span>Date: 2026-11-02</span></div>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>herdr-ws</code> now takes a scope of <code>session:workspace</code> pairs, reaches the Floor (<code>default</code>) and one Castle workspace, lets only <code>tc-</code> and <code>nw-</code> conductors be closed, renamed or relocated in Castle, and logs every cross-project act. The script is not installed; the deployed copy and the live sessions are untouched. Read "Suite" in the spec and plan as "Castle".</p>
+</section>
+<h2>What changed</h2>
+<ul>
+<li><strong>Scope.</strong> <code>HERDR_SCOPE</code> (fallback <code>default:$HERDR_WS</code>); a leading <code>--session S</code>; the wrapper builds the herdr argv itself and never forwards a caller's <code>--session</code>, <code>--socket</code> or <code>HERDR_SOCKET_PATH</code>.</li>
+<li><strong>Castle close rule.</strong> <code>tab close</code>, <code>agent stop</code>, <code>pane close</code> need a <code>tc-</code>/<code>nw-</code> label; <code>rename</code> is judged on the old and new name; unknown labels fail closed.</li>
+<li><strong>Relocate and flag targets.</strong> <code>pane move</code>/<code>swap</code> parse argv against herdr's real flags; every verb refuses <code>--flag=value</code> and <code>--current</code>, and checks every <code>--pane/--tab/--workspace/--source-pane/--target-pane</code> value against the scope.</li>
+<li><strong>Audit log.</strong> One JSON line per outside workspace to <code>drivers/&lt;KEY&gt;.log</code> or <code>_unmapped.log</code>: time, who, own, target, agent, pane, workspace, verb. Without <code>HERDR_WS</code> it still logs, with <code>own:"unknown"</code>. A write failure never blocks the call.</li>
+<li><strong>Text payloads.</strong> Send text containing <code>--flag=value</code> (for example <code>pane run</code>) as ONE quoted argument.</li>
+</ul>
+<h2>Tests</h2>
+<p>59 hermetic tests with a fake <code>herdr</code> (<code>scripts/opencode-boot/herdr-ws.test.ts</code>), fork pool of 2. The old read-only script <code>test-herdr-ws.mjs</code>: ALL PASS.</p>
+<h2>Review</h2>
+<table><tr><th>Step</th><th>Result</th></tr>
+<tr><td>T10</td><td>r1: 4 findings, fixed (e7bdc94e); r2 clean</td></tr>
+<tr><td>T11</td><td>r1: rename bypass + 2 Minor, fixed (e9914eb7); r2 clean</td></tr>
+<tr><td>Pane move/swap</td><td>Maestro observation, fixed (32261a68)</td></tr>
+<tr><td>T12</td><td>r1: 2 Important, fixed (fab2cd9c); r2 clean</td></tr>
+<tr><td>Ticket</td><td>r1: 2 Important + 2 Minor (F4 accepted), fixed (0fd4eaf2); r2 approved; N1 cfb2fdb3</td></tr></table>
+<h2>For the Maestro</h2>
+<ul>
+<li>Accepted by decision: in Castle, <code>pane run</code>/<code>send-text</code>/<code>send-keys</code>/<code>agent prompt</code> to a sibling conductor in the same Castle workspace stay allowed (spec 7.1 item 4).</li>
+<li>The plan's <code>dgs-2</code> example line disagrees with its key rule; the rule was followed.</li>
+<li>No protected path touched; no install; no first use (needs a real session after the install).</li>
+</ul>
+</body></html>

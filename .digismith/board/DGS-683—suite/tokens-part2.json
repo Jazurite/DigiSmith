@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "ticket": "DGS-683",
+  "generated_at": "2026-11-02T15:07:04.569Z",
+  "reader_versions": {
+    "claude-code": "1"
+  },
+  "steps": {
+    "other": {
+      "claude-sonnet-5-5": {
+        "input": 716,
+        "output": 291351,
+        "cache_read": 34059215,
+        "cache_write_5m": 0,
+        "cache_write_1h": 961812,
+        "responses": 318
+      },
+      "claude-opus-5-5": {
+        "input": 44,
+        "output": 22759,
+        "cache_read": 1924943,
+        "cache_write_5m": 0,
+        "cache_write_1h": 106453,
+        "responses": 21
+      }
+    },
+    "implementation": {
+      "claude-sonnet-5-5": {
+        "input": 126,
+        "output": 24425,
+        "cache_read": 4051744,
+        "cache_write_5m": 89212,
+        "cache_write_1h": 28738,
+        "responses": 51
+      },
+      "claude-haiku-5-5": {
+        "input": 66,
+        "output": 31478,
+        "cache_read": 1614604,
+        "cache_write_5m": 112851,
+        "cache_write_1h": 0,
+        "responses": 31
+      }
+    }
+  },
+  "tasks": {
+    "1": {
+      "claude-sonnet-5-5": {
+        "input": 30,
+        "output": 3487,
+        "cache_read": 1050559,
+        "cache_write_5m": 0,
+        "cache_write_1h": 9687,
+        "responses": 11
+      },
+      "claude-haiku-5-5": {
+        "input": 38,
+        "output": 21679,
+        "cache_read": 1010176,
+        "cache_write_5m": 73618,
+        "cache_write_1h": 0,
+        "responses": 18
+      }
+    },
+    "2": {
+      "claude-sonnet-5-5": {
+        "input": 22,
+        "output": 3106,
+        "cache_read": 832118,
+        "cache_write_5m": 0,
+        "cache_write_1h": 7063,
+        "responses": 8
+      },
+      "claude-haiku-5-5": {
+        "input": 28,
+        "output": 9799,
+        "cache_read": 604428,
+        "cache_write_5m": 39233,
+        "cache_write_1h": 0,
+        "responses": 13
+      }
+    },
+    "3": {
+      "claude-sonnet-5-5": {
+        "input": 44,
+        "output": 9364,
+        "cache_read": 1205120,
+        "cache_write_5m": 48549,
+        "cache_write_1h": 6862,
+        "responses": 18
+      }
+    },
+    "4": {
+      "claude-sonnet-5-5": {
+        "input": 28,
+        "output": 8049,
+        "cache_read": 873444,
+        "cache_write_5m": 40663,
+        "cache_write_1h": 4607,
+        "responses": 13
+      }
+    }
+  },
+  "sessions": [
+    {
+      "session_id": "4d7f77d7-1c19-4502-942e-703ad9d263a0",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "ef9c308e-9480-4799-b05d-5cd384baafba",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "9db356ab-fcc7-4d32-9a8c-efb79eef48f1",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "f43deb3d-80ad-404c-9f13-cecbfd329c69",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "3e0cd25b-df2e-49dd-89d8-95eccd59c2ae",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "42e303c0-daf0-48aa-be4a-e5a3745bf489",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "044d54e7-c3dd-4600-9b74-75e3d1f2f29f",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "3f0488a7-8a83-4ce6-ba27-7e6901e0e180",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "680d22d7-8643-4c69-9bdf-9e9510a17c78",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "90774e95-cacd-49e0-8962-d34dc0cb9929",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "f253c0e3-4d3b-4cf8-a49c-83c1415f1189",
+      "role": "unknown",
+      "attribution": "inferred"
+    }
+  ],
+  "unattributed": {}
+}
