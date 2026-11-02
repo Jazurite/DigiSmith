@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readOpen } from "../attention.ts";
 import type { Exec } from "../conductor.ts";
+import { PromptError } from "../act.ts";
 import { directorTarget, projectConductorName, promptDirector, promptDriver, writeDriverIfAbsent } from "./target.ts";
 
 const HERDR = join(homedir(), ".digismith-depot", "bin", "herdr-ws");
@@ -108,6 +109,39 @@ describe("promptDriver", () => {
     expect(calls[0].args).toContain("digismith-conductor");
     code = 2;
     await expect(send()).rejects.toThrow(/exit 2/);
+  });
+});
+
+describe("F1 to F3: delivered, the Director as driver, a fallback without a workspace", () => {
+  const send = (ticket = "DGS-1") => promptDriver(exec, conductorsJson, dir, ticket, "x");
+  it("F1: errors before herdr is called are PromptError no; a non-zero exit is no; an exec that throws is maybe", async () => {
+    writeFileSync(conductorsJson, JSON.stringify({ "DigiSmith/digismith-conductor": { status: "closed", workspace: "w2" } }));
+    await expect(send()).rejects.toMatchObject({ name: expect.any(String), delivered: "no" });
+    await expect(send()).rejects.toBeInstanceOf(PromptError);
+    writeFileSync(conductorsJson, "{nope");
+    await expect(send()).rejects.toMatchObject({ delivered: "no" });
+    await expect(promptDirector(exec, conductorsJson, "x")).rejects.toMatchObject({ delivered: "no" });
+    writeReg();
+    code = 1;
+    await expect(send()).rejects.toMatchObject({ delivered: "no" });
+    code = 0;
+    const boom: Exec = async () => { throw new Error("timeout"); };
+    await expect(promptDriver(boom, conductorsJson, dir, "DGS-1", "x")).rejects.toMatchObject({ delivered: "maybe" });
+  });
+  it("F2: a driver record that names the Director is skipped: fall back and open the attention item", async () => {
+    mkdirSync(join(root, "drivers"));
+    writeFileSync(driverFile("DGS-1"), JSON.stringify({ ticket: "DGS-1", driver: "director", since: "x", mode: "factory" }));
+    await send();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toEqual(["agent", "prompt", "digismith-conductor", "x"]);
+    expect(calls[0].args).not.toContain("--session");
+    expect(readOpen(dir)).toMatchObject([{ ticket: "DGS-1", cause: "driver-not-in-registry" }]);
+  });
+  it("F3: the fallback conductor needs a workspace: without one nothing is sent and the item opens", async () => {
+    writeFileSync(conductorsJson, JSON.stringify({ "DigiSmith/digismith-conductor": { session: "default" }, "DigiSmith/director": { session: "Castle", workspace: "w1", kind: "factory" } }));
+    await expect(send()).rejects.toMatchObject({ delivered: "no" });
+    expect(calls).toEqual([]);
+    expect(readOpen(dir)).toMatchObject([{ cause: "driver-not-in-registry" }]);
   });
 });
 

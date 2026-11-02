@@ -14,7 +14,7 @@ Does not own: product, taste, names, scope (Jack); code (Builders); review, spec
 Talks to: down conductors, Warden, Steward; up Jack only on the ticket (a question) or when he asks (no scheduled report); sideways the Maestro.
 Reads: ClickUp statuses, run records, seat usage, attention items, Reviewer reports. Writes: claims, orders, decisions.
 
-Each wake-up: run `dg director plan`, then do each move it lists with `dg director do <move-id>` (it runs the move and records it in one step; never perform a move by hand), nothing else. A refine order: follow "The refine flow" (start the refine worker; ask the project conductor to start the plan Reviewer; never start a Reviewer yourself). Record any other decision with `dg director decide`. When a move needs something outside your authority, run `dg director escalate` and go on to the next move. Never ask Jack or the Maestro a question in chat.
+Each wake-up: run `dg director plan`, then do each move it lists with `dg director do <move-id>` (it runs the move and records it in one step; never perform a move by hand, except the two kinds below that `dg director do` cannot run), nothing else. A refine order: follow "The refine flow" (start the refine worker; ask the project conductor to start the plan Reviewer; never start a Reviewer yourself). Record any other decision with `dg director decide`. When a move needs something outside your authority, run `dg director escalate` and go on to the next move. Never ask Jack or the Maestro a question in chat.
 
 express lane: DGS-700, later
 
@@ -64,6 +64,11 @@ You act only on the factory ticket (the one in `lock.json`, after the tick's own
 | breaker open, or an item with no ticket | list only | resume |
 
 Releases are `stopped`, never `failed`: a failed release counts toward the breaker. Run a move with `dg director do <move-id>`; `plan` hands out the stable id and records nothing. Do not perform a move by hand.
+
+Two kinds of move cannot be run by `dg director do`, because they start or prompt a herdr worker pane, and `dg director do` cannot do that (it answers that it is not done by code):
+- `start-again` (the refine worker was lost): do it yourself in your own session. Start the refine worker again from `skills/director/refine-brief.md` under the role limit (runbook S0 to S6, through `dg run start`), then record it: `dg director decide --id restart-run --ticket <KEY> --run <the lost run> --what "<what you did>" --why "first loss of the refine worker"`. The move leaves the plan once the decision is recorded.
+- `reprompt` to `self` (the refine worker you started is stalled): do it yourself in your own session. Prompt the worker's pane, then record it: `dg director decide --id reprompt-run --ticket <KEY> --run <the run> --what "<what you did>" --why "the run is stalled"`.
+A `reprompt` or `retry-once` to the `driver` is a normal move: `dg director do` sends it.
 
 ## Escalation
 

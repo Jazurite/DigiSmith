@@ -1,6 +1,5 @@
 import { currentCount } from "../../run/limit-check.ts";
 import { refusal } from "../../run/limit.ts";
-import { PromptError } from "../act.ts";
 import type { Exec } from "../conductor.ts";
 import { realExecOut, type ExecOut } from "../observers-real.ts";
 import type { ScanDeps } from "../scan.ts";
@@ -16,7 +15,7 @@ export interface DirectorWiring {
   refine: NonNullable<ScanDeps["refine"]>;
   wake: () => Promise<void>;
   driver: NonNullable<ScanDeps["driver"]>;
-  /** the tick's prompt for a ticket: to the ticket's driver, with a PromptError that says whether anything was delivered */
+  /** the tick's prompt for a ticket: to the ticket's driver; a failure is a PromptError that says whether anything was delivered */
   tickPrompt: (ticket: string) => (text: string) => Promise<void>;
 }
 
@@ -38,12 +37,7 @@ export function directorWiring(d: WiringInput): DirectorWiring | null {
       await wakeDirector({ dir: d.dir, now: d.now, exec: d.execOut ?? realExecOut, target: () => ({ agent: t.name, session: t.session, workspace: t.workspace, scope: t.scope }) }, plan);
     },
     driver: { name: projectConductorName(d.conductorsJson), prompt: toDriver },
-    tickPrompt: (ticket) => async (text) => {
-      try { await toDriver(ticket, text); } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        // a plain exit code: nothing was delivered. Anything else: it may have been.
-        throw new PromptError(msg, /\(exit \d+\)/.test(msg) ? "no" : "maybe");
-      }
-    },
+    // promptDriver throws a PromptError that already says whether anything was delivered
+    tickPrompt: (ticket) => (text) => toDriver(ticket, text),
   };
 }

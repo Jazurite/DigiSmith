@@ -53,6 +53,14 @@ describe("skills/director/SKILL.md", () => {
     const lines = card.split("\n").filter((l) => /express/i.test(l));
     expect(lines).toEqual(["express lane: DGS-700, later"]);
   });
+  it("tells the Director to do start-again and reprompt-to-self itself in its own session and then record the move (dg director do cannot)", () => {
+    expect(card).toMatch(/start-again/);
+    expect(card).toMatch(/dg director do[^\n]*cannot|cannot[^\n]*dg director do/i);
+    expect(card).toContain("dg director decide --id restart-run");
+    expect(card).toContain("dg director decide --id reprompt-run");
+    expect(card).toMatch(/refine-brief\.md/);
+    expect(card).toMatch(/do it yourself in your own session/i);
+  });
   it("has the loop, the refine flow, the unblock table, escalation and the decision record", () => {
     for (const h of ["## The loop", "## The refine flow", "## Unblocking", "## Escalation", "## The decision record"]) expect(card).toContain(h);
   });

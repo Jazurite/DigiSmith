@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { claimDriver, DriverTaken, readDriver } from "../../conductor/drivers.ts";
 import { herdrSessionArgs, readRegistryFile, scopeFor, type ConductorEntry } from "../../conductor-registry/registry.ts";
 import { appendAttention } from "../attention-write.ts";
+import { PromptError } from "../act.ts";
 import type { Exec } from "../conductor.ts";
 
 export const DIRECTOR_NAME = "director";
@@ -26,19 +27,32 @@ export function directorTarget(conductorsJson: string): DirectorTarget | null {
   } catch { return null; }
 }
 
+/** Errors raised before herdr is called are PromptError "no" (nothing delivered); an exec that throws is "maybe"; a non-zero exit is "no". */
 async function promptEntry(exec: Exec, e: ConductorEntry, all: ConductorEntry[], message: string): Promise<void> {
   const ws = e.floor ?? e.workspace;
-  if (ws === undefined) throw new Error(`${e.key}: no workspace`);
+  if (ws === undefined) throw new PromptError(`${e.key}: no workspace`, "no");
+  let scope: string;
+  try { scope = scopeFor(e, undefined, all); } catch (err) { throw new PromptError((err as Error).message, "no"); }
   const sess = e.session === "default" ? [] : herdrSessionArgs(e);
-  const r = await exec(herdrBin(), [...sess, "agent", "prompt", e.name, message], { HERDR_WS: ws, HERDR_SCOPE: scopeFor(e, undefined, all) });
-  if (r.code !== 0) throw new Error(`herdr-ws agent prompt failed (exit ${r.code}): ${r.stderr}`);
+  let r: { code: number; stderr: string };
+  try {
+    r = await exec(herdrBin(), [...sess, "agent", "prompt", e.name, message], { HERDR_WS: ws, HERDR_SCOPE: scope });
+  } catch (err) {
+    throw new PromptError(`herdr-ws agent prompt did not finish: ${(err as Error).message}`, "maybe");
+  }
+  if (r.code !== 0) throw new PromptError(`herdr-ws agent prompt failed (exit ${r.code}): ${r.stderr}`, "no");
+}
+
+/** The registry read; a failure there happens before any delivery. */
+function entriesBeforeDelivery(conductorsJson: string): ConductorEntry[] {
+  try { return entriesOf(conductorsJson); } catch (err) { throw new PromptError((err as Error).message, "no"); }
 }
 
 export async function promptDirector(exec: Exec, conductorsJson: string, message: string): Promise<void> {
-  const all = entriesOf(conductorsJson);
+  const all = entriesBeforeDelivery(conductorsJson);
   const t = directorTarget(conductorsJson);
   const e = t === null ? undefined : all.find((x) => x.key === t.key);
-  if (e === undefined) throw new Error(`no Director (an open factory entry named ${DIRECTOR_NAME}) in ${conductorsJson}`);
+  if (e === undefined) throw new PromptError(`no Director (an open factory entry named ${DIRECTOR_NAME}) in ${conductorsJson}`, "no");
   await promptEntry(exec, e, all, message);
 }
 
@@ -54,8 +68,8 @@ const KEY = /^[A-Z]+-\d+$/;
  * A malformed driver file, or a driver the registry does not know, falls back and opens one attention item.
  */
 export async function promptDriver(exec: Exec, conductorsJson: string, attentionDir: string, ticket: string, text: string): Promise<void> {
-  const all = entriesOf(conductorsJson);
-  const fallback = all.find((x) => x.key === PROJECT_KEY && x.status === "open");
+  const all = entriesBeforeDelivery(conductorsJson);
+  const fallback = all.find((x) => x.key === PROJECT_KEY && x.status === "open" && x.workspace !== undefined && x.name !== DIRECTOR_NAME);
   const denv = { ...process.env, DIGISMITH_DEPOT_DIR: dirname(conductorsJson) };
   const note = (cause: string): void => {
     try { appendAttention(attentionDir, new Date(), { ticket, run: `${ticket}/driver`, kind: "unknown", cause }); } catch { /* the prompt still goes to the fallback */ }
@@ -65,13 +79,17 @@ export async function promptDriver(exec: Exec, conductorsJson: string, attention
     try {
       const rec = readDriver(ticket, denv);
       if (rec !== null) {
-        target = all.find((x) => x.name === rec.driver && x.status === "open" && x.workspace !== undefined);
+        // the Director is never a driver: a record naming it (a hand edit) is treated as unknown
+        target = all.find((x) => x.name === rec.driver && x.name !== DIRECTOR_NAME && x.status === "open" && x.workspace !== undefined);
         if (target === undefined) note("driver-not-in-registry");
       }
     } catch { note("driver-file-unreadable"); }
   }
   const e = target ?? fallback;
-  if (e === undefined) throw new Error(`no conductor to prompt for ${ticket}: no driver record and no ${PROJECT_KEY} in ${conductorsJson}`);
+  if (e === undefined) {
+    note("driver-not-in-registry");
+    throw new PromptError(`no conductor to prompt for ${ticket}: no usable driver record and no open ${PROJECT_KEY} with a workspace in ${conductorsJson}`, "no");
+  }
   await promptEntry(exec, e, all, text);
 }
 
