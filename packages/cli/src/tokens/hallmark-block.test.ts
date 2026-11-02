@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyBlock, renderBlock, START, END, type BlockRow, type BlockTotals } from "./hallmark-block.ts";
+import { applyBlock, renderBlock, sentinelCounts, START, END, type BlockRow, type BlockTotals } from "./hallmark-block.ts";
 
 const totals: BlockTotals = { counts: { input: 10, output: 20, cache_read: 30, cache_write_5m: 4, cache_write_1h: 1, responses: 3 }, cost_usd: 1.5, unpriced: false };
 const rows: BlockRow[] = [
@@ -14,8 +14,8 @@ describe("renderBlock", () => {
     const lines = b.split("\n");
     expect(lines[0]).toBe(START);
     expect(lines[lines.length - 1]).toBe(END);
-    expect(START).toBe("--- Hallmark (dg clickup ticket-total) ---");
-    expect(END).toBe("--- end Hallmark ---");
+    expect(START).toBe("Hallmark totals begin (dg clickup ticket-total)");
+    expect(END).toBe("Hallmark totals end");
     expect(b).toContain("Total: in 10, out 20, cache read 30, cache write 5 = $1.5000 list price");
     expect(b).toContain("Agent time: 2 min 44 s over 2 tasks (sum of task windows)");
     expect(b).toContain("Reviews: 0 rounds, 0 findings, 0 fix rounds");
@@ -24,7 +24,7 @@ describe("renderBlock", () => {
     // blank line between the non-table lines
     expect(b).toContain(`${START}\n\nTotal:`);
     expect(b).toMatch(/\n\nAgent time:.*\n\nReviews:.*\n\n\| Task/);
-    expect(b).toMatch(/\n\nUpdated .*\n\n--- end Hallmark ---$/);
+    expect(b).toMatch(/\n\nUpdated .*\n\nHallmark totals end$/);
   });
   it("adds a Partial line", () => {
     expect(renderBlock(rows, totals, { now: NOW, missing: 2 })).toContain("Partial: 2 session(s) without transcript");
@@ -58,6 +58,22 @@ describe("applyBlock", () => {
     expect(strip(second)).toEqual(strip(first));
     expect(second).not.toBe(first);
     expect(second.match(/Updated /g)).toHaveLength(1);
+  });
+  it("replaces the legacy block, escaped as ClickUp returns it, with no stray backslash", () => {
+    const legacy = "\\--- Hallmark (dg clickup ticket-total) ---\n\nTotal: x\n\n| Task |\n| ---|\n\n\\--- end Hallmark ---";
+    const plain = legacy.replaceAll("\\---", "---");
+    for (const old of [legacy, plain]) {
+      const next = applyBlock(`Top\n\n${old}\n\nTail`, block);
+      expect(next).toBe(`Top\n\n${block}\n\nTail`);
+      expect(sentinelCounts(next)).toEqual({ start: 1, end: 1, legacy: 0 });
+    }
+  });
+  it("re-applies the new block idempotently", () => {
+    const once = applyBlock("Intro", block);
+    expect(applyBlock(once, block)).toBe(once);
+  });
+  it("throws when the new and the legacy form are both present", () => {
+    expect(() => applyBlock(`${block}\n\n--- Hallmark (dg clickup ticket-total) ---\nx\n--- end Hallmark ---`, block)).toThrow("Hallmark sentinel");
   });
   it("throws on a lone or reversed sentinel", () => {
     expect(() => applyBlock(`a\n${START}\nb`, block)).toThrow("sentinel");

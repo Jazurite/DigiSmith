@@ -1,8 +1,18 @@
 import { formatDuration, utc7 } from "./stamp.ts";
 import type { Counts } from "./types.ts";
 
-export const START = "--- Hallmark (dg clickup ticket-total) ---";
-export const END = "--- end Hallmark ---";
+export const START = "Hallmark totals begin (dg clickup ticket-total)";
+export const END = "Hallmark totals end";
+// The first form: ClickUp returns a line that starts with --- with a backslash in front.
+export const LEGACY_START = /\\?--- Hallmark \(dg clickup ticket-total\) ---/g;
+export const LEGACY_END = /\\?--- end Hallmark ---/g;
+const hits = (text: string, re: RegExp): { index: number; length: number }[] => [...text.matchAll(re)].map((m) => ({ index: m.index as number, length: m[0].length }));
+const literal = (text: string, needle: string) => hits(text, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
+
+/** Sentinel lines left in a description: the new ones (once each) and any legacy ones (none). */
+export function sentinelCounts(text: string): { start: number; end: number; legacy: number } {
+  return { start: literal(text, START).length, end: literal(text, END).length, legacy: hits(text, LEGACY_START).length + hits(text, LEGACY_END).length };
+}
 
 export interface BlockRow {
   task: string;
@@ -51,17 +61,21 @@ export function renderBlock(rows: BlockRow[], totals: BlockTotals, opts: { now?:
   return parts.join("\n\n");
 }
 
-/** Appends the block after a blank line, or replaces the old one in place. Text outside it is untouched. */
+/** Appends the block after a blank line, or replaces the old one (new or legacy form) in place. Text outside it is untouched. */
 export function applyBlock(description: string, block: string): string {
-  const s = description.indexOf(START);
-  const e = description.indexOf(END);
-  if (s === -1 && e === -1) {
+  const ns = literal(description, START), ne = literal(description, END);
+  const ls = hits(description, LEGACY_START), le = hits(description, LEGACY_END);
+  const total = ns.length + ne.length + ls.length + le.length;
+  if (total === 0) {
     if (description === "") return block;
     const gap = description.endsWith("\n\n") ? "" : description.endsWith("\n") ? "\n" : "\n\n";
     return `${description}${gap}${block}`;
   }
-  if (s === -1 || e === -1 || e < s || description.indexOf(START, s + 1) !== -1 || description.indexOf(END, e + 1) !== -1) {
-    throw new Error("the description holds a lone, reversed or repeated Hallmark sentinel; fix it by hand");
+  const newForm = ns.length + ne.length > 0;
+  const legacyForm = ls.length + le.length > 0;
+  const [s, e] = newForm ? [ns, ne] : [ls, le];
+  if ((newForm && legacyForm) || s.length !== 1 || e.length !== 1 || e[0].index < s[0].index) {
+    throw new Error("the description holds a lone, reversed, repeated or mixed Hallmark sentinel; fix it by hand");
   }
-  return description.slice(0, s) + block + description.slice(e + END.length);
+  return description.slice(0, s[0].index) + block + description.slice(e[0].index + e[0].length);
 }

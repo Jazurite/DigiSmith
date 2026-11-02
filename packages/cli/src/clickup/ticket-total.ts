@@ -3,7 +3,7 @@ import type { ClickUpClient } from "@digismith/clickup-client";
 import { createClient } from "./lib.ts";
 import { printCall } from "./task-type-write.ts";
 import { collectRecords } from "../tokens/count.ts";
-import { applyBlock, END, renderBlock, START, type BlockRow, type BlockTotals } from "../tokens/hallmark-block.ts";
+import { applyBlock, renderBlock, sentinelCounts, type BlockRow, type BlockTotals } from "../tokens/hallmark-block.ts";
 import { createDepotRegistry } from "../tokens/registry.ts";
 import { priceOf, taskUsage } from "../tokens/stamp.ts";
 import { readStamps } from "../tokens/stamps-store.ts";
@@ -14,7 +14,6 @@ const failure = (msg: string) => `warn: ${msg.replace(/\s*\n\s*/g, " ")}`;
 const taskOrder = (a: string, b: string) => (a === "final" ? 1 : b === "final" ? -1 : Number(a) - Number(b) || a.localeCompare(b));
 
 interface Desc { description?: string | null; markdown_description?: string | null }
-const count = (text: string, needle: string) => text.split(needle).length - 1;
 
 function rowsFor(key: string, data: ReturnType<typeof collectRecords>): BlockRow[] {
   const latest = new Map(readStamps(key).map((s) => [s.task, s])); // a later line wins
@@ -91,8 +90,8 @@ export function createTicketTotalCommand(clientFactory: () => ClickUpClient = cr
         } catch (err) {
           throw new Error(`written, but the read-back failed: ${(err as Error).message}; not writing again, check the description`);
         }
-        const text = back.markdown_description ?? back.description ?? "";
-        if (count(text, START) !== 1 || count(text, END) !== 1) throw new Error(`written, but the read-back does not hold both Hallmark sentinels exactly once; not writing again, check the description`);
+        const seen = sentinelCounts(back.markdown_description ?? back.description ?? "");
+        if (seen.start !== 1 || seen.end !== 1 || seen.legacy !== 0) throw new Error(`written, but the read-back does not hold both Hallmark sentinels exactly once (or still holds an old one); not writing again, check the description`);
         console.log(`written to ${key}`);
       } catch (err) {
         console.error(failure((err as Error).message));

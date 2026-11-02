@@ -143,6 +143,36 @@ describe("ticket-total", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("replaces the escaped legacy block now on a ticket", async () => {
+    seed(); appendStamp(KEY, stamp("1", 0.4635, 104, 0, 0));
+    const old = "Intro\n\n\\--- Hallmark (dg clickup ticket-total) ---\n\nTotal: x\n\n\\--- end Hallmark ---\n\nTail";
+    const f = fake({ description: old, markdown_description: old });
+    await run(f, { yes: true });
+    const w = (f.updateTask.mock.calls[0] as unknown as [string, { markdown_description: string }])[1].markdown_description;
+    expect(w.startsWith("Intro\n\n" + START)).toBe(true);
+    expect(w.endsWith(END + "\n\nTail")).toBe(true);
+    expect(w).not.toContain("\\");
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("a read-back that still holds a legacy sentinel fails", async () => {
+    seed(); appendStamp(KEY, stamp("1", 0.4635, 104, 0, 0));
+    const f = fake({ description: "Intro", markdown_description: "Intro" }, { readBack: (w) => ({ markdown_description: w + "\n\\--- end Hallmark ---" }) });
+    await run(f, { yes: true });
+    expect(f.updateTask).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("both forms present: warn, exit 1, no write", async () => {
+    seed(); appendStamp(KEY, stamp("1", 0.4635, 104, 0, 0));
+    const both = `${START}\nx\n${END}\n\n--- Hallmark (dg clickup ticket-total) ---\n--- end Hallmark ---`;
+    const f = fake({ description: both, markdown_description: both });
+    await run(f, { yes: true });
+    expect(f.updateTask).not.toHaveBeenCalled();
+    expect(warns()).toHaveLength(1);
+    expect(process.exitCode).toBe(1);
+  });
+
   it("refuses when markdown_description is missing or empty while description is not", async () => {
     seed(); appendStamp(KEY, stamp("1", 0.4635, 104, 0, 0));
     for (const d of [{ description: "Text" }, { description: "Text", markdown_description: "" }]) {
