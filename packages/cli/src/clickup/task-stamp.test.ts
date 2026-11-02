@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClickUpClient } from "@digismith/clickup-client";
@@ -177,7 +177,12 @@ describe("task-stamp", () => {
   });
 
   it("final posts the final review heading", async () => {
-    seed({ extra: (reg) => reg.append({ kind: "task_start", ticket: KEY, task: "final", session_id: "s1", ts: "2026-11-02T11:00:00Z" }) || reg.append({ kind: "task_end", ticket: KEY, task: "final", session_id: "s1", ts: "2026-11-02T11:10:00Z" }) });
+    seed({
+      extra: (reg) => {
+        reg.append({ kind: "task_start", ticket: KEY, task: "final", session_id: "s1", ts: "2026-11-02T11:00:00Z" });
+        reg.append({ kind: "task_end", ticket: KEY, task: "final", session_id: "s1", ts: "2026-11-02T11:10:00Z" });
+      },
+    });
     const f = fake();
     await run(f, { planTask: "final", yes: true });
     expect(String(f.post.mock.calls[0][1]).split("\n")[0]).toBe("Hallmark final review of DGS-546");
@@ -249,5 +254,36 @@ describe("task-stamp", () => {
     writeFileSync(ledger, "Task 1: dispatch implementer agent=ag1\n");
     await run(fake(), {});
     expect(out(console.log as never)).toContain("(2 responses)");
+  });
+
+  it("a ledger append that fails after the post says the comment was posted and not to send again", async () => {
+    seed();
+    writeFileSync(ledger, "");
+    chmodSync(ledger, 0o444); // readable, not writable: the append throws
+    const f = fake();
+    await run(f, { yes: true });
+    expect(f.post).toHaveBeenCalledTimes(1);
+    const lines = (console.error as never as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0])).filter((l) => l.startsWith("warn:"));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("comment 77");
+    expect(lines[0]).toContain("do not send again");
+    expect(readStamps(KEY)).toHaveLength(1);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("--all skips an invalid registry task id with one warn line and goes on", async () => {
+    seed({
+      extra: (reg) => {
+        reg.append({ kind: "task_start", ticket: KEY, task: "x-y", session_id: "s1", ts: "2026-11-02T10:10:00Z" });
+        reg.append({ kind: "task_end", ticket: KEY, task: "x-y", session_id: "s1", ts: "2026-11-02T10:15:00Z" });
+      },
+    });
+    const f = fake();
+    await run(f, { planTask: undefined, all: true, yes: true });
+    const warns = out(console.error as never).split("\n").filter((l) => l.startsWith("warn:"));
+    expect(warns).toHaveLength(1);
+    expect(warns[0]).toContain("x-y");
+    expect(f.post).toHaveBeenCalledTimes(1);
+    expect(out(console.log as never)).toContain("task 1: stamped (comment 77)");
   });
 });

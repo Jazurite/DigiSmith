@@ -86,11 +86,12 @@ async function resolve(ctx: Ctx): Promise<string> {
 // Stamps one plan task. Returns the one output line (for --all); single mode prints more itself.
 async function stampOne(ctx: Ctx, n: string, quiet: boolean): Promise<string> {
   const { req, key, data } = ctx;
+  if (!/^(\d+|final)$/.test(n)) throw new Error(`task id "${n}" is not a number or final`);
   const ledgerText = readText(req.ledger);
   const usage = taskUsage(data.records, data.entries, parseTaskAgents(ledgerText), n, data.ticketSessions);
   const ended = data.entries.some((e) => e.kind === "task_end" && e.task === n);
   if (!ended || usage.windows.length === 0) return "task not ended";
-  if (new RegExp(`^Task ${n}: stamped \\(comment \\S+\\)\\s*$`, "m").test(ledgerText)) return "already stamped (ledger)";
+  if (new RegExp(`^Task ${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}: stamped \\(comment \\S+\\)\\s*$`, "m").test(ledgerText)) return "already stamped (ledger)";
   if (stampOf(key, n)) return "already stamped (stamps file)";
   const id = await resolve(ctx);
   const first = marker(key, n);
@@ -113,7 +114,13 @@ async function stampOne(ctx: Ctx, n: string, quiet: boolean): Promise<string> {
   const cid = String(created.id);
   // Written before the read-back so a later run never posts twice.
   appendStamp(key, stampLine(n, cid, usage, review, partial));
-  if (req.ledger !== undefined) appendLedger(req.ledger, `Task ${n}: stamped (comment ${cid})`);
+  if (req.ledger !== undefined) {
+    try {
+      appendLedger(req.ledger, `Task ${n}: stamped (comment ${cid})`);
+    } catch (err) {
+      throw new Error(`sent (comment ${cid}), but the ledger line could not be written: ${(err as Error).message}; do not send again (the stamps file has it)`);
+    }
+  }
   let rows;
   try {
     rows = await ctx.client().getTaskComments(id);
