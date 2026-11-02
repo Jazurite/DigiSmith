@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { STEPS, type Registry, type RegistryEntry } from "./types.ts";
 
-const TICKET_PATTERN = /^[A-Za-z0-9_-]+$/;
+export const TICKET_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 export function depotRegistryDir(): string {
   return process.env.DIGISMITH_TOKEN_REGISTRY_DIR ?? join(homedir(), ".digismith-depot", "token-registry");
@@ -29,7 +29,7 @@ function isEntry(v: unknown): v is RegistryEntry {
 }
 
 // True when the file is non-empty and its last byte is not a newline (a torn tail).
-function endsTorn(file: string): boolean {
+export function endsTorn(file: string): boolean {
   if (!existsSync(file)) return false;
   const fd = openSync(file, "r");
   try {
