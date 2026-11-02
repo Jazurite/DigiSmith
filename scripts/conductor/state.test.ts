@@ -298,6 +298,25 @@ describe("DGS-683 health per herdr session", () => {
     expect(runner.calls).toContainEqual(["herdr", "--session", "Castle", "tab", "list", "--workspace", "w7"]);
     expect(s.warnings.some((w) => /conductors\.json/.test(w))).toBe(false);
   });
+  it("HERDR_WS pins the Floor, so a Castle conductor's tabs are listed in its OWN workspace", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Castle", workspace: "w7", floor: "w2" } }));
+    const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
+    await collectState({ ...base(), herdrWorkspace: "w2" }, deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Castle", "tab", "list", "--workspace", "w7"]);
+    expect(runner.calls).not.toContainEqual(["herdr", "--session", "Castle", "tab", "list", "--workspace", "w2"]);
+  });
+  it("an old-shape default-session entry with no pinned workspace keeps the unfiltered tab list", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { note: "/n", workspace: "w2" } }));
+    const runner = fakeRunner();
+    await collectState(base(), deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "default", "tab", "list"]);
+    expect(runner.calls.some((c) => c.includes("--workspace"))).toBe(false);
+  });
+  it("a pinned workspace on a default-session conductor still filters the tab list", async () => {
+    const runner = fakeRunner();
+    await collectState({ ...base(), herdrWorkspace: "w2" }, deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "default", "tab", "list", "--workspace", "w2"]);
+  });
   it("keeps the old default-session calls with no registry entry", async () => {
     const runner = fakeRunner();
     await collectState(base(), deps(runner));

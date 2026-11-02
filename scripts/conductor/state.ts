@@ -274,7 +274,8 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
         up = `${entry.session} ${up}; Floor ${fl.code === 0 ? parse(fl.stdout) : "unknown"}`;
       }
       state.health.server = state.health.server === "unknown" ? up : `${up}; ${state.health.server}`;
-      const ws = opts.herdrWorkspace ?? entry?.workspace;
+      // HERDR_WS pins a FLOOR workspace. A conductor in another session lists its own workspace there; in the default session only a pin filters (as before).
+      const ws = own && entry ? entry.workspace : opts.herdrWorkspace;
       const args = [...sess, "tab", "list", ...(ws ? ["--workspace", ws] : [])];
       const tl = await deps.runner("herdr", args);
       if (tl.code !== 0) throw new Error(tl.stderr.trim() || `tab list exit ${tl.code}`);
