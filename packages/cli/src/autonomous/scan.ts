@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { appendAttention } from "./attention-write.ts";
 import { appendResolved, readOpen } from "./attention.ts";
 import { awayExpired, readAway } from "./away.ts";
 import { readBreaker } from "./breaker.ts";
 import { fmtUtc7, stampOf } from "./clock.ts";
-import { conductorCheck, promptConductor, type Exec } from "./conductor.ts";
+import { conductorCheck, factoryConductorName, promptConductor, type Exec } from "./conductor.ts";
+import { claimDriver, DriverTaken, releaseDriver } from "../conductor/drivers.ts";
 import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
@@ -53,7 +55,7 @@ function specPlanText(t: LoTask): string {
   return lines.length > 0 ? lines.join("\n") : "- see the ticket";
 }
 
-type ClaimOutcome = "claimed" | "busy" | "claim-failed";
+type ClaimOutcome = "claimed" | "busy" | "claim-failed" | { driven: string };
 
 async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   const key = keyOf(t);
@@ -72,6 +74,28 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     return "busy";
   }
   let wroteOrder = false;
+  // The driver record: the claiming factory conductor's registry NAME (not the word "factory"), so its own workers pass the start check.
+  // The drivers folder sits next to conductors.json in the depot.
+  const denv = { ...process.env, DIGISMITH_DEPOT_DIR: dirname(d.conductorsJson) };
+  let driverName: string | null = null;
+  try {
+    // a key outside the driver key format (a non-DigiSmith id) has no driver record, as in driverRefusal
+    if (/^[A-Z]+-\d+$/.test(key)) {
+      const who = factoryConductorName(d.conductorsJson);
+      claimDriver({ ticket: key, driver: who, mode: "factory" }, denv);
+      driverName = who;
+    }
+  } catch (e) {
+    try { clearLock(d.dir); } catch { /* best effort */ }
+    if (e instanceof DriverTaken) {
+      close("retryable", `driven-by:${e.driver}`);
+      appendEvent(d.dir, now, "skip", { key, reason: `driven-by:${e.driver}` });
+      return { driven: e.driver };
+    }
+    try { close("permanent", errText(e)); } catch { /* best effort */ }
+    appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
+    return "claim-failed";
+  }
   try {
     await d.tracker.setStatus(t.id, STARTER);
     const back = await d.tracker.getStatus(t.id);
@@ -87,6 +111,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     if (wroteOrder) rmSync(order, { force: true });
     // Each cleanup step is independent: one failing never skips the others.
     try { clearLock(d.dir); } catch { /* best effort */ }
+    try { if (driverName !== null) releaseDriver(key, driverName, denv); } catch { /* best effort */ }
     try { await d.tracker.setStatus(t.id, INTAKE); } catch { /* best effort */ }
     try { close("permanent", errText(e)); } catch { /* best effort */ }
     appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
@@ -271,6 +296,10 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     if (out === "busy") {
       if (notesChanged) writeNotes(d.dir, notes);
       return { outcome: "busy", candidates: candidates.length, skipped };
+    }
+    if (typeof out === "object") {   // another conductor drives this ticket: skip it, try the next one
+      skipped.push({ key, reason: `driven-by:${out.driven}` });
+      continue;
     }
     return finish({ outcome: out, claimed: out === "claimed" ? key : undefined, candidates: candidates.length, skipped });
   }

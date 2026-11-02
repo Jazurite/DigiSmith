@@ -72,6 +72,25 @@ describe("startTicketConductor", () => {
     expect(readDriver("DGS-9", env)?.mode).toBe("factory");
     expect(paneRun().args[5]).not.toContain("HERDR_WS");
   });
+  it("after a factory claim the starter hands the driver over to tc-<key>", async () => {
+    seed({}, { kind: ["project", "factory"] });
+    claimDriver({ ticket: "DGS-9", driver: "digismith-conductor", mode: "factory" }, env);
+    await startTicketConductor(A, { exec, env, repo });
+    expect(readDriver("DGS-9", env)).toMatchObject({ driver: "tc-dgs-9", mode: "factory" });
+  });
+  it("a driver held by another conductor is not handed over", async () => {
+    seed({}, { kind: ["project", "factory"] });
+    claimDriver({ ticket: "DGS-9", driver: "someone-else", mode: "factory" }, env);
+    await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow(/already has a driver: someone-else/);
+    expect(calls).toEqual([]);
+  });
+  it("a failed start after a hand-over gives the driver back to the factory conductor", async () => {
+    seed({}, { kind: ["project", "factory"] });
+    claimDriver({ ticket: "DGS-9", driver: "digismith-conductor", mode: "factory" }, env);
+    failOn = "tab create";
+    await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow();
+    expect(readDriver("DGS-9", env)).toMatchObject({ driver: "digismith-conductor", mode: "factory" });
+  });
   it("a second start for the same ticket names the driver and calls no herdr", async () => {
     claimDriver({ ticket: "DGS-9", driver: "factory", mode: "factory" }, env);
     await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow(/DGS-9 already has a driver: factory/);

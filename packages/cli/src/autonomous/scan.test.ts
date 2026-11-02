@@ -13,6 +13,8 @@ import { acquireLock, readEvents, readLock } from "./state.ts";
 import { readOpen } from "./attention.ts";
 import { appendAttention } from "./attention-write.ts";
 import type { ScanGuard } from "./scan-guard.ts";
+import { claimDriver, readDriver } from "../conductor/drivers.ts";
+import { driverRefusal } from "../run/limit-check.ts";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
 const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
@@ -83,6 +85,7 @@ describe("runScan: any hour", () => {
     const run = async (away: boolean) => {
       rmSync(dir, { recursive: true, force: true });
       rmSync(ordersDir, { recursive: true, force: true });
+      rmSync(join(root, "drivers"), { recursive: true, force: true });   // the first run's driver record would make the second skip DGS-2
       tracker = new FakeTracker();
       execCalls = [];
       writeAway(dir, { away, since: NOON.toISOString(), until: null, endedAt: away ? null : NOON.toISOString() });
@@ -713,5 +716,54 @@ describe("runScan: already-merged items close by rule", () => {
     tracker.add({ id: "t600", key: "DGS-600", status: "complete" });
     await runScan(mk({ guard: guard() }));
     expect(readOpen(dir).map((i) => i.id).sort()).toEqual(["DGS-600/starter.unknown.0", "DGS-9/already-merged.unknown.0"]);
+  });
+});
+
+describe("runScan: the claim writes the driver record (DGS-683 T22)", () => {
+  const denv = () => ({ DIGISMITH_DEPOT_DIR: root });
+  it("writes the lock and a factory-mode driver named by the claiming conductor's registry name, creating drivers/", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    expect(existsSync(join(root, "drivers"))).toBe(false);
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claimed");
+    expect(readLock(dir)?.ticket).toBe("DGS-1");
+    expect(readDriver("DGS-1", denv())).toMatchObject({ ticket: "DGS-1", driver: "digismith-conductor", mode: "factory" });
+  });
+  it("names the kind factory entry when there is one (the Director later), never the literal 'factory'", async () => {
+    writeFileSync(conductorsJson, JSON.stringify({ "DigiSmith/digismith-conductor": { workspace: "w2" }, "Factory/director": { kind: "factory", session: "Castle", workspace: "w7", floor: "w2" } }));
+    tracker.add({ id: "t1", key: "DGS-1" });
+    await runScan(mk());
+    expect(readDriver("DGS-1", denv())?.driver).toBe("director");
+  });
+  it("the claiming conductor's own worker passes driverRefusal; another name is refused", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    await runScan(mk());
+    expect(driverRefusal({ ...denv(), DIGISMITH_NAME: "digismith-conductor" }, "builder", "DGS-1")).toBeNull();
+    expect(driverRefusal({ ...denv(), DIGISMITH_NAME: "someone-else" }, "builder", "DGS-1")).toMatch(/DGS-1 is driven by digismith-conductor/);
+  });
+  it("a ticket with another driver is skipped as driven-by:<name>, gets no lock, and the next ticket is claimed", async () => {
+    claimDriver({ ticket: "DGS-1", driver: "tc-dgs-1", mode: "attended" }, denv());
+    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.add({ id: "t2", key: "DGS-2" });
+    const r = await runScan(mk());
+    expect(r.skipped).toContainEqual({ key: "DGS-1", reason: "driven-by:tc-dgs-1" });
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-2" });
+    expect(readLock(dir)?.ticket).toBe("DGS-2");
+    expect(readDriver("DGS-1", denv())?.driver).toBe("tc-dgs-1");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+  });
+  it("only a driven ticket: outcome none, no lock", async () => {
+    claimDriver({ ticket: "DGS-1", driver: "tc-dgs-1", mode: "attended" }, denv());
+    tracker.add({ id: "t1", key: "DGS-1" });
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("none");
+    expect(readLock(dir)).toBeNull();
+    expect(tracker.calls).not.toContain("setStatus t1 claimed");
+  });
+  it("a failed claim removes the driver it wrote", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.readBackWrong = true;
+    expect((await runScan(mk())).outcome).toBe("claim-failed");
+    expect(readDriver("DGS-1", denv())).toBeNull();
   });
 });

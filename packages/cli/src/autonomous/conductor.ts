@@ -59,6 +59,11 @@ export function conductorCheck(conductorsJson: string): { cause: ConductorCause;
   }
 }
 
+/** The registry name of the factory conductor the scan prompts (kind factory; none: digismith-conductor). The driver record uses this name. */
+export function factoryConductorName(conductorsJson: string): string {
+  return readConductor(conductorsJson).entry.name;
+}
+
 export async function promptConductor(exec: Exec, conductorsJson: string, message: string): Promise<void> {
   const { entry, workspace, scope } = readConductor(conductorsJson);
   const herdr = join(homedir(), ".digismith-depot", "bin", "herdr-ws");

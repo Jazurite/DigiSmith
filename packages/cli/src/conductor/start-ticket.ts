@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { execFile } from "node:child_process";
 import type { Exec } from "../autonomous/conductor.ts";
 import { findByKind, putEntry, removeEntry, resolveConductor, scopeFor } from "../conductor-registry/registry.ts";
-import { DriverTaken, claimDriver, releaseDriver } from "./drivers.ts";
+import { DriverTaken, claimDriver, handoverDriver, readDriver, releaseDriver } from "./drivers.ts";
 
 // `dg conductor start-ticket` (spec 6.2). Read "Suite" in the spec as "Castle" (rename 2026-11-02).
 
@@ -77,11 +77,19 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
     throw new Error(`limit: ${MAX_TICKET_CONDUCTORS} ticket conductors are already open`);
   }
 
-  try {
-    claimDriver({ ticket: a.ticket, driver: name, mode: starter.kinds.includes("factory") ? "factory" : "attended" }, env);
-  } catch (e) {
-    if (e instanceof DriverTaken) throw new Error(`${e.ticket} already has a driver: ${e.driver}`);
-    throw e;
+  // A ticket the factory conductor claimed already has its driver record: that conductor hands it over to the ticket conductor.
+  let handedOver = false;
+  const cur = readDriver(a.ticket, env);
+  if (cur !== null && cur.mode === "factory" && cur.driver === starter.name && starter.kinds.includes("factory")) {
+    handoverDriver(a.ticket, starter.name, name, env);
+    handedOver = true;
+  } else {
+    try {
+      claimDriver({ ticket: a.ticket, driver: name, mode: starter.kinds.includes("factory") ? "factory" : "attended" }, env);
+    } catch (e) {
+      if (e instanceof DriverTaken) throw new Error(`${e.ticket} already has a driver: ${e.driver}`);
+      throw e;
+    }
   }
 
   let tabId: string | undefined;
@@ -119,7 +127,10 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
     if (tabId !== undefined) {
       try { await d.exec(herdrWsPath(), ["--session", CASTLE, "tab", "close", tabId], { HERDR_WS: starter.workspace, HERDR_SCOPE: scopeFor(starter, env) }); } catch { /* best effort */ }
     }
-    try { releaseDriver(a.ticket, name, env); } catch { /* keep the original error */ }
+    try {
+      if (handedOver) handoverDriver(a.ticket, name, starter.name, env);   // give it back to the factory conductor
+      else releaseDriver(a.ticket, name, env);
+    } catch { /* keep the original error */ }
     try { removeEntry(key, env); } catch { /* keep the original error */ }
     throw e;
   }
