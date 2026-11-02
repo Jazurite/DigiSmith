@@ -9,12 +9,13 @@ const SOURCE = path.join(__dirname, "herdr-ws")
 const FAKE = `#!/bin/sh
 # argv: --session S <group> <verb> ...
 echo "$@" >> "$FAKE_LOG"
+echo "\${HERDR_SOCKET_PATH-unset}" >> "$FAKE_LOG.env"
 S="$2"; shift 2
 case "$1 $2" in
   "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"}]}}' ;;
   "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
   "tab get") case "$3" in w7:t2) L=tc-dgs-9;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
-  "tab list") echo "{\\"result\\":{\\"tabs\\":[{\\"tab_id\\":\\"$4:t1\\",\\"workspace_id\\":\\"$4\\"}]}}" ;;
+  "tab list") echo "{\\"id\\":\\"cli:tab:list\\",\\"result\\":{\\"tabs\\":[{\\"tab_id\\":\\"$4:t1\\",\\"workspace_id\\":\\"$4\\"}]}}" ;;
   *) echo '{"result":{}}' ;;
 esac
 `
@@ -23,15 +24,16 @@ let dir: string
 let copy: string
 let log: string
 
-type R = { status: number | null; stdout: string; stderr: string; log: string }
+type R = { status: number | null; stdout: string; stderr: string; log: string; env: string }
 
 function run(env: Record<string, string>, args: string[]): R {
   fs.writeFileSync(log, "")
+  fs.writeFileSync(log + ".env", "")
   const r = spawnSync("python3", [copy, ...args], {
     env: { PATH: "/usr/bin:/bin", FAKE_LOG: log, ...env },
     encoding: "utf8",
   })
-  return { status: r.status, stdout: r.stdout, stderr: r.stderr, log: fs.readFileSync(log, "utf8") }
+  return { status: r.status, stdout: r.stdout, stderr: r.stderr, log: fs.readFileSync(log, "utf8"), env: fs.readFileSync(log + ".env", "utf8") }
 }
 const ok = (r: R) => r.status === 0
 const refused = (r: R) => r.status === 3 && /herdr-ws: refused/.test(r.stderr)
@@ -125,6 +127,13 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
     expect(refused(run(env, ["tab", "create", "--label", "x", "--workspace"]))).toBe(true)
   })
 
+  it("a repeated --workspace or --pane is refused (scope bypass)", () => {
+    const env = { HERDR_SCOPE: "default:w2" }
+    expect(refused(run(env, ["tab", "create", "--workspace", "w2", "--workspace", "w9"]))).toBe(true)
+    expect(refused(run(env, ["tab", "create", "--workspace", "w9", "--workspace", "w2"]))).toBe(true)
+    expect(refused(run(env, ["agent", "start", "dgs-1", "--pane", "w2:p1", "--pane", "w9:p1"]))).toBe(true)
+  })
+
   it("agent start checks --pane against the scope", () => {
     const env = { HERDR_SCOPE: "default:w2,default:w3" }
     expect(ok(run(env, ["agent", "start", "dgs-2", "--pane", "w3:p1"]))).toBe(true)
@@ -140,6 +149,7 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
     expect(r.log).not.toMatch(/w7/)
     const ids = (JSON.parse(r.stdout).result.tabs as { tab_id: string }[]).map((t) => t.tab_id)
     expect(ids).toEqual(["w2:t1", "w3:t1"])
+    expect(JSON.parse(r.stdout).id).toBe("cli:tab:list") // envelope of the first reply is kept
   })
 
   it("a bad scope text is refused", () => {
@@ -161,6 +171,8 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
       ["--session", "Suite", "agent", "list"],
     )
     expect(ok(r)).toBe(true)
+    expect(r.env.trim().split("\n").every((x) => x === "unset")).toBe(true)
+    expect(r.env.trim()).not.toBe("")
     for (const line of r.log.trim().split("\n")) expect(line).toMatch(/^--session (Suite|default) /)
     const r2 = run({ HERDR_SCOPE: "default:w2,default:w3" }, ["agent", "get", "dgs-2"])
     for (const line of r2.log.trim().split("\n")) expect(line).toMatch(/^--session default /)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """herdr-ws: herdr limited to a scope of (session, workspace) pairs (DGS-198 guardrail, DGS-683 scope).
-Scope: HERDR_SCOPE = comma list "session:workspace" (for example Suite:w7,default:w2,default:w3). Absent: default:$HERDR_WS.
+Scope: HERDR_SCOPE = comma list "session:workspace" (for example Suite:w7,default:w2,default:w3). Absent: default:$HERDR_WS (HERDR_WS must match ^w\\d+$ like every scope workspace).
 --session S as the first argument selects the session (S must be in the scope; no --session = default). Allowed groups: agent, pane, tab.
 Every target must sit in a workspace the scope names for that session. Lists are filtered. create needs --workspace in that set.
 start and prompt-type verbs check the target. The wrapper builds the herdr argv itself: it never forwards a --session or --socket of the caller."""
@@ -61,15 +61,19 @@ if verb == "list":
         if len(WSS) == 1:
             r = run([grp, "list", "--workspace", next(iter(WSS))])
         else:
-            merged, r = {}, None
+            merged, r, env0 = {}, None, None
             for w in sorted(WSS):
                 r = run([grp, "list", "--workspace", w])
                 if r.returncode != 0: break
                 try:
-                    for k, v in json.loads(r.stdout).get("result", {}).items():
+                    d = json.loads(r.stdout)
+                    if env0 is None: env0 = d
+                    for k, v in d.get("result", {}).items():
                         if isinstance(v, list): merged.setdefault(k, []).extend(v)
                 except Exception: deny("could not merge %s list" % grp)
-            if r.returncode == 0: sys.stdout.write(json.dumps({"result": merged}) + "\n"); sys.exit(0)
+            if r.returncode == 0:
+                env0.setdefault("result", {}).update(merged)  # keep the first reply's envelope, merge only the lists
+                sys.stdout.write(json.dumps(env0) + "\n"); sys.exit(0)
     else:
         r = run(["agent", "list"])
         try:
@@ -80,6 +84,7 @@ if verb == "list":
             print(json.dumps(d)); sys.exit(0)
         except Exception: deny("could not filter agent list")
     sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)
+if a.count("--workspace") > 1 or a.count("--pane") > 1: deny("--workspace and --pane may appear only once")
 if verb == "create":
     if "--workspace" not in rest or rest.index("--workspace") + 1 >= len(rest) or rest[rest.index("--workspace") + 1] not in WSS:
         deny("create needs --workspace in %s" % ",".join(sorted(WSS)))
