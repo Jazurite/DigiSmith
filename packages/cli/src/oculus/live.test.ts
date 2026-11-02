@@ -166,6 +166,10 @@ describe("liveView", () => {
     const v = await liveView(d.env, NOW, herdrOf([agent({ name: "a", pane_id: "w2:p1", agent_session: undefined })], [agent({ name: "b", pane_id: "w2:p1", agent_session: undefined })]), HOME);
     expect(v.agents.map((a) => [a.session, a.run])).toEqual([["default", "old-run"], ["Castle", null]]);
   });
+  it("a Castle row never comes before the default rows of the same status", async () => {
+    const v = await liveView(d.env, NOW, herdrOf([agent({ name: "zed", pane_id: "w2:p1" })], [agent({ name: "aaa", workspace_id: "w1", pane_id: "w1:p1" })]), HOME);
+    expect(v.agents.map((a) => [a.session, a.name])).toEqual([["default", "zed"], ["Castle", "aaa"]]);
+  });
   it("a Castle call that fails leaves the default rows and marks the view", async () => {
     const h: HerdrCall = async (argv) => (argv.includes("Castle") ? { ok: false } : listOf([agent({ name: "dgs-599", pane_id: "w2:p5" })]));
     const v = await liveView(d.env, NOW, h, HOME);

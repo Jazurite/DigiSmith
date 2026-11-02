@@ -106,7 +106,8 @@ export async function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCa
     const status = (AGENT_STATUSES as readonly string[]).includes(a.agent_status as string) ? (a.agent_status as AgentStatus) : "unknown";
     agents.push({ session, name, pane: pane.slice(0, NAME_MAX), tab: str(a.tab_id)?.slice(0, NAME_MAX) ?? null, workspace: str(a.workspace_id)?.slice(0, NAME_MAX) ?? null, role: herdrRole(name), project: projectOf(a.cwd, home), status, run });
   }
-  const bySession = (a: string, b: string) => (a === b ? 0 : a === "default" ? -1 : b === "default" ? 1 : cmp(a, b));   // the Floor first
+  // The Floor (default) is forced first: "Castle" sorts before "default" alphabetically, and the view lists the Floor rows before the Castle rows.
+  const bySession = (a: string, b: string) => (a === b ? 0 : a === "default" ? -1 : b === "default" ? 1 : cmp(a, b));
   const cmp = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true });   // w2 before w10
   agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || bySession(x.session, y.session) || cmp(x.workspace ?? "~", y.workspace ?? "~") || cmp(x.name ?? "~", y.name ?? "~") || cmp(x.pane, y.pane));
   return { readAt, herdr: "ok", castle: castleRaw ? "ok" : "unavailable", agents };
