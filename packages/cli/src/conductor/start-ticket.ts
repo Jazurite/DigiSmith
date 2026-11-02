@@ -109,10 +109,10 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
     }
     if (pane === undefined) throw new Error("herdr-ws tab create printed no pane id");
     // same identity env as the bootstrap sets before agent start: scope, name, and the Floor workspace
-    const envText = `HERDR_SCOPE=${scopeFor(starter, env)} DIGISMITH_NAME=${name}` + (starter.floor !== undefined ? ` HERDR_WS=${starter.floor}` : "");
+    const envText = `HERDR_SCOPE=${scopeFor(starter, env)} DIGISMITH_NAME=${name}` + (starter.floor !== undefined && !starter.kinds.includes("factory") ? ` HERDR_WS=${starter.floor}` : "");
     await run("pane run", ["pane", "run", pane, `cd ${shQuote(repo)} && export ${envText}`]);
     await run("agent start", ["agent", "start", name, "--kind", "claude", "--pane", pane, "--timeout", "90000", "--", ...conductorFlags(name, herdr)]);
-    await run("agent prompt", ["agent", "prompt", name, `Read .digismith/sessions/${name}/brief.md and follow it.`]);
+    await run("agent prompt", ["agent", "prompt", name, `Read .digismith/sessions/${name}/brief.md and follow it.`, "--wait"]);
     return { key, pane, name };
   } catch (e) {
     // every rollback step runs; a failing step never hides the original error

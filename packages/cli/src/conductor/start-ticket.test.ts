@@ -59,6 +59,7 @@ describe("startTicketConductor", () => {
       "tc-dgs-9", "--kind", "claude", "--pane", "w7:p9", "--timeout", "90000", "--",
       "--name", "tc-dgs-9", "--disallowedTools", "Bash(herdr *)", "--allowedTools", "Bash(herdr-ws *)", `Bash(${calls[0].file} *)`,
     ]);
+    expect(calls[3].args.slice(2)).toEqual(["agent", "prompt", "tc-dgs-9", "Read .digismith/sessions/tc-dgs-9/brief.md and follow it.", "--wait"]);
     expect(calls[3].args).toContain("Read .digismith/sessions/tc-dgs-9/brief.md and follow it.");
     expect(calls[0].file).toMatch(/herdr-ws$/);
     expect(calls[0].env?.HERDR_WS).toBe("w7");
@@ -68,6 +69,7 @@ describe("startTicketConductor", () => {
     seed({}, { kind: ["project", "factory"] });
     await startTicketConductor(A, { exec, env, repo });
     expect(readDriver("DGS-9", env)?.mode).toBe("factory");
+    expect(calls[1].args[5]).not.toContain("HERDR_WS");
   });
   it("a second start for the same ticket names the driver and calls no herdr", async () => {
     claimDriver({ ticket: "DGS-9", driver: "factory", mode: "factory" }, env);
