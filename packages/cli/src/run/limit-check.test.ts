@@ -3,7 +3,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { appendEvent } from "./events.ts";
-import { currentCount, mainCheckout } from "./limit-check.ts";
+import { currentCount, driverRefusal, mainCheckout } from "./limit-check.ts";
+import { claimDriver } from "../conductor/drivers.ts";
+import { acquireLock } from "../autonomous/state.ts";
 import { createRun } from "./record.ts";
 
 let tmp: string;
@@ -78,5 +80,32 @@ describe("mainCheckout and the config source", () => {
     fs.mkdirSync(path.join(wt, ".digismith"));
     fs.writeFileSync(path.join(wt, ".digismith", "config.yml"), "nightwatch:\n  scan_every_minutes: 15\n");
     expect(currentCount(env, wt).count.limits.builder).toBe(1);
+  });
+});
+
+describe("driverRefusal and the factory ticket (DGS-683)", () => {
+  const lockOn = (ticket: string) => acquireLock(path.join(tmp, "autonomous"), { ticket, taskId: "t1", claimedAt: "", claimedAtUtc7: "", order: "", scanId: "s" });
+  it("a factory-mode record on the lock's ticket passes with no DIGISMITH_NAME", () => {
+    claimDriver({ ticket: "DGS-1", driver: "digismith-conductor", mode: "factory" }, env);
+    lockOn("DGS-1");
+    expect(driverRefusal(env, "builder", "DGS-1")).toBeNull();
+    expect(driverRefusal(env, "reviewer", "DGS-1")).toBeNull();
+  });
+  it("a tc-<key> attended record and another name is still refused, even with the lock", () => {
+    claimDriver({ ticket: "DGS-2", driver: "tc-dgs-2", mode: "attended" }, env);
+    lockOn("DGS-2");
+    expect(driverRefusal({ ...env, DIGISMITH_NAME: "other" }, "builder", "DGS-2")).toMatch(/DGS-2 is driven by tc-dgs-2/);
+  });
+  it("a factory-mode record handed over to tc-<key> still refuses another name, lock or not", () => {
+    claimDriver({ ticket: "DGS-4", driver: "tc-dgs-4", mode: "factory" }, env);
+    lockOn("DGS-4");
+    expect(driverRefusal({ ...env, DIGISMITH_NAME: "other" }, "builder", "DGS-4")).toMatch(/driven by tc-dgs-4/);
+    expect(driverRefusal({ ...env, DIGISMITH_NAME: "tc-dgs-4" }, "builder", "DGS-4")).toBeNull();
+  });
+  it("a factory record without the lock on that ticket is still refused", () => {
+    claimDriver({ ticket: "DGS-3", driver: "digismith-conductor", mode: "factory" }, env);
+    expect(driverRefusal(env, "builder", "DGS-3")).toMatch(/driven by digismith-conductor/);
+    lockOn("DGS-9");
+    expect(driverRefusal(env, "builder", "DGS-3")).toMatch(/driven by digismith-conductor/);
   });
 });

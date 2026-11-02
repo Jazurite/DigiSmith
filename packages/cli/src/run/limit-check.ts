@@ -60,5 +60,7 @@ export function driverRefusal(env: NodeJS.ProcessEnv, role: string, ticket: stri
   if (!/^[A-Z]+-\d+$/.test(ticket)) return null;
   const d = readDriver(ticket, env);
   if (d === null || d.driver === env.DIGISMITH_NAME) return null;
+  // the factory's own ticket: its conductor may run without DIGISMITH_NAME, so a factory-mode record on the lock's ticket passes when no name is set (as in startRefusal); a different name is still refused
+  if (!env.DIGISMITH_NAME && d.mode === "factory" && readLock(autonomousDir(env))?.ticket === ticket) return null;
   return `${ticket} is driven by ${d.driver} (since ${d.since}): ask that conductor`;
 }
