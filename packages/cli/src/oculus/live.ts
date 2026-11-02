@@ -1,7 +1,7 @@
 // packages/cli/src/oculus/live.ts
 // DGS-599: every herdr agent on the Workbox for Oculus. Reads only: one herdr call per session with a fixed argv and the run records.
 // Never reads pane text; drops terminal_title (Claude sets it from the conversation) and the folder path.
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import * as os from "node:os";
 import * as path from "node:path";
 import { isSafe } from "../run/paths.ts";
@@ -20,7 +20,8 @@ export type AgentRole = Role;   // the DGS-598 role set (run/schema.ts ROLES)
 export interface LiveAgent { session: string; name: string | null; pane: string; tab: string | null; workspace: string | null; role: AgentRole; project: string | null; status: AgentStatus; run: string | null }
 export interface LiveView { readAt: string; herdr: "ok" | "unreachable"; suite?: "ok" | "unavailable"; agents: LiveAgent[] }
 /** One read-only herdr call: the argv is one of HERDR_CALLS. */
-export type HerdrCall = (argv: readonly string[]) => { ok: true; stdout: string } | { ok: false };
+export type HerdrResult = { ok: true; stdout: string } | { ok: false };
+export type HerdrCall = (argv: readonly string[]) => Promise<HerdrResult>;
 
 const NAME_MAX = 64;
 const ORDER: Record<AgentStatus, number> = { blocked: 0, working: 1, idle: 2, unknown: 3, done: 4 };
@@ -29,12 +30,13 @@ const ORDER: Record<AgentStatus, number> = { blocked: 0, working: 1, idle: 2, un
 export function realHerdr(): HerdrCall {
   const home = os.homedir();
   return (argv) => {
-    if (!HERDR_CALLS.some((c) => c.join(" ") === argv.join(" "))) return { ok: false };   // only the fixed argvs run
-    const r = spawnSync(path.join(home, ".local", "bin", "herdr"), [...argv], {
-      encoding: "utf8", timeout: 3000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024, shell: false,
-      env: { HOME: home, PATH: "/usr/bin:/bin", XDG_CONFIG_HOME: path.join(home, ".config") },
+    if (!HERDR_CALLS.some((c) => c.join(" ") === argv.join(" "))) return Promise.resolve({ ok: false });   // only the fixed argvs run
+    return new Promise((resolve) => {
+      execFile(path.join(home, ".local", "bin", "herdr"), [...argv], {
+        encoding: "utf8", timeout: 3000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024,
+        env: { HOME: home, PATH: "/usr/bin:/bin", XDG_CONFIG_HOME: path.join(home, ".config") },
+      }, (err, stdout) => resolve(err ? { ok: false } : { ok: true, stdout }));
     });
-    return r.status === 0 && !r.error ? { ok: true, stdout: r.stdout } : { ok: false };
   };
 }
 
@@ -70,7 +72,7 @@ function openRuns(env: NodeJS.ProcessEnv, now: Date): { byPane: Map<string, Open
   return { byPane: pane, bySession: session };
 }
 
-function parseAgents(r: ReturnType<HerdrCall>): Record<string, unknown>[] | null {
+function parseAgents(r: HerdrResult): Record<string, unknown>[] | null {
   if (!r.ok) return null;
   try {
     const raw = (JSON.parse(r.stdout) as { result?: { agents?: unknown } }).result?.agents;
@@ -80,13 +82,15 @@ function parseAgents(r: ReturnType<HerdrCall>): Record<string, unknown>[] | null
   }
 }
 
-export function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, home: string = os.homedir()): LiveView {
+export async function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, home: string = os.homedir()): Promise<LiveView> {
   const readAt = now.toISOString();
   const down: LiveView = { readAt, herdr: "unreachable", agents: [] };
   // the default session must answer; a Suite that does not answer only marks the view
-  const floor = parseAgents(herdr(HERDR_CALLS[0]));
+  // both calls start together: a dead Suite adds nothing to a healthy Floor read
+  const [floorRes, suiteRes] = await Promise.all(HERDR_CALLS.map((c) => (async () => herdr(c))().catch((): HerdrResult => ({ ok: false }))));
+  const floor = parseAgents(floorRes);
   if (!floor) return down;
-  const suiteRaw = parseAgents(herdr(HERDR_CALLS[1]));
+  const suiteRaw = parseAgents(suiteRes);
   const sessions: [string, Record<string, unknown>[]][] = [["default", floor], ...(suiteRaw ? [["Suite", suiteRaw] as [string, Record<string, unknown>[]]] : [])];
   const runs = openRuns(env, now);
   const agents: LiveAgent[] = [];

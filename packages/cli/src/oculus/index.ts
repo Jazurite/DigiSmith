@@ -41,10 +41,7 @@ export function runOculus(argv: string[], env: NodeJS.ProcessEnv, now: Date, dep
   for (const k of ["run", "ticket", "project"]) if (f[k] !== undefined && !isSafe(f[k])) return fail("bad id");
   const since = num(f, "since"), before = num(f, "before"), tail = num(f, "tail"), limit = num(f, "limit");
   if ([since, before, tail, limit].some((n) => Number.isNaN(n))) return fail("bad number");
-  if (name === "live") {
-    if (Object.keys(f).length > 0) return fail("live takes no flag");
-    return ok(liveView(env, now, deps.herdr ?? realHerdr()));
-  }
+  if (name === "live") return fail("live is read through runOculusAsync");
   switch (name) {
     case "overview": return ok(overviewView(env, now));
     case "attention": return ok(attentionView(env, now));
@@ -55,6 +52,17 @@ export function runOculus(argv: string[], env: NodeJS.ProcessEnv, now: Date, dep
   }
 }
 
+/** The entry the command uses: the live view reads herdr (two calls at once), every other view is the sync one. */
+export async function runOculusAsync(argv: string[], env: NodeJS.ProcessEnv, now: Date, deps: OculusDeps = {}): Promise<Result> {
+  if (argv[0] === "view" && argv[1] === "live") {
+    const f = flags(argv.slice(2));
+    if (f === null) return fail("unknown flag or missing value");
+    if (Object.keys(f).length > 0) return fail("live takes no flag");
+    return ok(await liveView(env, now, deps.herdr ?? realHerdr()));
+  }
+  return runOculus(argv, env, now, deps);
+}
+
 const oculusCommand: CommandModule = {
   command: "oculus",
   describe: "read-only views for Oculus (served by the Nexus API)",
@@ -62,9 +70,9 @@ const oculusCommand: CommandModule = {
     command: "view <name>",
     describe: `print one JSON view: ${VIEW_NAMES.join(", ")}`,
     builder: (v) => v.positional("name", { type: "string", demandOption: true }).strict(false),
-    handler: () => {
+    handler: async () => {
       const i = process.argv.indexOf("oculus");
-      const r = runOculus(process.argv.slice(i + 1), process.env, new Date());
+      const r = await runOculusAsync(process.argv.slice(i + 1), process.env, new Date());
       if (r.out) process.stdout.write(r.out);
       if (r.err) process.stderr.write(r.err);
       process.exitCode = r.code;
