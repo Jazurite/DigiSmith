@@ -7,7 +7,7 @@ import { groupsOf, isAutonomousOrder, ledgerTasks, parsePlanTasks, phaseTable, p
 
 const run = (over: Partial<RunRecord> = {}): RunRecord => ({
   schema: "nightwatch-run/v1", run: "builder-1", ticket: "DGS-590", role: "builder", order: null, seat: "dev0", model: "sonnet-5-5",
-  plugin_version: null, base_sha: null, branch: "b", worktree: null, herdr: { workspace: null, tab: null, pane: null }, budget: null,
+  plugin_version: null, base_sha: null, branch: "b", worktree: null, herdr: { session: null, workspace: null, tab: null, pane: null }, budget: null,
   created_at: "2026-10-22T01:00:00.000Z", ...over,
 });
 const ev = (seq: number, type: string, ts: string, data: Record<string, unknown> = {}): EventLine => ({ schema: "nightwatch-event/v1", seq, ts, run: "builder-1", type, data });

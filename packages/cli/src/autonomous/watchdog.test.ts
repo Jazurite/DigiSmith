@@ -6,7 +6,7 @@ const min = (m: number) => new Date(T0 + m * 60_000).toISOString();
 const run = (role = "builder") => ({
   schema: "nightwatch-run/v1", run: "builder-x", ticket: "DGS-1", role, order: null, seat: null, model: null,
   plugin_version: null, base_sha: null, branch: null, worktree: null,
-  herdr: { workspace: "w2", tab: null, pane: "w2:p1" }, budget: null, created_at: min(0),
+  herdr: { session: "default", workspace: "w2", tab: null, pane: "w2:p1" }, budget: null, created_at: min(0),
 }) as never;
 let seq = 0;
 const ev = (type: string, m: number, data: Record<string, unknown> = type === "blocked" ? { kind: "permission_prompt" } : {}) =>
