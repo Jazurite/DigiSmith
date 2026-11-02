@@ -1,0 +1,41 @@
+# DGS-699 ledger
+Checklist sync: skipped (conductor owns ClickUp)
+
+- 01:35 UTC+7 T1 built, 65 tests green, commit 3f6fcb0f. Review pack task-1-r1 written.
+- 01:5x T1 r1 verdict approved, 4 Minor fixed (F1-F4), commit 81ebe5816569a8df07f07a872a433ce0dc322e53, 72 tests. Pack task-1-r2 written. T2 owes the 'return path with Done when line: no refusal' scan test.
+- T1 r2 CLEAN. Accepted note: a crash between append-back and rmSync in retryPendingComments can resend a failed comment once (duplicate, not a loss).
+- T2 built, commit 3845a1c9f53918426026c91845f68425380c5566, director 121 + scan-refine 21 green, scan.test unchanged green. Pack task-2-r1.
+- T2 r1 approved, 4 Minor fixed (F1-F4), commit 91c3e252395c16d65e51e827270edd7edca3e028; director+scan-refine+scan.test 229 green (scan.test.ts unchanged). Pack task-2-r2.
+- T2 r2 CLEAN (Reviewer did not re-run tests; Builder numbers: 6 files, 229 green at 91c3e252).
+- T3 built, commit 18454ee0e6d546e485e96b6a154109628992f9a0, 19 tests green. Pack task-3-r1.
+- T3 r1 approved, F1 F2 + controller note fixed, commit 2dd8be01e349ba9850b2b709ae02b09956b52ed3, 22 tests. Pack task-3-r2.
+- T3 r2 CLEAN (Reviewer ran 22 tests).
+- T4 built, commit 4dc0242fa13bde930b8f34e1d38436f449af4284, 21 tests green. Pack task-4-r1.
+- T4 r1 NEEDS FIXES (F1 F2 Important, F3 F4 Minor) all fixed, commit 435612c02a92da5531b18abcc5192dbe977d5cda, 25 tests. Pack task-4-r2. T5 carries: roleOf from run records, retryRunKey for retry-once, do = already-done only for the SAME id.
+- T4 r2 CLEAN (Reviewer ran 25). T5 carries: roleOf from run record role; retryRunKey; do already-done only for same id; test that real retry journal lines carry detail.run/item.
+- T5 a-d built, commit 932739063e46b05c2675cb2b6914939379af4f84. 16 files / 427 tests, 426 green (1 known base failure). Strip-types smoke cannot run here: clickup-client dist not built in the worktree (also fails for dg --help); not caused by this diff. Pack task-5-r1.
+- T5 r1 approved, F1-F4 fixed, commit 6dec46a10fac535964343e9dd4ec0c0908c69f2e. Smoke ran after building clickup-client in the worktree: "dg director plan --help" prints the help; strip-types.smoke 8/8. director + smoke: 12 files, 223 green. Pack task-5-r2.
+- T5 r2: no Critical/Important; 2 Minor from the fixes (N1 rerun only for release, N2 validate move id) fixed with the F3 test-name nit in ca58fc67297406c4fbacfdbf3c74450cb6fd6ac3. Rides in the T6 pack (no r3). Base before this commit: 6dec46a10fac535964343e9dd4ec0c0908c69f2e
+- T6 built (docs 59c5b146, protect 43156618, backstop 04b7ea83) + N1/N2 fix ca58fc67. Whole folder autonomous+run: 71 files, 1450 tests, 3 failed = known base failures only. Edited .digismith/config.yml on the branch (one line) per plan T6: flag in merge note. Existing merge-gate tests (d),(i) got approval records (still assert protected-path). Pack task-6-r1.
+- T6 r1 APPROVED (0 findings; Reviewer ran 51 tests). Merge-note items: config.yml edit (43156618), own merge refused by authority gate until approval record.
+- Part 2 built, commit 8fc8927715ff1500fad367dd9650865795c39eb3. Open point: start-again / reprompt-to-self effects are not code-wired (worker start is the Director session's job). Pack task-5p2-r1.
+- Part 2 r1 approved, F1-F3 + card rule fixed, commit e6515be410fcb6654641aae0705a53ac5de97b7c, 263 green. Merge summary must name: start-again/reprompt-self are done by the Director session and recorded with dg director decide. Pack task-5p2-r2.
+- Part 2 r2 CLEAN (Reviewer did not run tests; Builder numbers: 16 files, 263 green at e6515be4).
+- Whole branch: 75 files, 1490 tests, 1487 green, only the 3 known base failures. Pack ticket-final-r1 (opus) written, base 1b64225d69dcc551df5de7fdeb9e279e7d4ce918 head e6515be410fcb6654641aae0705a53ac5de97b7c.
+- ticket-final-r1 WITH FIXES (F1-F4) fixed; pre-fix head e6515be410fcb6654641aae0705a53ac5de97b7c
+- ticket-final-r1 fixes F1-F4 in 5a06d240d4783a511282b9a1af9e6f30d4a06367. Whole suite (forks 2, load 2.9): packages/cli/src/autonomous, run, index.test.ts, strip-types.smoke: 75 files, 1499 tests, 1496 green, 3 failed.
+- Proof the 3 fail on origin/main (1b64225d): git archive origin/main extracted to the scratchpad (no Director code), node_modules symlinked to this worktree's, same 3 files run: 3 files, 131 tests, the same 3 failures with the same messages: run list 7 days ("path" argument ... Received null), index "one busy hand builder leaves a slot" (scan: busy, expected claimed), guardrails "sets scan_every_minutes to 15" (limits {builder:1} vs {builder:2}). The archive copy stays in the scratchpad (not deleted).
+- ticket-final-r2: F1-F4 addressed; F5 (move id without the occurrence) and F6 (no conductor relays the STOP line) fixed in 043643db6bd027d564a737921d5f55ab3fd17fb9.
+- Known limit (accepted by the conductor, fails closed): the approval match for a short file token (fitsTree in authority.ts) decides the tree by file extension: skills/ holds .md, .json, .txt; any other folder holds code. A doc in a code folder or code in skills/ is not covered by a folder approval and needs a full path or an exact listing.
+- Whole suite after F5/F6 (forks 2, load 3.9 at start): packages/cli/src/autonomous, run, index.test.ts, strip-types.smoke: 75 files, 1503 tests, 1500 green, 3 failed (the known base failures).
+- Per-failure proof on origin/main (1b64225d), rerun on the git archive copy in the scratchpad: 3 files, 131 tests, 3 failed with the same messages: run "list hides runs idle for more than 7 days" ("path" argument ... Received null); autonomous index "one busy hand builder leaves a slot" (scan: busy, expected claimed); guardrails "sets scan_every_minutes to 15" ({builder: 1} vs {builder: 2}).
+
+## Final notes (merge preparation)
+- ticket-final-r3 (opus) CLEAN: F5 and F6 addressed, nothing blocks the merge. Last code commit 043643db.
+- Part 1 = T1 to T4, T5 steps a to d, T6. Part 2 = T5 steps e and f (target, claim hand-off to the driver, registry wiring). The Castle registry (DGS-683) was already in the base (origin/main 1b64225d), no rebase.
+- Design note: `start-again` and `reprompt` to `self` are NOT run by `dg director do` (it throws "not done by code": a herdr worker is started or prompted by the Director session, `dg run start` only registers a run record). The Director does them itself in its own session and records them with `dg director decide --id restart-run|reprompt-run --run <run>`; the card says exactly that and a card test checks it. Likewise a stuck refine run (lock older than 6 hours): `do` releases the lock and asks Jack; the Director stops the run itself (`dg run event <run-id> lost`) and records `dg director decide --id release-stopped`.
+- Known limits: (1) `fitsTree` (approval of a short file token) decides the tree by file extension, fails closed. (2) A crash between the append-back and the rmSync in `retryPendingComments` can resend a failed ClickUp comment once (a duplicate, not a loss). (3) A Maestro who merges by hand past the merge gate is not stopped by code (spec 4.4). (4) Refine-run stop is not code-wired (above).
+- Whole suite, final (forks 2, load 3.9 at start, 5.5 at the end): packages/cli/src/autonomous, packages/cli/src/run, packages/cli/src/index.test.ts, packages/cli/src/strip-types.smoke.test.ts: 75 files, 1503 tests, 1500 green, 3 failed. The 3 failures are the known base failures and each also fails on origin/main 1b64225d (git archive copy, same three files, 131 tests, 3 failed, same messages): run index "list hides runs idle for more than 7 days"; autonomous index "one busy hand builder leaves a slot"; guardrails "sets scan_every_minutes to 15".
+- Protected and authority files touched: see report.md.
+- Live system untouched: no registry flip, no Director started, no ClickUp write, no install, nothing written under ~/.digismith-depot. One read-only token snapshot (tokens.json) in the board folder. One build of @digismith/clickup-client inside this worktree (dist untracked, ignored). A git archive copy of origin/main sits in the Claude scratchpad (not deleted).
+- Checklist sync: skipped (conductor owns ClickUp).

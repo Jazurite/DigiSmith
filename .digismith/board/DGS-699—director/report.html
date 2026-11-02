@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-699 Director: keep the factory running — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .2em}</style></head><body>
+<h1>DGS-699 Director: keep the factory running — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-699</strong></span><span>Date: 2026-11-03</span></div>
+<section id="summary">
+<h2>Summary</h2>
+<p>The Director keeps the Workbox factory running: a refine lane in the scan, capacity and seat rank, an unblock table, escalation to concept, a decision record, the Director card and a wake-up. It decides inside a written authority list and asks Jack only outside it. The merge needs the Maestro on Jack's written word.</p>
+</section>
+<p>Ticket: DGS-699. Branch DGS-699__director, last code commit 043643db. Express lane: DGS-700, not built. Read &quot;Suite&quot; in spec.md and plan.md as &quot;Castle&quot;.</p>
+<h2>What changed</h2>
+<ul>
+<li><strong>Authority list (<code>director/authority.ts</code>):</strong> 11 within and 11 Jack-only ids, the authority paths, the approval line <code>Authority change approved by Jack: &lt;date&gt;: &lt;paths&gt;</code>, coverage by token, and the merge-time path rules.</li>
+<li><strong>Decision record and escalation:</strong> every decision is journalled (<code>director/decisions.jsonl</code>) before its ClickUp comment; one question per ticket to <code>concept</code> (<code>escalations.jsonl</code>); failed comments queue and retry.</li>
+<li><strong>Refine lane:</strong> the scan claims a <code>refinement</code> ticket (<code>refine-lock.json</code>, role slot), a refine worker writes spec and plan, a plan Reviewer judges them, and <code>dg director refine-release --result ready</code> applies the gate: fail closed, a plan that names an authority path needs Jack&#x27;s line on the ticket, then <code>to do</code>. The lane runs after the build scan (also while the lock is held) and never changes its result.</li>
+<li><strong>Capacity and seats:</strong> <code>laneState</code>, and <code>rankSeats</code> (the runbook rule as a pure, total order).</li>
+<li><strong>Unblock table:</strong> <code>movesFor</code>, one row per case of spec 7, history keyed on ticket, run and id; releases are always <code>stopped</code>.</li>
+<li><strong>Plan, do, wake, <code>dg director</code>:</strong> <code>plan</code>, <code>do &lt;move-id&gt;</code> (record first, then the effect; repeat-safe), <code>decide</code>, <code>escalate</code>, <code>refine-round</code>, <code>refine-release</code>, <code>seat</code>. The wake sends <code>Director tick: dg director plan</code> only when there are moves, the pane is idle with an empty input box, and the same list was not sent in the last 10 minutes.</li>
+<li><strong>Part 2 (Castle registry):</strong> the Director is the open registry entry named <code>director</code> with kind factory. With one, the refine lane, the wake and the claim hand-off are on: a build claim names the project conductor as driver and prompts it, never the Director; tick orders go to the driver. Without one nothing changes.</li>
+<li><strong>Card, briefs, docs:</strong> <code>skills/director/SKILL.md</code>, <code>brief.md</code>, <code>refine-brief.md</code>, <code>docs/director.md</code>, a &quot;Director&quot; section in <code>WATCHDOG.md</code>.</li>
+<li><strong>Protection:</strong> <code>skills/director/</code> joins <code>DEFAULT_PROTECTED</code> and <code>protected_paths</code>; the merge gate refuses a branch that touches an authority path without Jack&#x27;s approval record (code <code>authority-path</code>).</li>
+</ul>
+<h2>Protected and authority paths touched (the merge needs the Maestro)</h2>
+<ul>
+<li><code>.digismith/config.yml</code>: ONE line added to <code>nightwatch.protected_paths</code>, <code>skills/director/</code> (commit 43156618). Protected and an authority path.</li>
+<li><code>packages/cli/src/autonomous/</code> (protected): existing files <code>scan.ts</code>, <code>watch.ts</code>, <code>types.ts</code>, <code>index.ts</code>, <code>merge-gate.ts</code> (authority), <code>protected-paths.ts</code> (authority), <code>WATCHDOG.md</code>, tests <code>merge-gate.test.ts</code>, <code>protected-paths.test.ts</code>; new: the whole <code>director/</code> folder (authority paths), <code>scan-refine.test.ts</code>, <code>watch-wake.test.ts</code>, <code>index-director.test.ts</code>.</li>
+<li><code>skills/director/</code> (authority; protected from this merge on).</li>
+<li>Not protected: <code>packages/cli/src/index.ts</code> (registers <code>dg director</code>), <code>docs/director.md</code>.</li>
+<li>Not touched: hooks/, skills/reviewer, skills/finishing-*, packages/cli/src/reviewer/, scripts/nexus-api/src/scheduler/, .digismith/mandate.yml, .digismith/profiles/.</li>
+</ul>
+<h2>This branch cannot pass its own merge gate</h2>
+<p>It touches authority paths and no approval record exists (<code>&lt;autonomous dir&gt;/director/authority-approvals/DGS-699.json</code>), so <code>dg autonomous merge-gate</code> refuses it as <code>authority-path</code>. The Maestro merges by hand on Jack&#x27;s written word (spec 4.4 states this limit).</p>
+<h2>Tests</h2>
+<p>Whole suite (forks 2) over <code>packages/cli/src/autonomous</code>, <code>packages/cli/src/run</code>, <code>packages/cli/src/index.test.ts</code>, <code>packages/cli/src/strip-types.smoke.test.ts</code>: 75 files, 1503 tests, 1500 pass, 3 fail. The 3 are the known base failures and also fail on origin/main 1b64225d (same files run on a <code>git archive</code> copy: <code>guardrails.test.ts</code> scan_every_minutes, <code>autonomous/index.test.ts</code> busy hand builder, <code>run/index.test.ts</code> 7-day list).</p>
+<h2>Review</h2>
+<p>Every task reviewed to clean (T1 to T4 and T5 with fix rounds, T6 clean at r1, Part 2 r1 and r2); whole branch ticket-final r1 with fixes (2 Important, 2 Minor), r2 (1 Important, 1 Minor new), r3 clean. See findings.md.</p>
+<h2>Notes for the Maestro (after the merge)</h2>
+<ul>
+<li><code>start-again</code> and <code>reprompt</code> to <code>self</code> are not run by <code>dg director do</code>: the Director does them itself in its session and records them with <code>dg director decide --id restart-run|reprompt-run --run &lt;run&gt;</code>; a stuck refine run is stopped by the Director (<code>dg run event &lt;run-id&gt; lost</code>) and recorded. The card says so.</li>
+<li>Rebuild the CLI (<code>pnpm --filter @digismith/cli build</code>) for <code>dg director</code>.</li>
+<li>The live flip is a Maestro step (spec 12, plan &quot;First use&quot;): one atomic write of <code>conductors.json</code> (backup first) that adds <code>director</code> (Castle, kind factory) and changes <code>digismith-conductor</code> to <code>project</code>; start the Director session with <code>skills/director/brief.md</code> first.</li>
+<li>Known limits: the approval match for a short file token decides the tree by file extension (fails closed); a crash in <code>retryPendingComments</code> can resend one comment; a hand merge past the gate is not stopped by code.</li>
+<li>Not done by the Builder: no registry flip, no Director started, no install, no ClickUp write, nothing written under ~/.digismith-depot.</li>
+</ul>
+<h2>First use</h2>
+<p><code>dg director plan</code> on the real depot (read only), then <code>dg autonomous scan --dry-run</code> once the registry has a <code>director</code> entry.</p>
+</body></html>
