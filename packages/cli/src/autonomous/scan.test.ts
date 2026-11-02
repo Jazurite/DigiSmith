@@ -781,6 +781,13 @@ describe("runScan: the claim writes the driver record (DGS-683 T22)", () => {
     expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1" });
     expect(readDriver("DGS-1", denv())).toMatchObject({ driver: "digismith-conductor", mode: "factory" });
   });
+  it("an accepted stale record is released when a later claim step fails", async () => {
+    claimDriver({ ticket: "DGS-1", driver: "digismith-conductor", mode: "factory" }, denv());   // left behind by an earlier claim
+    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.readBackWrong = true;
+    expect((await runScan(mk())).outcome).toBe("claim-failed");
+    expect(readDriver("DGS-1", denv())).toBeNull();
+  });
   it("a leftover record of another conductor is still a skip", async () => {
     claimDriver({ ticket: "DGS-1", driver: "digismith-conductor", mode: "attended" }, denv());   // same name but attended: not the factory's claim
     tracker.add({ id: "t1", key: "DGS-1" });

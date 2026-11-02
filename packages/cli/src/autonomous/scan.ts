@@ -90,6 +90,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
         let cur: ReturnType<typeof readDriver> = null;
         try { cur = e instanceof DriverTaken ? readDriver(key, denv) : null; } catch { /* an unreadable record stays the original DriverTaken */ }
         if (!(cur !== null && cur.driver === who && cur.mode === "factory")) throw e;
+        driverName = who;   // an accepted record is this claim's now: a later failed step releases it
       }
     }
   } catch (e) {
