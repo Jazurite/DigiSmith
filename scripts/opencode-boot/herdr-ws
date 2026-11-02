@@ -67,39 +67,55 @@ def current_label(g, t):
         except Exception: return ""
     if g == "agent": return agent_of_pane(t) if re.match(r"^w\d+:p", t) else t
     return agent_of_pane(t)
-def flag_values(args, names):
-    return [args[i + 1] for i, x in enumerate(args) if x in names and i + 1 < len(args)]
+# real flags of "herdr pane move" and "herdr pane swap" (herdr pane <verb> --help); a flag not listed here is refused (fail closed)
+RELOCATE_VALUE = {"move": {"--tab", "--split", "--target-pane", "--ratio", "--workspace", "--label", "--tab-label"},
+                  "swap": {"--direction", "--pane", "--source-pane", "--target-pane"}}
+RELOCATE_BOOL = {"move": {"--new-tab", "--focus", "--no-focus"}, "swap": set()}
 def relocate_check(args):
     # pane move / pane swap relocate a pane between tabs or workspaces: every pane and destination named must be in the scope; in Castle every pane named must also belong to a tc-/nw- agent
     # (else a conductor's pane could be moved into a tc- tab, and closing that tab would pass the label check). Implicit panes (--current, a swap neighbour by --direction) are refused: they cannot be checked.
-    if "--new-workspace" in args or "--current" in args: deny("%s is not accepted for pane move or swap here" % ("--new-workspace" if "--new-workspace" in args else "--current"))
-    panes = flag_values(args, ("--pane", "--source-pane", "--target-pane"))
-    if args and not args[0].startswith("-"): panes.append(args[0])
-    if verb == "swap" and (len(set(panes)) < 2 or not (set(flag_values(args, ("--source-pane",))) or set(flag_values(args, ("--pane",))))): deny("pane swap needs two named panes")
-    if verb == "swap" and "--direction" in args and not flag_values(args, ("--target-pane",)): deny("pane swap neighbour must be named with --target-pane")
-    if not panes: deny("pane move needs a named pane")
-    dests = flag_values(args, ("--tab",)) + flag_values(args, ("--workspace",))
-    for x in panes + dests:
+    # The argv is parsed here, not scanned: --flag=value, an unknown flag, a second positional or a flag without its value is refused, and a flag value is never read as the positional.
+    vals, bools = RELOCATE_VALUE[verb], RELOCATE_BOOL[verb]
+    flags, positional, i = {}, [], 0
+    while i < len(args):
+        x = args[i]
+        if x.startswith("-"):
+            if "=" in x: deny("%s: the --flag=value form is not accepted for pane %s" % (x, verb))
+            if x in vals:
+                if i + 1 >= len(args): deny("%s needs a value" % x)
+                flags.setdefault(x, []).append(args[i + 1]); i += 2; continue
+            if x in bools: flags.setdefault(x, []).append(""); i += 1; continue
+            deny("%s is not accepted for pane %s here" % (x, verb))
+        positional.append(x); i += 1
+    if len(positional) > 1 or (verb == "swap" and positional): deny("pane %s takes %s" % (verb, "no positional pane" if verb == "swap" else "one pane"))
+    panes = positional + flags.get("--pane", []) + flags.get("--source-pane", []) + flags.get("--target-pane", [])
+    if verb == "swap" and not ((flags.get("--source-pane") or flags.get("--pane")) and flags.get("--target-pane")): deny("pane swap needs two named panes (--source-pane and --target-pane)")
+    if not panes: deny("pane %s needs a named pane" % verb)
+    dests = flags.get("--tab", []) + flags.get("--workspace", [])
+    named = panes + dests
+    for x in named:
         w = x if WS_RE.match(x) else ws_of(x)
         if w not in WSS: deny("%s is not in the scope of session %s" % (x, SESSION))
     if SESSION == "Castle":
         for x in panes:
             if not ticket_name(agent_of_pane(x)): deny("in Castle only panes of tc- or nw- conductors can be moved or swapped")
-    return panes[0]
-def audit(tgt, tws):
-    # DGS-683 spec 6.3/7.1 item 5: a non-read act in the Floor on a workspace other than the caller's own appends one JSON line to <depot>/drivers/<KEY>.log.
-    # Logged when the call is forwarded (an attempt), never blocks the call: a write failure prints one line on stderr.
+    return named
+def audit(items):
+    # DGS-683 spec 6.3/7.1 item 5: a non-read act in the Floor on a workspace other than the caller's own appends one JSON line to <depot>/drivers/<KEY>.log, one per target outside it
+    # (a move or swap names several panes and destinations). Logged when the call is forwarded (an attempt), never blocks the call: a write failure prints one line on stderr.
     own = os.environ.get("HERDR_WS", "")
-    if SESSION != "default" or not own or verb in ("list", "get", "read") or tws == own: return
-    try:
-        name = agent_of_pane(tgt) if re.match(r"^w\d+:p", tgt) else tgt
-        m = re.search(r"dgs-\d+", name, re.I)
-        depot = os.environ.get("DIGISMITH_DEPOT_DIR") or os.path.join(os.path.expanduser("~"), ".digismith-depot")
-        os.makedirs(os.path.join(depot, "drivers"), exist_ok=True)
-        t = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).isoformat(timespec="seconds")
-        rec = {"time": t, "who": os.environ.get("DIGISMITH_NAME") or "unknown", "target": tgt, "workspace": tws, "verb": "%s %s" % (grp, verb)}
-        with open(os.path.join(depot, "drivers", (m.group(0).upper() if m else "_unmapped") + ".log"), "a") as f: f.write(json.dumps(rec) + "\n")
-    except Exception as e: sys.stderr.write("herdr-ws: audit log not written: %s\n" % e)
+    if SESSION != "default" or not own or verb in ("list", "get", "read"): return
+    for tgt, tws in items:
+        if tws == own: continue
+        try:
+            name = agent_of_pane(tgt) if re.match(r"^w\d+:p", tgt) else tgt
+            m = re.search(r"dgs-\d+", name, re.I)
+            depot = os.environ.get("DIGISMITH_DEPOT_DIR") or os.path.join(os.path.expanduser("~"), ".digismith-depot")
+            os.makedirs(os.path.join(depot, "drivers"), exist_ok=True)
+            t = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).isoformat(timespec="seconds")
+            rec = {"time": t, "who": os.environ.get("DIGISMITH_NAME") or "unknown", "target": tgt, "workspace": tws, "verb": "%s %s" % (grp, verb)}
+            with open(os.path.join(depot, "drivers", (m.group(0).upper() if m else "_unmapped") + ".log"), "a") as f: f.write(json.dumps(rec) + "\n")
+        except Exception as e: sys.stderr.write("herdr-ws: audit log not written: %s\n" % e)
 if len(a) < 2: deny("usage: herdr-ws [--session S] <agent|pane|tab> <verb> [target] ...")
 grp, verb, rest = a[0], a[1], a[2:]
 if grp not in ("agent", "pane", "tab"): deny("group %s not allowed" % grp)
@@ -132,23 +148,25 @@ if verb == "list":
         except Exception: deny("could not filter agent list")
     sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)
 if a.count("--workspace") > 1 or a.count("--pane") > 1: deny("--workspace and --pane may appear only once")
-TGT, TWS = "", ""  # what the call acts on, and that target's workspace (for the audit log)
+ITEMS = []  # (target, workspace) of everything the call acts on, for the audit log
 if verb == "create":
     if "--workspace" not in rest or rest.index("--workspace") + 1 >= len(rest) or rest[rest.index("--workspace") + 1] not in WSS:
         deny("create needs --workspace in %s" % ",".join(sorted(WSS)))
-    TWS = rest[rest.index("--workspace") + 1]; TGT = TWS
+    ITEMS = [(rest[rest.index("--workspace") + 1],) * 2]
     cmd = a
 else:
     if not rest: deny("target missing")
-    tgt = rest[0]; TGT = tgt
+    tgt = rest[0]
     if verb == "start":  # agent start <name> --pane <id>
         if "--pane" not in rest or rest.index("--pane") + 1 >= len(rest): deny("--pane outside the scope")
         TWS = ws_of(rest[rest.index("--pane") + 1])
         if TWS not in WSS: deny("--pane outside the scope")
-    elif grp == "pane" and verb in ("move", "swap"): TGT = relocate_check(rest); TWS = ws_of(TGT)
+        ITEMS = [(tgt, TWS)]
+    elif grp == "pane" and verb in ("move", "swap"): ITEMS = [(x, x if WS_RE.match(x) else ws_of(x)) for x in relocate_check(rest)]
     else:
         TWS = ws_of(tgt)
         if TWS not in WSS: deny("target %s is not in the scope of session %s" % (tgt, SESSION))
+        ITEMS = [(tgt, TWS)]
     cmd = a
 if SESSION == "Castle":
     # DGS-683: in Castle the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed.
@@ -161,6 +179,6 @@ if SESSION == "Castle":
         if not ticket_name(current_label(grp, rest[0])): deny("in Castle only tc- or nw- conductors can be renamed")
         if not ticket_name(rest[1]): deny("in Castle a new name must keep the tc- or nw- prefix")
 elif verb in ("close",) and grp == "tab" and rest and rest[0] in {w + ":t1" for w in WSS}: deny("tab 1 (maestro) cannot be closed here")
-audit(TGT, TWS)
+audit(ITEMS)
 r = run(cmd)
 sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)

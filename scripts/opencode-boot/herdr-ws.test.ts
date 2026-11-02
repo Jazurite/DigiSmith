@@ -363,3 +363,77 @@ describe("herdr-ws cross-project audit log (T12)", () => {
   })
 })
 
+describe("herdr-ws pane move/swap parsing and its audit log (T12 r1 fixes)", () => {
+  const env = { HERDR_SCOPE: "default:w2" }
+  const mv = (...a: string[]) => run(env, ["pane", ...a])
+
+  it("an option before the positional pane cannot hide a pane outside the scope", () => {
+    const r = mv("move", "--target-pane", "w2:p1", "w9:p1")
+    expect(refused(r)).toBe(true)
+    expect(r.log).not.toMatch(/pane move/)
+    expect(refused(mv("move", "--tab", "w2:t1", "w9:p1"))).toBe(true)
+    expect(refused(mv("move", "--focus", "w9:p1"))).toBe(true)
+    expect(ok(mv("move", "--tab", "w2:t1", "w2:p1"))).toBe(true)
+    expect(ok(mv("move", "--focus", "--tab", "w2:t1", "w2:p1"))).toBe(true)
+  })
+
+  it("the --flag=value form is refused for every flag, so it cannot hide a destination or pane", () => {
+    for (const f of ["--tab=w9:t1", "--target-pane=w9:p1", "--source-pane=w9:p1", "--workspace=w9", "--pane=w9:p1", "--split=right"]) {
+      expect(refused(mv("move", "w2:p1", f)), f).toBe(true)
+      expect(refused(mv("swap", "--source-pane", "w2:p1", "--target-pane", "w2:p1", f)), f).toBe(true)
+    }
+  })
+
+  it("an unknown flag, a second positional, a bare -- or a flag without its value is refused", () => {
+    expect(refused(mv("move", "w2:p1", "--bogus"))).toBe(true)
+    expect(refused(mv("move", "w2:p1", "-x"))).toBe(true)
+    expect(refused(mv("move", "w2:p1", "w2:p2"))).toBe(true)
+    expect(refused(mv("move", "w2:p1", "--"))).toBe(true)
+    expect(refused(mv("move", "w2:p1", "--tab"))).toBe(true)
+    expect(refused(mv("swap", "w2:p1"))).toBe(true) // swap takes no positional
+  })
+
+  it("a value flag consumes its value: a value that looks like a pane is not a positional", () => {
+    expect(ok(mv("move", "w2:p1", "--label", "w9:p1"))).toBe(true)
+  })
+
+  it("the Castle checks hold with options before the positional", () => {
+    const c = (...a: string[]) => run({ HERDR_SCOPE: "Castle:w7,default:w2" }, ["--session", "Castle", "pane", ...a])
+    expect(refused(c("move", "--target-pane", "w7:p2", "w7:p1"))).toBe(true) // conductor pane is the positional
+    expect(ok(c("move", "--target-pane", "w7:p6", "w7:p2"))).toBe(true)
+    expect(refused(c("move", "--tab=w7:t2", "w7:p2"))).toBe(true)
+  })
+
+  describe("audit log names every pane or destination outside HERDR_WS", () => {
+    let depot: string
+    beforeEach(() => { depot = path.join(dir, "depot") })
+    const e = () => ({ HERDR_WS: "w2", HERDR_SCOPE: "default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot, DIGISMITH_NAME: "x-conductor" })
+    const all = () => {
+      const out: Record<string, unknown>[] = []
+      for (const f of fs.existsSync(path.join(depot, "drivers")) ? fs.readdirSync(path.join(depot, "drivers")) : [])
+        for (const l of fs.readFileSync(path.join(depot, "drivers", f), "utf8").trim().split("\n")) out.push({ ...JSON.parse(l), file: f })
+      return out
+    }
+
+    it("move of an own pane into another workspace's tab logs the destination", () => {
+      run(e(), ["pane", "move", "w2:p1", "--tab", "w3:t1"])
+      expect(all()).toMatchObject([{ target: "w3:t1", workspace: "w3", verb: "pane move", file: "_unmapped.log" }])
+    })
+
+    it("move of another workspace's pane next to an own pane logs the pane under its ticket key", () => {
+      run(e(), ["pane", "move", "w3:p2", "--target-pane", "w2:p1"])
+      expect(all()).toMatchObject([{ target: "w3:p2", workspace: "w3", file: "DGS-683.log" }])
+    })
+
+    it("swap of two panes in another workspace logs both", () => {
+      run(e(), ["pane", "swap", "--source-pane", "w3:p1", "--target-pane", "w3:p3"])
+      expect(all().map((x) => x.target)).toEqual(["w3:p1", "w3:p3"])
+    })
+
+    it("a move inside the own workspace logs nothing", () => {
+      run(e(), ["pane", "move", "w2:p1", "--tab", "w2:t2"])
+      expect(all()).toEqual([])
+    })
+  })
+})
+
