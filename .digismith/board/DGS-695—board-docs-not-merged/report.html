@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-695 report</title>
+<style>body{font:16px/1.5 system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .2em}</style></head><body>
+<h1>DGS-695: board-docs commits are not "already merged"</h1>
+<h2>What changed</h2>
+<ul>
+<li><code>readMainLog</code> reads changed files in the same single git call; rows are <code>{ sha, subject, files }</code>.</li>
+<li><code>isBoardDocs(key, files)</code>: files exist and all start with <code>.digismith/board/&lt;key&gt;—</code>, case-insensitive. <code>counts()</code> is used by rule (a), rule (b) and <code>blockerProblem</code>; drift and the scan guard get it through the log.</li>
+<li><code>WATCHDOG.md</code> states the rule.</li>
+</ul>
+<h2>Tests</h2>
+<p>Real-git tests for each edge case (em dash, <code>DGS-70</code>, other key's folder, mixed, empty and merge commits, rename, case, quoted names); fake-git fixtures moved to a <code>logOf</code> helper. <code>src/autonomous</code>: 948 tests. Whole package: 168 files, 2718 tests, all pass.</p>
+<h2>Review</h2>
+<table border="1" cellpadding="6" cellspacing="0"><tr><th>Round</th><th>Result</th></tr>
+<tr><td>Task 1</td><td>Approved; 2 Minor fixed (13ad33a5)</td></tr>
+<tr><td>Task 2</td><td>Approved, no findings</td></tr>
+<tr><td>Ticket</td><td>Ready to merge, no findings</td></tr></table>
+<h2>Commits</h2>
+<ul><li>29f1b294 fix(autonomous): board-docs commits do not count as already merged</li><li>42d9c8aa test(autonomous): scan guard and drift ignore board-docs commits</li><li>13ad33a5 fix(autonomous): compare the board folder case-insensitively</li><li>2a303349 docs(autonomous): state that board-docs commits are not a merge</li></ul>
+</body></html>
