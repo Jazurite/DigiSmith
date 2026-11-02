@@ -284,12 +284,19 @@ describe("DGS-683 health per herdr session", () => {
     expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list"]);
   });
   it("names a bad conductors.json and falls back to the default session", async () => {
-    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "X/x": { kind: "boss" } }));
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { kind: "boss" } }));
     const runner = fakeRunner();
     const s = await collectState(base(), deps(runner));
     expect(s.warnings.some((w) => /conductors\.json/.test(w) && !/tab list failed/.test(w))).toBe(true);
     expect(runner.calls).toContainEqual(["herdr", "--session", "default", "tab", "list"]);
     expect(s.sources.herdr).toBe("ok");
+  });
+  it("an invalid entry of another conductor changes nothing", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "X/x": { kind: "boss" }, "DigiSmith/digismith-conductor": { session: "Suite", workspace: "w7", floor: "w2" } }));
+    const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
+    const s = await collectState(base(), deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list", "--workspace", "w7"]);
+    expect(s.warnings.some((w) => /conductors\.json/.test(w))).toBe(false);
   });
   it("keeps the old default-session calls with no registry entry", async () => {
     const runner = fakeRunner();

@@ -35,8 +35,8 @@ function readFile(env: NodeJS.ProcessEnv): Record<string, Entry> {
 
 const abs = (p: string, root: string) => (path.isAbsolute(p) ? p : path.join(root, p));
 
-export function loadTargets(env: NodeJS.ProcessEnv, repoRoot: string): FluxTarget[] {
-  return Object.keys(readFile(env)).map((a) => resolveTarget(a, {}, env, repoRoot)!).filter(Boolean);
+export function loadTargets(env: NodeJS.ProcessEnv, repoRoot: string, warn?: (text: string) => void): FluxTarget[] {
+  return Object.keys(readFile(env)).map((a) => resolveTarget(a, {}, env, repoRoot, warn)!).filter(Boolean);
 }
 
 /** File entry, then flags on top; with neither, conductors.json (note) and the default brief path. */
@@ -45,6 +45,7 @@ export function resolveTarget(
   flags: { project?: string; brief?: string; note?: string; wake?: string },
   env: NodeJS.ProcessEnv,
   repoRoot: string,
+  warn?: (text: string) => void,
 ): FluxTarget | undefined {
   if (!SAFE.test(agent)) throw new Error(`refused: agent name ${JSON.stringify(agent)}`);
   const e = readFile(env)[agent];
@@ -52,8 +53,9 @@ export function resolveTarget(
   let entry: ReturnType<typeof resolveConductor>;
   try {
     entry = resolveConductor(`${project}/${agent}`, env);
-  } catch {
-    // an unusable conductors.json: the old default session and the default note path
+  } catch (e) {
+    // an unusable conductors.json: keep the old default session and note path, but say so
+    warn?.(`flux target ${agent}: conductors.json unusable, using the default session: ${(e as Error).message}`);
   }
   let note = flags.note ?? e?.note ?? entry?.note;
   if (!e && !note && !flags.brief) return undefined;

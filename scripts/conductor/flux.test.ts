@@ -211,6 +211,11 @@ describe("skips", () => {
     herdr.agents.push({ name: "dgs-9", pane_id: "w2:p9", agent_status: s, session: "w-1" });
     await skipped("worker_running:dgs-9", {}, target({ workers: ["dgs-9"] }));
   });
+  it("a Floor worker listed only in the default session blocks a Suite target", async () => {
+    const floor = new FakeHerdr({});
+    floor.agents = [{ name: "dgs-9", pane_id: "w2:p9", agent_status: "working", session: "w-1" }];
+    await skipped("worker_running:dgs-9", { floor }, target({ workers: ["dgs-9"], session: "Suite" }));
+  });
   it("a worker name that herdr does not list does not skip", async () => {
     const r = await fluxConductor(target({ workers: ["dgs-9"] }), {}, deps());
     expect(r.result).toBe("fluxed");

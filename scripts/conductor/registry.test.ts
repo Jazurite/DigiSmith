@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { findByKind, floorWorkspaces, putEntry, readRegistry, removeEntry, resolveConductor, scopeFor } from "./registry.ts";
+import { findByKind, floorWorkspaces, putEntry, readRegistry, readRegistryChecked, removeEntry, resolveConductor, scopeFor } from "./registry.ts";
 
 let depot: string;
 let env: NodeJS.ProcessEnv;
@@ -45,6 +45,17 @@ describe("registry", () => {
     expect(() => readRegistry(env)).toThrow(/workspace/);
     write({ "A/a": { kind: "boss" } });
     expect(() => readRegistry(env)).toThrow(/kind/);
+  });
+  it("one invalid entry does not break the lookups of the valid ones", () => {
+    write({ "A/a": { kind: "boss" }, "B/b": { session: "Suite", workspace: "w8", floor: "w2", kind: "factory" }, "C/c": { workspace: "w3" } });
+    expect(resolveConductor("B/b", env)?.session).toBe("Suite");
+    expect(() => resolveConductor("A/a", env)).toThrow(/A\/a.*kind/);
+    expect(resolveConductor("Z/z", env)).toBeUndefined();
+    expect(findByKind("factory", env).map((x) => x.key)).toEqual(["B/b"]);
+    expect(floorWorkspaces(env)).toEqual(["w2", "w3"]);
+    const r = readRegistryChecked(env);
+    expect(Object.keys(r.entries).sort()).toEqual(["B/b", "C/c"]);
+    expect(r.problems.map((p) => p.key)).toEqual(["A/a"]);
   });
   it("putEntry and removeEntry keep the other keys", () => {
     write({ "A/a": { workspace: "w3", note: "/x" } });

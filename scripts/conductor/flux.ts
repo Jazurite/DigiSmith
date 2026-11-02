@@ -54,6 +54,8 @@ export interface FluxHerdr {
 
 export interface FluxDeps {
   herdr: FluxHerdr;
+  /** The Floor (session default) when the target runs in another session: only the worker check reads it (DGS-683). */
+  floor?: FluxHerdr;
   now: () => Date;
   sleep: (ms: number) => Promise<void>;
   env: NodeJS.ProcessEnv;
@@ -285,7 +287,7 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
       if (w) return skip(`worker_running:${w.card.name}`);
     }
     if (target.workers?.length) {
-      const live = await deps.herdr.list();
+      const live = [...(await deps.herdr.list()), ...(deps.floor ? await deps.floor.list() : [])];
       for (const name of target.workers) {
         if (live.some((x) => x.name === name)) return skip(`worker_running:${name}`); // an idle or done tab is a tab not yet closed
       }

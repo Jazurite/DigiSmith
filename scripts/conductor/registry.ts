@@ -94,23 +94,47 @@ function normalize(key: string, raw: unknown): ConductorEntry {
   };
 }
 
-export function readRegistry(env?: NodeJS.ProcessEnv): Record<string, ConductorEntry> {
-  const out: Record<string, ConductorEntry> = {};
-  for (const [key, raw] of Object.entries(readRaw(env))) out[key] = normalize(key, raw);
-  return out;
+export interface RegistryProblem {
+  key: string;
+  message: string;
 }
 
+/** Every valid entry, and the problems of the invalid ones; only an unreadable file throws. */
+export function readRegistryChecked(env?: NodeJS.ProcessEnv): { entries: Record<string, ConductorEntry>; problems: RegistryProblem[] } {
+  const entries: Record<string, ConductorEntry> = {};
+  const problems: RegistryProblem[] = [];
+  for (const [key, raw] of Object.entries(readRaw(env))) {
+    try {
+      entries[key] = normalize(key, raw);
+    } catch (err) {
+      problems.push({ key, message: (err as Error).message });
+    }
+  }
+  return { entries, problems };
+}
+
+/** Strict: throws on the first invalid entry. */
+export function readRegistry(env?: NodeJS.ProcessEnv): Record<string, ConductorEntry> {
+  const { entries, problems } = readRegistryChecked(env);
+  if (problems.length > 0) throw new Error(problems[0].message);
+  return entries;
+}
+
+/** One entry. Another entry's problem does not matter here; this entry's own problem throws. */
 export function resolveConductor(key: string, env?: NodeJS.ProcessEnv): ConductorEntry | undefined {
-  return readRegistry(env)[key];
+  const { entries, problems } = readRegistryChecked(env);
+  const own = problems.find((p) => p.key === key);
+  if (own) throw new Error(own.message);
+  return entries[key];
 }
 
 export function findByKind(kind: Kind, env?: NodeJS.ProcessEnv): ConductorEntry[] {
-  return Object.values(readRegistry(env)).filter((e) => e.status === "open" && e.kinds.includes(kind));
+  return Object.values(readRegistryChecked(env).entries).filter((e) => e.status === "open" && e.kinds.includes(kind));
 }
 
 export function floorWorkspaces(env?: NodeJS.ProcessEnv): string[] {
   const floors = new Set<string>();
-  for (const e of Object.values(readRegistry(env))) if (e.floor !== undefined) floors.add(e.floor);
+  for (const e of Object.values(readRegistryChecked(env).entries)) if (e.floor !== undefined) floors.add(e.floor);
   return [...floors].sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
 }
 
