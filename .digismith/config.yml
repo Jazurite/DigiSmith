@@ -15,7 +15,7 @@ nightwatch:
   # 0 blocks the kind. A bad value falls back to the default and shows in dg autonomous status.
   limits:
     builder: 4
-    reviewer: 4
+    reviewer: 2
     role: 1
   # A run with no event for this long (minutes) stops counting. Clear it for good with: dg run event <run-id> lost
   stale_after_minutes: 120
