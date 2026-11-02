@@ -5,7 +5,7 @@ import { claudeProjectsDir, findTranscript, inferSessionsForTicket } from "./att
 import { readClaudeCodeSession } from "./claude-code-reader.ts";
 import { depotRegistryDir } from "./registry.ts";
 import { buildSnapshot } from "./snapshot.ts";
-import type { Counts, Registry, Snapshot, UsageRecord } from "./types.ts";
+import type { Counts, Registry, RegistryEntry, Snapshot, UsageRecord } from "./types.ts";
 
 export interface CountOptions {
   ticket: string;
@@ -15,18 +15,27 @@ export interface CountOptions {
   taskAgents?: Record<string, string[]>;
 }
 
-export function countTicket(opts: CountOptions): Snapshot {
+export interface Collected {
+  records: UsageRecord[];
+  entries: RegistryEntry[];
+  inferred: string[];
+  missingSessions: string[];
+}
+
+export function collectRecords(opts: Pick<CountOptions, "ticket" | "registry" | "projectsDir">): Collected {
   const root = opts.projectsDir ?? claudeProjectsDir();
   const entries = opts.registry.read(opts.ticket);
   const registered = entries.flatMap((e) => (e.kind === "session" ? [e.session_id] : []));
   const inferred = inferSessionsForTicket(opts.ticket, root).filter((s) => !registered.includes(s)).sort();
   const ticketSessions = new Set([...registered, ...inferred]);
+  const missingSessions: string[] = [];
   // A resumed transcript replays earlier responses, so dedupe across sessions too.
   const byResponse = new Map<string, { r: UsageRecord; file: string }>();
   for (const sid of [...new Set([...registered, ...inferred])]) {
     const file = findTranscript(sid, root);
     if (!file) {
       console.error(`tokens: no transcript found for session ${sid}`);
+      missingSessions.push(sid);
       continue;
     }
     // On a duplicate prefer the record whose own session is a ticket session, then the highest output,
@@ -42,6 +51,11 @@ export function countTicket(opts: CountOptions): Snapshot {
     }
   }
   const records = [...byResponse.values()].map((v) => v.r).sort((a, b) => a.ts.localeCompare(b.ts));
+  return { records, entries, inferred, missingSessions };
+}
+
+export function countTicket(opts: CountOptions): Snapshot {
+  const { records, entries, inferred } = collectRecords(opts);
   return buildSnapshot({
     ticket: opts.ticket,
     generatedAt: (opts.now ?? (() => new Date().toISOString()))(),

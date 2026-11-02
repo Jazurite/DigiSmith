@@ -50,7 +50,7 @@ export function inferredStep(record: UsageRecord, entries: RegistryEntry[], regi
   return at <= Math.min(...ends) ? "implementation" : null;
 }
 
-function ledgerTask(record: UsageRecord, taskAgents: Record<string, string[]> | undefined): string | null {
+export function ledgerTask(record: UsageRecord, taskAgents: Record<string, string[]> | undefined): string | null {
   if (!record.agent_id) return null;
   for (const [task, agents] of Object.entries(taskAgents ?? {})) if (agents.includes(record.agent_id)) return task;
   return null;
