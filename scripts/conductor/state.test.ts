@@ -65,9 +65,9 @@ describe("resolveNotePath", () => {
     fs.rmSync(path.join(depot, "conductors.json"));
     expect(resolveNotePath(args, env)).toBe(path.join(depot, "sessions/DigiSmith/digismith-conductor/note.md"));
   });
-  it("reads the note of a Suite entry, and falls through for an entry with no note", () => {
+  it("reads the note of a Castle entry, and falls through for an entry with no note", () => {
     const env = { DIGISMITH_DEPOT_DIR: depot };
-    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "P/s": { session: "Suite", workspace: "w7", note: "/s.md" }, "P/t": { session: "Suite", workspace: "w8" } }));
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "P/s": { session: "Castle", workspace: "w7", note: "/s.md" }, "P/t": { session: "Castle", workspace: "w8" } }));
     expect(resolveNotePath({ project: "P", conductor: "s" }, env)).toBe("/s.md");
     expect(resolveNotePath({ project: "P", conductor: "t" }, env)).toBe(path.join(depot, "sessions/P/t/note.md"));
   });
@@ -260,28 +260,28 @@ describe("collectState stale state (DGS-577)", () => {
 });
 
 describe("DGS-683 health per herdr session", () => {
-  it("reads a Suite conductor's own session and the default one", async () => {
-    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Suite", workspace: "w7", floor: "w2" } }));
+  it("reads a Castle conductor's own session and the default one", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Castle", workspace: "w7", floor: "w2" } }));
     const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
     const s = await collectState(base(), deps(runner));
-    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list", "--workspace", "w7"]);
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Castle", "tab", "list", "--workspace", "w7"]);
     expect(runner.calls).toContainEqual(["herdr", "--session", "default", "status", "server"]);
-    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "status", "server"]);
-    expect(s.health.server).toBe("Suite up; Floor up");
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Castle", "status", "server"]);
+    expect(s.health.server).toBe("Castle up; Floor up");
   });
   it("warns when the Floor status call fails", async () => {
-    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Suite", workspace: "w7", floor: "w2" } }));
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Castle", workspace: "w7", floor: "w2" } }));
     const base_ = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
     const runner = Object.assign(async (cmd: string, args: string[]) => (args.join(" ") === "--session default status server" ? { code: 1, stdout: "", stderr: "no server" } : base_(cmd, args)), { calls: base_.calls });
     const s = await collectState(base(), deps(runner as never));
-    expect(s.health.server).toBe("Suite up; Floor unknown");
+    expect(s.health.server).toBe("Castle up; Floor unknown");
     expect(s.warnings.some((w) => /Floor.*no server/.test(w))).toBe(true);
   });
-  it("lists tabs without --workspace for a Suite entry with no workspace", async () => {
-    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Suite" } }));
+  it("lists tabs without --workspace for a Castle entry with no workspace", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Castle" } }));
     const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
     await collectState(base(), deps(runner));
-    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list"]);
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Castle", "tab", "list"]);
   });
   it("names a bad conductors.json and falls back to the default session", async () => {
     fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { kind: "boss" } }));
@@ -292,10 +292,10 @@ describe("DGS-683 health per herdr session", () => {
     expect(s.sources.herdr).toBe("ok");
   });
   it("an invalid entry of another conductor changes nothing", async () => {
-    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "X/x": { kind: "boss" }, "DigiSmith/digismith-conductor": { session: "Suite", workspace: "w7", floor: "w2" } }));
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "X/x": { kind: "boss" }, "DigiSmith/digismith-conductor": { session: "Castle", workspace: "w7", floor: "w2" } }));
     const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
     const s = await collectState(base(), deps(runner));
-    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list", "--workspace", "w7"]);
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Castle", "tab", "list", "--workspace", "w7"]);
     expect(s.warnings.some((w) => /conductors\.json/.test(w))).toBe(false);
   });
   it("keeps the old default-session calls with no registry entry", async () => {

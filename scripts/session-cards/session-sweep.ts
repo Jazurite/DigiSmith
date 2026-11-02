@@ -37,7 +37,7 @@ export function readLiveSessions(env: NodeJS.ProcessEnv = process.env, spawn: Sp
     const r = spawn(bin, args, { env, encoding: "utf8", timeout: 15_000 });
     if (r.error || r.status !== 0) return { ok: false, error: r.error?.message ?? `herdr-ws exit ${r.status}` };
     // Strict on purpose: an empty list from ANY scoped session makes the whole read not ok, so a card
-    // in a just-started or empty session (e.g. a fresh Suite) is never judged dead and closed.
+    // in a just-started or empty session (e.g. a fresh Castle) is never judged dead and closed.
     const live = liveSessionsFromAgentList(String(r.stdout ?? ""));
     if (!live.ok) return live;
     for (const id of live.sessions) merged.add(id);

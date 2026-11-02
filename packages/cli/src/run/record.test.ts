@@ -27,7 +27,7 @@ describe("an old record without herdr.session (DGS-683)", () => {
   it("reads as default with a pane and null without one", () => {
     expect(readRun(old({ workspace: "w2", tab: "t", pane: "p1" })).herdr.session).toBe("default");
     expect(readRun(old({ workspace: null, tab: null, pane: null })).herdr.session).toBeNull();
-    expect(readRun(old({ session: "Suite", workspace: "w7", tab: "t", pane: "p1" })).herdr.session).toBe("Suite");
+    expect(readRun(old({ session: "Castle", workspace: "w7", tab: "t", pane: "p1" })).herdr.session).toBe("Castle");
   });
 });
 
@@ -86,7 +86,7 @@ describe("createRun", () => {
     expect(r.base_sha).toBe("abc");
     expect(r.budget).toEqual({ turns: 50 });
     expect(r.herdr).toEqual({ session: "default", workspace: "w2", tab: "T", pane: "p1" });
-    expect(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", workspace: "w7", pane: "p2" }, { ...env, HERDR_SESSION: "Suite" }).herdr.session).toBe("Suite");
+    expect(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", workspace: "w7", pane: "p2" }, { ...env, HERDR_SESSION: "Castle" }).herdr.session).toBe("Castle");
     expect(() => createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", budget: "[1]" }, env)).toThrow(/budget/);
   });
   it("gives a new id for every start, even in the same second", () => {

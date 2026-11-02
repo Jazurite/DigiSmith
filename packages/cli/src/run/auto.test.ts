@@ -77,8 +77,8 @@ describe("startAuto", () => {
     expect(readRun(a.dir)).toMatchObject({ role: "other", role_from: "pending", herdr: { session: "default", workspace: "w2", tab: "w2:t8W", pane: "w2:p8W" } });
   });
   it("records HERDR_SESSION, default when unset inside herdr, null outside herdr", () => {
-    const inSuite = start({ session_id: "sid-s1", source: "startup" }, { ...env, HERDR_PANE_ID: "w7:p1", HERDR_WORKSPACE_ID: "w7", HERDR_SESSION: "Suite" })!;
-    expect(readRun(inSuite.dir).herdr).toMatchObject({ session: "Suite", pane: "w7:p1" });
+    const inCastle = start({ session_id: "sid-s1", source: "startup" }, { ...env, HERDR_PANE_ID: "w7:p1", HERDR_WORKSPACE_ID: "w7", HERDR_SESSION: "Castle" })!;
+    expect(readRun(inCastle.dir).herdr).toMatchObject({ session: "Castle", pane: "w7:p1" });
     const outside = start({ session_id: "sid-s2", source: "startup" })!;
     expect(readRun(outside.dir).herdr.session).toBeNull();
   });

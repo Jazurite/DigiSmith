@@ -81,14 +81,14 @@ describe('live schemas (DGS-599)', () => {
     expect(JSON.stringify(v)).not.toContain('secret')
     expect(liveViewSchema.parse(await liveView(d.env, NOW, async () => ({ ok: false }))).herdr).toBe('unreachable')
   })
-  it('a live view with a Suite row and the suite field parses; a Suite that is down parses too', async () => {
+  it('a live view with a Castle row and the castle field parses; a Castle that is down parses too', async () => {
     const list = (name: string) => ({ ok: true as const, stdout: JSON.stringify({ result: { agents: [{ pane_id: 'w7:p1', tab_id: 'w7:t1', workspace_id: 'w7', name, agent_status: 'idle', cwd: '/Users/x/Workspace/Jazurite/DigiSmith' }] } }) })
-    const v = await liveView(d.env, NOW, async (argv) => list(argv.includes('Suite') ? 'digismith-conductor' : 'dgs-599'), '/Users/x')
+    const v = await liveView(d.env, NOW, async (argv) => list(argv.includes('Castle') ? 'digismith-conductor' : 'dgs-599'), '/Users/x')
     const parsed = liveViewSchema.parse(v)
-    expect(parsed.suite).toBe('ok')
-    expect(parsed.agents.map((a) => [a.session, a.name])).toEqual([['default', 'dgs-599'], ['Suite', 'digismith-conductor']])
-    const down = liveViewSchema.parse(await liveView(d.env, NOW, async (argv) => (argv.includes('Suite') ? { ok: false } : list('dgs-599')), '/Users/x'))
-    expect(down.suite).toBe('unavailable')
+    expect(parsed.castle).toBe('ok')
+    expect(parsed.agents.map((a) => [a.session, a.name])).toEqual([['default', 'dgs-599'], ['Castle', 'digismith-conductor']])
+    const down = liveViewSchema.parse(await liveView(d.env, NOW, async (argv) => (argv.includes('Castle') ? { ok: false } : list('dgs-599')), '/Users/x'))
+    expect(down.castle).toBe('unavailable')
     expect(() => liveViewSchema.parse({ ...v, extra: 1 })).toThrow()
   })
   it('the agent roles and the run roles are the one DGS-598 role set', () => {

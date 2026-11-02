@@ -77,8 +77,8 @@ describe("promptConductor", () => {
   });
 });
 
-describe("promptConductor in the Suite (DGS-683)", () => {
-  const suite = { "DigiSmith/digismith-conductor": { kind: ["project", "factory"], session: "Suite", workspace: "w7", floor: "w2" }, "Emma/emma-conductor": { workspace: "w3" } };
+describe("promptConductor in the Castle (DGS-683)", () => {
+  const castle = { "DigiSmith/digismith-conductor": { kind: ["project", "factory"], session: "Castle", workspace: "w7", floor: "w2" }, "Emma/emma-conductor": { workspace: "w3" } };
   const run = async (obj: unknown) => {
     const calls: Array<[string[], Record<string, string> | undefined]> = [];
     const exec: Exec = async (_f, a, env) => { calls.push([a, env]); return { code: 0, stderr: "" }; };
@@ -86,24 +86,24 @@ describe("promptConductor in the Suite (DGS-683)", () => {
     return calls;
   };
   it("prompts in the session of the factory entry with the scope", async () => {
-    const calls = await run(suite);
+    const calls = await run(castle);
     expect(calls).toHaveLength(1);
-    expect(calls[0][0]).toEqual(["--session", "Suite", "agent", "prompt", "digismith-conductor", "msg"]);
-    expect(calls[0][1]).toMatchObject({ HERDR_SCOPE: "Suite:w7,default:w2,default:w3", HERDR_WS: "w2" });
+    expect(calls[0][0]).toEqual(["--session", "Castle", "agent", "prompt", "digismith-conductor", "msg"]);
+    expect(calls[0][1]).toMatchObject({ HERDR_SCOPE: "Castle:w7,default:w2,default:w3", HERDR_WS: "w2" });
   });
   it("chooses a factory entry over the DigiSmith key", async () => {
-    const calls = await run({ ...good, "Factory/factory-conductor": { kind: "factory", session: "Suite", workspace: "w8", floor: "w2" } });
-    expect(calls[0][0]).toEqual(["--session", "Suite", "agent", "prompt", "factory-conductor", "msg"]);
+    const calls = await run({ ...good, "Factory/factory-conductor": { kind: "factory", session: "Castle", workspace: "w8", floor: "w2" } });
+    expect(calls[0][0]).toEqual(["--session", "Castle", "agent", "prompt", "factory-conductor", "msg"]);
   });
   it("keeps today's argv and HERDR_WS for the old shape", async () => {
     const calls = await run(good);
     expect(calls[0][0]).toEqual(["agent", "prompt", "digismith-conductor", "msg"]);
     expect(calls[0][1]).toMatchObject({ HERDR_WS: "w2", HERDR_SCOPE: "default:w2" });
   });
-  it("conductorCheck: a Suite entry with no workspace is workspace-missing", () => {
-    const r = conductorCheck(fixture({ "DigiSmith/digismith-conductor": { session: "Suite" } }));
+  it("conductorCheck: a Castle entry with no workspace is workspace-missing", () => {
+    const r = conductorCheck(fixture({ "DigiSmith/digismith-conductor": { session: "Castle" } }));
     expect(r?.cause).toBe("conductor-workspace-missing");
-    expect(r?.text).toContain("Suite");
+    expect(r?.text).toContain("Castle");
   });
   it("an invalid entry of the target gives a clear conductor-config message, another invalid entry does not", async () => {
     const bad = fixture({ "DigiSmith/digismith-conductor": { workspace: "w2", status: "weird" } });

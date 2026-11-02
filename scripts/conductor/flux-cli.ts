@@ -69,7 +69,7 @@ export async function fluxMain(argv: string[], io: FluxCliIo): Promise<number> {
   }
   const dryRun = !!o["dry-run"];
   if (!io.env.HERDR_WS && !io.env.HERDR_SCOPE) {
-    io.stderr("flux needs HERDR_SCOPE (for example HERDR_SCOPE=Suite:w7,default:w2) or HERDR_WS (for example HERDR_WS=w2): herdr is touched only through herdr-ws\n");
+    io.stderr("flux needs HERDR_SCOPE (for example HERDR_SCOPE=Castle:w7,default:w2) or HERDR_WS (for example HERDR_WS=w2): herdr is touched only through herdr-ws\n");
     return 1;
   }
   const warn = (t: string) => io.stderr(`${t}\n`);

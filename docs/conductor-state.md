@@ -10,7 +10,7 @@ Each conductor keeps one block in its note, between `<!-- digismith:conductor-st
 node --experimental-strip-types scripts/conductor/cli.ts state-refresh --conductor <own name> --workers <w1,w2,...> [--watch <project note>,<board folder>]
 ```
 
-`HERDR_WS` pins the herdr workspace (or pass `--herdr-workspace`). `HERDR_SCOPE` (`<session>:<workspace>,...`, for example `Suite:w7,default:w2`) names the sessions and workspaces herdr-ws may touch; the flux needs `HERDR_SCOPE` or `HERDR_WS`. Run it:
+`HERDR_WS` pins the herdr workspace (or pass `--herdr-workspace`). `HERDR_SCOPE` (`<session>:<workspace>,...`, for example `Castle:w7,default:w2`) names the sessions and workspaces herdr-ws may touch; the flux needs `HERDR_SCOPE` or `HERDR_WS`. Run it:
 
 - after every merge (right after hook 03),
 - after every worker start and every worker stop,
@@ -19,11 +19,11 @@ node --experimental-strip-types scripts/conductor/cli.ts state-refresh --conduct
 
 `--watch` is a list of files or folders, as absolute paths (a relative path is looked up from the folder where the command runs, and the catch-up may run elsewhere; a folder is walked to depth 3, at most 2000 entries). The next refresh without `--watch` reuses the stored list. A conductor that keeps a project note outside the depot passes the note and the project's `.digismith/board` folder. A missing path gives a warning, not an error.
 
-`--workers` is the list of worker pane names this conductor owns now. The next refresh without `--workers` reuses the stored list. A card whose `under` is this conductor also counts. Without `HERDR_WS` the workspace comes from the conductor's entry in `conductors.json` (`floor`, or every Floor workspace for a `factory` conductor), then from the conductor card's `runs_on` (`herdr w2:p1`, or `herdr Suite/w7:p1` for the Suite); with neither, Running is unknown (see below). A pane in neither is shown under Health as `owner unknown`, never as Running.
+`--workers` is the list of worker pane names this conductor owns now. The next refresh without `--workers` reuses the stored list. A card whose `under` is this conductor also counts. Without `HERDR_WS` the workspace comes from the conductor's entry in `conductors.json` (`floor`, or every Floor workspace for a `factory` conductor), then from the conductor card's `runs_on` (`herdr w2:p1`, or `herdr Castle/w7:p1` for the Castle); with neither, Running is unknown (see below). A pane in neither is shown under Health as `owner unknown`, never as Running.
 
 ## What the refresh does
 
-- **Running** is rebuilt from `herdr agent list` (read only). Workers run on the Floor (session `default`), so the list is always read from `default`, even for a conductor that lives in the Suite session; Health reads the conductor's own session and the Floor and the open worker cards. Never kept from the old block. When herdr cannot be read or no workspace is known (a card without `runs_on` counts, and the reason names the card), the block says `Running: unknown (<reason>)` in its header and has no Running rows.
+- **Running** is rebuilt from `herdr agent list` (read only). Workers run on the Floor (session `default`), so the list is always read from `default`, even for a conductor that lives in the Castle session; Health reads the conductor's own session and the Floor and the open worker cards. Never kept from the old block. When herdr cannot be read or no workspace is known (a card without `runs_on` counts, and the reason names the card), the block says `Running: unknown (<reason>)` in its header and has no Running rows.
 - **Waiting for Jack, Parked or failed, Next** keep every item, unless its marker says it is resolved.
 - **Decided under the mandate** and the seats are kept as they are.
 - It sets `Updated:` (the refresh time), `Changed:` (the content time; kept when the refresh changes nothing) and `Main:` (the newest merge it saw) and writes only the block. It refuses to write when the block changed while it ran, when the block is not valid, or when the note does not exist (`--create` allows a new note).

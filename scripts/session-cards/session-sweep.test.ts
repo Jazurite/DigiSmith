@@ -96,14 +96,14 @@ describe("readLiveSessions across herdr sessions", () => {
     return { calls, spawn };
   };
   it("calls once per scoped session and unions the ids", () => {
-    const { calls, spawn } = fake({ Suite: { status: 0, stdout: list("s1") }, default: { status: 0, stdout: list("d1") } });
-    const r = readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }, spawn);
-    expect(calls).toEqual([["--session", "Suite", "agent", "list"], ["--session", "default", "agent", "list"]]);
+    const { calls, spawn } = fake({ Castle: { status: 0, stdout: list("s1") }, default: { status: 0, stdout: list("d1") } });
+    const r = readLiveSessions({ HERDR_SCOPE: "Castle:w7,default:w2,default:w3" }, spawn);
+    expect(calls).toEqual([["--session", "Castle", "agent", "list"], ["--session", "default", "agent", "list"]]);
     expect(r).toEqual({ ok: true, sessions: new Set(["s1", "d1"]) });
   });
   it("is not ok when one call exits 1", () => {
-    const { spawn } = fake({ Suite: { status: 0, stdout: list("s1") }, default: { status: 1, stdout: "" } });
-    expect(readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2" }, spawn).ok).toBe(false);
+    const { spawn } = fake({ Castle: { status: 0, stdout: list("s1") }, default: { status: 1, stdout: "" } });
+    expect(readLiveSessions({ HERDR_SCOPE: "Castle:w7,default:w2" }, spawn).ok).toBe(false);
   });
   it("without HERDR_SCOPE makes the one plain call", () => {
     const { calls, spawn } = fake({ "": { status: 0, stdout: list("x") } });
@@ -111,7 +111,7 @@ describe("readLiveSessions across herdr sessions", () => {
     expect(calls).toEqual([["agent", "list"]]);
   });
   it("keeps a card whose runs_on carries the session, and an old-format card", () => {
-    writeCard(card("n", { runs_on: "herdr Suite/w7:p1" }), env);
+    writeCard(card("n", { runs_on: "herdr Castle/w7:p1" }), env);
     writeCard(card("o", { runs_on: "herdr w2:p1" }), env);
     const r = sweep({ project: "P", now: NOW, env, apply: true, live: alive("sess-n", "sess-o") });
     expect(r.map((x) => x.verdict)).toEqual(["kept", "kept"]);
@@ -119,19 +119,19 @@ describe("readLiveSessions across herdr sessions", () => {
     expect(gone.map((x) => x.verdict)).toEqual(["lost", "lost"]);
   });
   it("an empty list from one scoped session is not ok and closes no card", () => {
-    const { spawn } = fake({ Suite: { status: 0, stdout: list() }, default: { status: 0, stdout: list("d1") } });
-    const live = readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2" }, spawn);
+    const { spawn } = fake({ Castle: { status: 0, stdout: list() }, default: { status: 0, stdout: list("d1") } });
+    const live = readLiveSessions({ HERDR_SCOPE: "Castle:w7,default:w2" }, spawn);
     expect(live.ok).toBe(false);
     writeCard(card("a"), env);
     expect(sweep({ project: "P", now: NOW, env, apply: true, live })[0].verdict).toBe("unverifiable");
     expect(listCards("P", { env, scope: "open" })).toHaveLength(1);
   });
   it("reads two sessions into the verdicts: dead card closed, live ones kept", () => {
-    const { spawn } = fake({ Suite: { status: 0, stdout: list("sess-s") }, default: { status: 0, stdout: list("sess-d") } });
-    const live = readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2" }, spawn);
-    writeCard(card("s", { runs_on: "herdr Suite/w7:p1" }), env);
+    const { spawn } = fake({ Castle: { status: 0, stdout: list("sess-s") }, default: { status: 0, stdout: list("sess-d") } });
+    const live = readLiveSessions({ HERDR_SCOPE: "Castle:w7,default:w2" }, spawn);
+    writeCard(card("s", { runs_on: "herdr Castle/w7:p1" }), env);
     writeCard(card("d", { runs_on: "herdr default/w2:p1" }), env);
-    writeCard(card("x", { runs_on: "herdr Suite/w7:p2" }), env);
+    writeCard(card("x", { runs_on: "herdr Castle/w7:p2" }), env);
     const r = sweep({ project: "P", now: NOW, env, apply: true, live });
     const v = Object.fromEntries(r.map((x) => [x.id, x.verdict]));
     expect(v).toEqual({ s: "kept", d: "kept", x: "lost" });

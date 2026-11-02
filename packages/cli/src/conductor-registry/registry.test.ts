@@ -33,23 +33,23 @@ describe("registry", () => {
     });
   });
   it("reads the new fields and a kind array", () => {
-    write({ "DigiSmith/digismith-conductor": { workspace: "w7", session: "Suite", floor: "w2", kind: ["project", "factory"] } });
+    write({ "DigiSmith/digismith-conductor": { workspace: "w7", session: "Castle", floor: "w2", kind: ["project", "factory"] } });
     const e = resolveConductor("DigiSmith/digismith-conductor", env)!;
-    expect(e.session).toBe("Suite"); expect(e.kinds).toEqual(["project", "factory"]);
+    expect(e.session).toBe("Castle"); expect(e.kinds).toEqual(["project", "factory"]);
     expect(findByKind("factory", env).map((x) => x.key)).toEqual(["DigiSmith/digismith-conductor"]);
   });
   it("findByKind skips a closed entry", () => {
-    write({ "DigiSmith/tc-dgs-9": { kind: "ticket", ticket: "DGS-9", status: "closed", session: "Suite", workspace: "w7", floor: "w2" } });
+    write({ "DigiSmith/tc-dgs-9": { kind: "ticket", ticket: "DGS-9", status: "closed", session: "Castle", workspace: "w7", floor: "w2" } });
     expect(findByKind("ticket", env)).toEqual([]);
   });
   it("floorWorkspaces is the sorted union of floors and default workspaces", () => {
-    write({ "A/a": { workspace: "w3" }, "B/b": { session: "Suite", workspace: "w8", floor: "w2" }, "C/c": { session: "Suite", workspace: "w9", floor: "w3" } });
+    write({ "A/a": { workspace: "w3" }, "B/b": { session: "Castle", workspace: "w8", floor: "w2" }, "C/c": { session: "Castle", workspace: "w9", floor: "w3" } });
     expect(floorWorkspaces(env)).toEqual(["w2", "w3"]);
   });
-  it("scopeFor: default entry = today's rule; Suite entry = own Suite workspace + every floor", () => {
-    write({ "A/a": { workspace: "w3" }, "B/b": { session: "Suite", workspace: "w8", floor: "w2" } });
+  it("scopeFor: default entry = today's rule; Castle entry = own Castle workspace + every floor", () => {
+    write({ "A/a": { workspace: "w3" }, "B/b": { session: "Castle", workspace: "w8", floor: "w2" } });
     expect(scopeFor(resolveConductor("A/a", env)!, env)).toBe("default:w3");
-    expect(scopeFor(resolveConductor("B/b", env)!, env)).toBe("Suite:w8,default:w2,default:w3");
+    expect(scopeFor(resolveConductor("B/b", env)!, env)).toBe("Castle:w8,default:w2,default:w3");
   });
   it("missing file is empty; broken JSON throws; bad values throw", () => {
     expect(readRegistry(env)).toEqual({});
@@ -61,8 +61,8 @@ describe("registry", () => {
     expect(() => readRegistry(env)).toThrow(/kind/);
   });
   it("one invalid entry does not break the lookups of the valid ones", () => {
-    write({ "A/a": { kind: "boss" }, "B/b": { session: "Suite", workspace: "w8", floor: "w2", kind: "factory" }, "C/c": { workspace: "w3" } });
-    expect(resolveConductor("B/b", env)?.session).toBe("Suite");
+    write({ "A/a": { kind: "boss" }, "B/b": { session: "Castle", workspace: "w8", floor: "w2", kind: "factory" }, "C/c": { workspace: "w3" } });
+    expect(resolveConductor("B/b", env)?.session).toBe("Castle");
     expect(() => resolveConductor("A/a", env)).toThrow(/A\/a.*kind/);
     expect(resolveConductor("Z/z", env)).toBeUndefined();
     expect(findByKind("factory", env).map((x) => x.key)).toEqual(["B/b"]);
@@ -87,7 +87,7 @@ describe("registry", () => {
   });
   it("putEntry and removeEntry keep the other keys", () => {
     write({ "A/a": { workspace: "w3", note: "/x" } });
-    putEntry("B/b", { session: "Suite", workspace: "w8", floor: "w2" }, env);
+    putEntry("B/b", { session: "Castle", workspace: "w8", floor: "w2" }, env);
     expect(Object.keys(JSON.parse(fs.readFileSync(path.join(depot, "conductors.json"), "utf8")))).toEqual(["A/a", "B/b"]);
     expect(removeEntry("A/a", env)).toBe(true);
     expect(removeEntry("A/a", env)).toBe(false);
@@ -114,7 +114,7 @@ describe("registry", () => {
     expect(() => readRegistry(env)).toThrow(/A\/a.*kind/);
   });
   it("scopeFor throws when the entry has no workspace", () => {
-    write({ "A/a": { note: "/x" }, "B/b": { session: "Suite" } });
+    write({ "A/a": { note: "/x" }, "B/b": { session: "Castle" } });
     expect(() => scopeFor(resolveConductor("A/a", env)!, env)).toThrow(/workspace/);
     expect(() => scopeFor(resolveConductor("B/b", env)!, env)).toThrow(/workspace/);
   });

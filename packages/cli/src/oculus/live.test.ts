@@ -14,8 +14,8 @@ const agent = (o: Record<string, unknown>) => ({
   foreground_cwd: `${HOME}/Workspace/Jazurite/DigiSmith`, pane_id: "w2:p1", tab_id: "w2:t1", terminal_title: SECRET_TITLE, terminal_title_stripped: SECRET_TITLE, workspace_id: "w2", ...o,
 });
 const listOf = (agents: object[]) => Promise.resolve({ ok: true as const, stdout: JSON.stringify({ id: "1", result: { type: "agent_list", agents } }) });
-// the list answers the default session; the Suite answers an empty list (the tests that count rows)
-const herdrOf = (agents: object[], suite: object[] = []): HerdrCall => (argv) => listOf(argv.includes("Suite") ? suite : agents);
+// the list answers the default session; the Castle answers an empty list (the tests that count rows)
+const herdrOf = (agents: object[], castle: object[] = []): HerdrCall => (argv) => listOf(argv.includes("Castle") ? castle : agents);
 
 let d: Depot;
 beforeEach(() => { d = makeDepot(); });
@@ -154,48 +154,48 @@ describe("liveView", () => {
       d.writeEvents("DGS-599", run, [{ type: "started", ts: "2026-10-24T07:00:00.000Z" }]);
     };
     open("floor-run", "default");
-    open("suite-run", "Suite");
+    open("castle-run", "Castle");
     const v = await liveView(d.env, NOW, herdrOf([agent({ name: "dgs-599", pane_id: "w2:p1", agent_session: undefined })], [agent({ name: "digismith-conductor", pane_id: "w2:p1", agent_session: undefined })]), HOME);
-    expect(v.suite).toBe("ok");
-    expect(v.agents.map((a) => [a.session, a.name, a.run])).toEqual([["default", "dgs-599", "floor-run"], ["Suite", "digismith-conductor", "suite-run"]]);
+    expect(v.castle).toBe("ok");
+    expect(v.agents.map((a) => [a.session, a.name, a.run])).toEqual([["default", "dgs-599", "floor-run"], ["Castle", "digismith-conductor", "castle-run"]]);
   });
   it("an old run record without a session joins the default session only", async () => {
     const f = join(d.writeRun({ ticket: "DGS-599", run: "old-run", role: "builder", created_at: "2026-10-24T07:00:00.000Z", herdr: { workspace: "w2", tab: null, pane: "w2:p1" } }), "run.json");
     const r = JSON.parse(readFileSync(f, "utf8")); delete r.herdr.session; writeFileSync(f, JSON.stringify(r));
     d.writeEvents("DGS-599", "old-run", [{ type: "started", ts: "2026-10-24T07:00:00.000Z" }]);
     const v = await liveView(d.env, NOW, herdrOf([agent({ name: "a", pane_id: "w2:p1", agent_session: undefined })], [agent({ name: "b", pane_id: "w2:p1", agent_session: undefined })]), HOME);
-    expect(v.agents.map((a) => [a.session, a.run])).toEqual([["default", "old-run"], ["Suite", null]]);
+    expect(v.agents.map((a) => [a.session, a.run])).toEqual([["default", "old-run"], ["Castle", null]]);
   });
-  it("a Suite call that fails leaves the default rows and marks the view", async () => {
-    const h: HerdrCall = async (argv) => (argv.includes("Suite") ? { ok: false } : listOf([agent({ name: "dgs-599", pane_id: "w2:p5" })]));
+  it("a Castle call that fails leaves the default rows and marks the view", async () => {
+    const h: HerdrCall = async (argv) => (argv.includes("Castle") ? { ok: false } : listOf([agent({ name: "dgs-599", pane_id: "w2:p5" })]));
     const v = await liveView(d.env, NOW, h, HOME);
     expect(v.herdr).toBe("ok");
-    expect(v.suite).toBe("unavailable");
+    expect(v.castle).toBe("unavailable");
     expect(v.agents.map((a) => a.name)).toEqual(["dgs-599"]);
   });
-  it("starts both calls before either answers, and a slow Suite does not hold up the Floor read", async () => {
+  it("starts both calls before either answers, and a slow Castle does not hold up the Floor read", async () => {
     const started: string[] = [];
-    let releaseSuite!: () => void;
-    const suiteGate = new Promise<void>((r) => { releaseSuite = r; });
+    let releaseCastle!: () => void;
+    const castleGate = new Promise<void>((r) => { releaseCastle = r; });
     const h: HerdrCall = async (argv) => {
       started.push(argv[1]);
-      if (argv[1] === "Suite") { await suiteGate; return { ok: false }; }
+      if (argv[1] === "Castle") { await castleGate; return { ok: false }; }
       return listOf([agent({ name: "dgs-599", pane_id: "w2:p5" })]);
     };
     const pending = liveView(d.env, NOW, h, HOME);
     await Promise.resolve();
-    expect(started).toEqual(["default", "Suite"]);   // both in flight at once
-    releaseSuite();
+    expect(started).toEqual(["default", "Castle"]);   // both in flight at once
+    releaseCastle();
     const v = await pending;
-    expect(v.suite).toBe("unavailable");
+    expect(v.castle).toBe("unavailable");
     expect(v.agents).toHaveLength(1);
   });
   it("a call that throws counts as a failed call", async () => {
-    const h: HerdrCall = async (argv) => { if (argv[1] === "Suite") throw new Error("boom"); return listOf([agent({ name: "a" })]); };
-    expect((await liveView(d.env, NOW, h, HOME)).suite).toBe("unavailable");
+    const h: HerdrCall = async (argv) => { if (argv[1] === "Castle") throw new Error("boom"); return listOf([agent({ name: "a" })]); };
+    expect((await liveView(d.env, NOW, h, HOME)).castle).toBe("unavailable");
   });
-  it("a default call that fails is unreachable even when the Suite answers", async () => {
-    const h: HerdrCall = async (argv) => (argv.includes("Suite") ? listOf([agent({ name: "x" })]) : { ok: false });
+  it("a default call that fails is unreachable even when the Castle answers", async () => {
+    const h: HerdrCall = async (argv) => (argv.includes("Castle") ? listOf([agent({ name: "x" })]) : { ok: false });
     expect(await liveView(d.env, NOW, h, HOME)).toEqual({ readAt: NOW.toISOString(), herdr: "unreachable", agents: [] });
   });
   it("says unreachable, with no agents, when herdr fails or answers something else", async () => {
@@ -206,8 +206,8 @@ describe("liveView", () => {
 });
 
 describe("the herdr call", () => {
-  it("uses exactly the read-only argvs, one per session", () => expect(HERDR_CALLS.map((c) => [...c])).toEqual([["--session", "default", "agent", "list"], ["--session", "Suite", "agent", "list"]]));
-  it("realHerdr refuses any argv that is not one of them", () => expect(realHerdr()(["--session", "Suite", "agent", "close", "x"])).resolves.toEqual({ ok: false }));
+  it("uses exactly the read-only argvs, one per session", () => expect(HERDR_CALLS.map((c) => [...c])).toEqual([["--session", "default", "agent", "list"], ["--session", "Castle", "agent", "list"]]));
+  it("realHerdr refuses any argv that is not one of them", () => expect(realHerdr()(["--session", "Castle", "agent", "close", "x"])).resolves.toEqual({ ok: false }));
   it("realHerdr only builds the call; the tests never run the real herdr", () => expect(typeof realHerdr()).toBe("function"));
 });
 

@@ -9,16 +9,16 @@ import { LIST_DAYS, listRuns } from "../run/read.ts";
 import { roleOf } from "../run/role.ts";
 import type { Role } from "../run/schema.ts";
 
-// The default (Floor) session and the Suite session; the Suite may be down, the Floor may not (DGS-683).
+// The default (Floor) session and the Castle session; the Castle may be down, the Floor may not (DGS-683).
 export const HERDR_CALLS = [
   ["--session", "default", "agent", "list"],
-  ["--session", "Suite", "agent", "list"],
+  ["--session", "Castle", "agent", "list"],
 ] as const;
 export const AGENT_STATUSES = ["working", "idle", "blocked", "done", "unknown"] as const;
 export type AgentStatus = (typeof AGENT_STATUSES)[number];
 export type AgentRole = Role;   // the DGS-598 role set (run/schema.ts ROLES)
 export interface LiveAgent { session: string; name: string | null; pane: string; tab: string | null; workspace: string | null; role: AgentRole; project: string | null; status: AgentStatus; run: string | null }
-export interface LiveView { readAt: string; herdr: "ok" | "unreachable"; suite?: "ok" | "unavailable"; agents: LiveAgent[] }
+export interface LiveView { readAt: string; herdr: "ok" | "unreachable"; castle?: "ok" | "unavailable"; agents: LiveAgent[] }
 /** One read-only herdr call: the argv is one of HERDR_CALLS. */
 export type HerdrResult = { ok: true; stdout: string } | { ok: false };
 export type HerdrCall = (argv: readonly string[]) => Promise<HerdrResult>;
@@ -85,13 +85,13 @@ function parseAgents(r: HerdrResult): Record<string, unknown>[] | null {
 export async function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, home: string = os.homedir()): Promise<LiveView> {
   const readAt = now.toISOString();
   const down: LiveView = { readAt, herdr: "unreachable", agents: [] };
-  // the default session must answer; a Suite that does not answer only marks the view
-  // both calls start together: a dead Suite adds nothing to a healthy Floor read
-  const [floorRes, suiteRes] = await Promise.all(HERDR_CALLS.map((c) => (async () => herdr(c))().catch((): HerdrResult => ({ ok: false }))));
+  // the default session must answer; a Castle that does not answer only marks the view
+  // both calls start together: a dead Castle adds nothing to a healthy Floor read
+  const [floorRes, castleRes] = await Promise.all(HERDR_CALLS.map((c) => (async () => herdr(c))().catch((): HerdrResult => ({ ok: false }))));
   const floor = parseAgents(floorRes);
   if (!floor) return down;
-  const suiteRaw = parseAgents(suiteRes);
-  const sessions: [string, Record<string, unknown>[]][] = [["default", floor], ...(suiteRaw ? [["Suite", suiteRaw] as [string, Record<string, unknown>[]]] : [])];
+  const castleRaw = parseAgents(castleRes);
+  const sessions: [string, Record<string, unknown>[]][] = [["default", floor], ...(castleRaw ? [["Castle", castleRaw] as [string, Record<string, unknown>[]]] : [])];
   const runs = openRuns(env, now);
   const agents: LiveAgent[] = [];
   for (const [session, raw] of sessions) for (const a of raw) {
@@ -106,7 +106,8 @@ export async function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCa
     const status = (AGENT_STATUSES as readonly string[]).includes(a.agent_status as string) ? (a.agent_status as AgentStatus) : "unknown";
     agents.push({ session, name, pane: pane.slice(0, NAME_MAX), tab: str(a.tab_id)?.slice(0, NAME_MAX) ?? null, workspace: str(a.workspace_id)?.slice(0, NAME_MAX) ?? null, role: herdrRole(name), project: projectOf(a.cwd, home), status, run });
   }
+  const bySession = (a: string, b: string) => (a === b ? 0 : a === "default" ? -1 : b === "default" ? 1 : cmp(a, b));   // the Floor first
   const cmp = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true });   // w2 before w10
-  agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || cmp(x.session, y.session) || cmp(x.workspace ?? "~", y.workspace ?? "~") || cmp(x.name ?? "~", y.name ?? "~") || cmp(x.pane, y.pane));
-  return { readAt, herdr: "ok", suite: suiteRaw ? "ok" : "unavailable", agents };
+  agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || bySession(x.session, y.session) || cmp(x.workspace ?? "~", y.workspace ?? "~") || cmp(x.name ?? "~", y.name ?? "~") || cmp(x.pane, y.pane));
+  return { readAt, herdr: "ok", castle: castleRaw ? "ok" : "unavailable", agents };
 }

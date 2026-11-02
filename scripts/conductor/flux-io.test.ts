@@ -44,14 +44,14 @@ describe("fluxRunner guard (the real herdr is touched only through herdr-ws, wit
   it("allows exactly one leading --session pair and checks the verbs after it", async () => {
     const { calls, inner } = rec();
     const run = fluxRunner(inner, { allowPrompt: true });
-    await run(HERDR_WS_BIN, ["--session", "Suite", "agent", "list"]);
-    await run(HERDR_WS_BIN, ["--session", "Suite", "agent", "prompt", "tec", "/clear"]);
+    await run(HERDR_WS_BIN, ["--session", "Castle", "agent", "list"]);
+    await run(HERDR_WS_BIN, ["--session", "Castle", "agent", "prompt", "tec", "/clear"]);
     expect(calls).toHaveLength(2);
     for (const args of [
-      ["--session", "Suite", "agent", "stop", "x"],
-      ["--session", "Suite", "--session", "default", "agent", "list"],
+      ["--session", "Castle", "agent", "stop", "x"],
+      ["--session", "Castle", "--session", "default", "agent", "list"],
       ["--session", "bad name", "agent", "list"],
-      ["--session", "Suite"],
+      ["--session", "Castle"],
     ]) await expect(run(HERDR_WS_BIN, args)).rejects.toThrow(/refused/);
     expect(calls).toHaveLength(2);
   });
@@ -69,7 +69,7 @@ describe("fluxRunner guard (the real herdr is touched only through herdr-ws, wit
 
 describe("createFluxHerdr session prefix", () => {
   it("prefixes every call with --session for a named session and not for default", async () => {
-    for (const [session, prefix] of [["Suite", ["--session", "Suite"]], ["default", []], [undefined, []]] as const) {
+    for (const [session, prefix] of [["Castle", ["--session", "Castle"]], ["default", []], [undefined, []]] as const) {
       const calls: string[][] = [];
       const inner: Runner = async (_c, args) => (calls.push(args), ok(JSON.stringify({ result: { agents: [], agent: { name: "a" } } })));
       const h = createFluxHerdr(inner, session);
@@ -153,9 +153,9 @@ describe("flux targets", () => {
     expect(resolveTarget("nobody", {}, env, repo)).toBeUndefined();
   });
   it("resolveTarget carries the session of the registry entry, default for an old one", () => {
-    fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/d3-conductor": { session: "Suite", workspace: "w7", note: "/n/d3.md" }, "DigiSmith/old": { note: "/n/old.md" } }));
+    fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/d3-conductor": { session: "Castle", workspace: "w7", note: "/n/d3.md" }, "DigiSmith/old": { note: "/n/old.md" } }));
     const env = { DIGISMITH_DEPOT_DIR: tmp };
-    expect(resolveTarget("d3-conductor", {}, env, "/repo")?.session).toBe("Suite");
+    expect(resolveTarget("d3-conductor", {}, env, "/repo")?.session).toBe("Castle");
     expect(resolveTarget("old", {}, env, "/repo")?.session).toBe("default");
   });
   it("resolveTarget falls to default when conductors.json is broken", () => {
@@ -250,7 +250,7 @@ describe("fluxMain (the CLI)", () => {
     expect(r.e).toContain("HERDR_WS");
   });
   it("HERDR_SCOPE alone is enough; with neither set the error names both", async () => {
-    const r = await run(["one"], { env: { HERDR_WS: "", HERDR_SCOPE: "Suite:w7,default:w2" } });
+    const r = await run(["one"], { env: { HERDR_WS: "", HERDR_SCOPE: "Castle:w7,default:w2" } });
     expect(r.code).toBe(0);
     const none = await run(["one"], { env: { HERDR_WS: "", HERDR_SCOPE: "" } });
     expect(none.code).toBe(1);
@@ -258,18 +258,18 @@ describe("fluxMain (the CLI)", () => {
     expect(none.e).toContain("HERDR_SCOPE");
   });
   it("--all builds one herdr per session of the targets", async () => {
-    fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/two": { session: "Suite", workspace: "w7" } }));
+    fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/two": { session: "Castle", workspace: "w7" } }));
     const asked: { dryRun: boolean; session?: string }[] = [];
     const seen: string[] = [];
     const out = { o: "" };
     const code = await fluxMain(["--all", "--dry-run"], {
-      stdout: (s) => void (out.o += s), stderr: () => {}, now: () => new Date(), env: { DIGISMITH_DEPOT_DIR: tmp, HERDR_SCOPE: "Suite:w7,default:w2" },
+      stdout: (s) => void (out.o += s), stderr: () => {}, now: () => new Date(), env: { DIGISMITH_DEPOT_DIR: tmp, HERDR_SCOPE: "Castle:w7,default:w2" },
       repoRoot: "/repo", transcriptDir: "/t", makeHerdr: (o) => (asked.push(o), { id: o.session } as unknown as FluxHerdr),
       flux: async (t, _o, d) => (seen.push(`${t.agent}@${(d.herdr as unknown as { id: string }).id}`), result(t.agent)),
     });
     expect(code).toBe(0);
-    expect(asked.map((a) => a.session).sort()).toEqual(["Suite", "default"]);
-    expect(seen.sort()).toEqual(["one@default", "two@Suite"]);
+    expect(asked.map((a) => a.session).sort()).toEqual(["Castle", "default"]);
+    expect(seen.sort()).toEqual(["one@default", "two@Castle"]);
     expect(out.o.split("\n")[0]).toBe("Targets (2): one, two");
   });
   it("an unknown agent with no target source is an error", async () => {
