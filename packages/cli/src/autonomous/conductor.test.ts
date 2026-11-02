@@ -116,6 +116,41 @@ describe("promptConductor in the Suite (DGS-683)", () => {
   });
 });
 
+describe("factory candidates in the raw file (DGS-683 T7 review)", () => {
+  it("an invalid factory entry is reported and nothing is sent to the fallback", async () => {
+    const calls: string[][] = [];
+    const exec: Exec = async (_f, a) => { calls.push(a); return { code: 0, stderr: "" }; };
+    const p = fixture({ ...good, "Factory/factory-conductor": { kind: "factory", session: "bad name" } });
+    await expect(promptConductor(exec, p, "m")).rejects.toThrow(/conductor-config: .*Factory\/factory-conductor.*session/);
+    expect(calls).toEqual([]);
+    expect(conductorCheck(p)?.cause).toBe("conductor-config-unreadable");
+  });
+  it("an invalid factory entry with a bad workspace is workspace-missing", () => {
+    const r = conductorCheck(fixture({ ...good, "Factory/f": { kind: "factory", workspace: "x" } }));
+    expect(r?.cause).toBe("conductor-workspace-missing");
+  });
+  it("two factory entries are a conductor-config problem, never first-wins", async () => {
+    const exec: Exec = async () => ({ code: 0, stderr: "" });
+    const two = { ...good, "A/a": { kind: "factory", workspace: "w5" }, "B/b": { kind: "factory", workspace: "w6" } };
+    await expect(promptConductor(exec, fixture(two), "m")).rejects.toThrow(/two factory conductors \(A\/a, B\/b\)/);
+    const r = conductorCheck(fixture({ ...good, "A/a": { kind: "factory", workspace: "w5" }, "B/b": { kind: "factory", session: "bad name" } }));
+    expect(r?.text).toMatch(/two factory conductors/);
+  });
+  it("a closed factory entry is not a candidate", async () => {
+    const calls: string[][] = [];
+    const exec: Exec = async (_f, a) => { calls.push(a); return { code: 0, stderr: "" }; };
+    await promptConductor(exec, fixture({ ...good, "Old/f": { kind: "factory", workspace: "w5", status: "closed" } }), "m");
+    expect(calls[0]).toContain("digismith-conductor");
+  });
+  it("a null or non-object entry for the target is conductor-config-unreadable", () => {
+    for (const entry of [null, "w2", [1]]) {
+      const r = conductorCheck(fixture({ "DigiSmith/digismith-conductor": entry }));
+      expect(r?.cause).toBe("conductor-config-unreadable");
+      expect(r?.text).toMatch(/^conductor-config: /);
+    }
+  });
+});
+
 describe("realExec", () => {
   it("exit 0", async () => {
     expect(await realExec(process.execPath, ["-e", "process.exit(0)"])).toEqual({ code: 0, stderr: "" });

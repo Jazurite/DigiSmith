@@ -24,12 +24,17 @@ function readConductor(conductorsJson: string): { entry: ConductorEntry; workspa
   } catch (e) {
     throw new Error(`cannot read ${conductorsJson}: ${(e as Error).message}`);
   }
-  // the factory conductor; with none, the DigiSmith key (the old single conductor)
-  const factory = Object.values(reg.entries).filter((x) => x.status === "open" && x.kinds.includes("factory")).sort((a, b) => a.key.localeCompare(b.key))[0];
-  const key = factory?.key ?? CONDUCTOR_KEY;
+  // factory candidates come from the raw file: an invalid entry that names kind factory counts too
+  const valid = Object.values(reg.entries).filter((x) => x.status === "open" && x.kinds.includes("factory"));
+  const broken = reg.problems.filter((p) => p.rawKinds.includes("factory") && !p.rawClosed);
+  const candidates = [...valid.map((x) => x.key), ...broken.map((p) => p.key)].sort();
+  if (candidates.length > 1) {
+    throw new Error(`conductor-config: two factory conductors (${candidates.join(", ")}) in ${conductorsJson}`);
+  }
+  const key = candidates[0] ?? CONDUCTOR_KEY;
   const own = reg.problems.find((p) => p.key === key);
   if (own) {
-    if (/workspace/.test(own.message)) {
+    if (own.field === "workspace") {
       throw Object.assign(new Error(`no workspace for ${key} in ${conductorsJson}: ${own.message}`), { workspaceProblem: true });
     }
     throw new Error(`conductor-config: ${own.message} (in ${conductorsJson})`);

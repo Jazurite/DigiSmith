@@ -11,6 +11,12 @@ beforeEach(() => { depot = fs.mkdtempSync(path.join(os.tmpdir(), "reg-")); env =
 afterEach(() => fs.rmSync(depot, { recursive: true, force: true }));
 
 describe("registry path", () => {
+  it("agrees with scripts/depot-dir.ts for DIGISMITH_DEPOT_DIR set and unset", async () => {
+    const { depotDir } = await import("../../../../scripts/depot-dir.ts");
+    for (const e of [{ DIGISMITH_DEPOT_DIR: "/x/d" }, { DIGISMITH_DEPOT_DIR: "" }, {}] as NodeJS.ProcessEnv[]) {
+      expect(registryPath(e)).toBe(path.join(depotDir(e), "conductors.json"));
+    }
+  });
   it("honours DIGISMITH_DEPOT_DIR and defaults to the home depot", () => {
     expect(registryPath({ DIGISMITH_DEPOT_DIR: "/x/depot" })).toBe("/x/depot/conductors.json");
     expect(registryPath({ DIGISMITH_DEPOT_DIR: "" })).toBe(path.join(os.homedir(), ".digismith-depot", "conductors.json"));
@@ -65,6 +71,13 @@ describe("registry", () => {
     expect(Object.keys(r.entries).sort()).toEqual(["B/b", "C/c"]);
     expect(r.problems.map((p) => p.key)).toEqual(["A/a"]);
     expect(registryProblems(env).map((p) => p.key)).toEqual(["A/a"]);
+  });
+  it("a problem names its failing field and the raw kinds", () => {
+    write({ "A/a": { kind: ["project", "factory"], workspace: "two" }, "B/b": null, "C/c": { kind: "boss" } });
+    const by = Object.fromEntries(readRegistryChecked(env).problems.map((p) => [p.key, p]));
+    expect(by["A/a"]).toMatchObject({ field: "workspace", rawKinds: ["project", "factory"], rawClosed: false });
+    expect(by["B/b"]).toMatchObject({ field: undefined, rawKinds: [] });
+    expect(by["C/c"].field).toBe("kind");
   });
   it("readRegistryFile reads an explicit path, with the same per-entry rule", () => {
     write({ "A/a": { kind: "boss" }, "B/b": { workspace: "w3" } });

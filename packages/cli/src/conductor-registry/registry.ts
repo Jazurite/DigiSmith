@@ -60,37 +60,43 @@ function readRaw(env?: NodeJS.ProcessEnv, from?: string): Record<string, unknown
   return parsed as Record<string, unknown>;
 }
 
+class EntryError extends Error {
+  constructor(message: string, readonly field?: string) {
+    super(message);
+  }
+}
+
 function normalize(key: string, raw: unknown): ConductorEntry {
   const slash = key.indexOf("/");
   if (slash <= 0 || slash === key.length - 1) throw new Error(`conductor key "${key}" must be Project/name`);
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${key}: entry must be an object`);
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new EntryError(`${key}: entry must be an object`);
   const r = raw as Record<string, unknown>;
   const str = (field: string): string | undefined => {
     const v = r[field];
     if (v === undefined) return undefined;
-    if (typeof v !== "string") throw new Error(`${key}: ${field} must be a string`);
+    if (typeof v !== "string") throw new EntryError(`${key}: ${field} must be a string`, field);
     return v;
   };
 
   const session = str("session") ?? "default";
-  if (!SESSION.test(session)) throw new Error(`${key}: session "${session}" is not a valid session name`);
+  if (!SESSION.test(session)) throw new EntryError(`${key}: session "${session}" is not a valid session name`, "session");
   const workspace = str("workspace");
-  if (workspace !== undefined && !WORKSPACE.test(workspace)) throw new Error(`${key}: workspace "${workspace}" must match ^w\\d+$`);
+  if (workspace !== undefined && !WORKSPACE.test(workspace)) throw new EntryError(`${key}: workspace "${workspace}" must match ^w\\d+$`, "workspace");
   const floor = str("floor") ?? (session === "default" ? workspace : undefined);
-  if (floor !== undefined && !WORKSPACE.test(floor)) throw new Error(`${key}: floor "${floor}" must match ^w\\d+$`);
+  if (floor !== undefined && !WORKSPACE.test(floor)) throw new EntryError(`${key}: floor "${floor}" must match ^w\\d+$`, "floor");
 
   let kinds: Kind[] = ["project"];
   if (r.kind !== undefined) {
     const list: unknown[] = Array.isArray(r.kind) ? r.kind : [r.kind];
-    if (list.length === 0) throw new Error(`${key}: kind must list at least one kind`);
+    if (list.length === 0) throw new EntryError(`${key}: kind must list at least one kind`, "kind");
     for (const k of list) {
-      if (!KINDS.includes(k as Kind)) throw new Error(`${key}: unknown kind ${JSON.stringify(k)}`);
+      if (!KINDS.includes(k as Kind)) throw new EntryError(`${key}: unknown kind ${JSON.stringify(k)}`, "kind");
     }
     kinds = list as Kind[];
   }
 
   const status = str("status") ?? "open";
-  if (status !== "open" && status !== "closed") throw new Error(`${key}: unknown status "${status}"`);
+  if (status !== "open" && status !== "closed") throw new EntryError(`${key}: unknown status "${status}"`, "status");
 
   return {
     key,
@@ -110,6 +116,12 @@ function normalize(key: string, raw: unknown): ConductorEntry {
 export interface RegistryProblem {
   key: string;
   message: string;
+  /** The entry field that failed, when one did (workspace, floor, session, kind, status). */
+  field?: string;
+  /** Kinds the raw entry names, valid or not: an invalid entry can still be a would-be factory. */
+  rawKinds: string[];
+  /** The raw entry says status closed. */
+  rawClosed: boolean;
 }
 
 /** Every valid entry, and the problems of the invalid ones; only an unreadable file throws. */
@@ -120,7 +132,15 @@ export function readRegistryChecked(env?: NodeJS.ProcessEnv, from?: string): { e
     try {
       entries[key] = normalize(key, raw);
     } catch (err) {
-      problems.push({ key, message: (err as Error).message });
+      const r = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+      const kinds = Array.isArray(r.kind) ? r.kind : r.kind === undefined ? [] : [r.kind];
+      problems.push({
+        key,
+        message: (err as Error).message,
+        field: err instanceof EntryError ? err.field : undefined,
+        rawKinds: kinds.filter((k): k is string => typeof k === "string"),
+        rawClosed: r.status === "closed",
+      });
     }
   }
   return { entries, problems };
