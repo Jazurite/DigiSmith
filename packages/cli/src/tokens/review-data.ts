@@ -6,11 +6,12 @@ export type ReviewData = {
   fixed: number | null;
   parked: number | null;
   rejected: number | null;
+  open: number | null;
   fixRounds: number | null;
   source: "ledger" | "findings.md" | "none";
 };
 
-const NONE: ReviewData = { rounds: null, findings: null, fixed: null, parked: null, rejected: null, fixRounds: null, source: "none" };
+const NONE: ReviewData = { rounds: null, findings: null, fixed: null, parked: null, rejected: null, open: null, fixRounds: null, source: "none" };
 
 function fromLedger(task: string, text: string): ReviewData | null {
   const lines = text.split(/\r?\n/).map((l) => l.trim().replace(/^- /, ""));
@@ -25,13 +26,13 @@ function fromLedger(task: string, text: string): ReviewData | null {
   let scoped = 0;
   let seen = false;
   for (const l of lines) {
-    if (isFinal && l.startsWith("Scoped re-review")) { scoped++; seen = true; continue; }
+    if (isFinal && l.startsWith("Scoped re-review")) { scoped++; continue; }
     if (!l.startsWith(prefix)) continue;
     const rest = l.slice(prefix.length);
     const m = /^reviewed \((clean|(\d+) findings?)\)/.exec(rest);
     if (m) { rounds++; handFindings += m[2] ? Number(m[2]) : 0; seen = true; }
-    else if (/^fix round \d+\/\d+/.test(rest)) { fixRoundLines++; seen = true; }
-    else if (rest.startsWith("parked")) { handParked++; seen = true; }
+    else if (/^fix round \d+\/\d+/.test(rest)) { fixRoundLines++; }
+    else if (rest.startsWith("parked")) { handParked++; }
   }
 
   const entries: VerdictEntry[] = [];
@@ -44,12 +45,14 @@ function fromLedger(task: string, text: string): ReviewData | null {
   if (!seen) return null;
 
   if (mine.length === 0) {
+    const fixed = fixRoundLines > 0 ? Math.max(0, handFindings - handParked) : 0;
     return {
       rounds: rounds || null,
       findings: handFindings,
-      fixed: Math.max(0, handFindings - handParked),
+      fixed,
       parked: handParked,
       rejected: 0,
+      open: Math.max(0, handFindings - handParked - fixed),
       fixRounds: isFinal ? scoped : fixRoundLines,
       source: "ledger",
     };
@@ -66,12 +69,14 @@ function fromLedger(task: string, text: string): ReviewData | null {
     else if (e.verdict === "parked") parked++;
     else if (e.verdict === "rejected") rejected++;
   }
+  const findings = Math.max(handFindings, latest.size);
   const fixingRounds = new Set(mine.filter((e) => e.verdict === "fixing").map((e) => e.round)).size;
   const roleRounds = new Set(mine.map((e) => e.round)).size;
   return {
     rounds: rounds || roleRounds,
-    findings: latest.size,
+    findings,
     fixed, parked, rejected,
+    open: Math.max(0, findings - fixed - parked - rejected),
     fixRounds: isFinal ? scoped : fixRoundLines || fixingRounds,
     source: "ledger",
   };
@@ -95,7 +100,7 @@ function fromFindings(task: string, text: string): ReviewData | null {
     else if (v.startsWith("parked")) parked++;
     else if (v.startsWith("rejected")) rejected++;
   }
-  return seen ? { rounds, findings, fixed, parked, rejected, fixRounds: null, source: "findings.md" } : null;
+  return seen ? { rounds, findings, fixed, parked, rejected, open: Math.max(0, findings - fixed - parked - rejected), fixRounds: null, source: "findings.md" } : null;
 }
 
 export function reviewData(task: string, sources: { ledgerText?: string; findingsText?: string }): ReviewData {

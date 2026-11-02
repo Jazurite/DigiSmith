@@ -40,15 +40,28 @@ describe("reviewData", () => {
       "| task 3 | 2 | - | - | approved, no findings | - | - |",
       "| task 4 | 1 | - | - | approved, no findings | - | - |",
     ]);
-    expect(reviewData("3", { ledgerText: "Task 9: reviewed (clean)", findingsText: f })).toEqual({ rounds: 2, findings: 2, fixed: 1, parked: 1, rejected: 0, fixRounds: null, source: "findings.md" });
+    expect(reviewData("3", { ledgerText: "Task 9: reviewed (clean)", findingsText: f })).toEqual({ rounds: 2, findings: 2, fixed: 1, parked: 1, rejected: 0, open: 0, fixRounds: null, source: "findings.md" });
   });
   it("reads ticket rows for final", () => {
     const f = table(["| ticket | 1 | a.ts:1 | Minor | w | s | fixed (x) |"]);
     expect(reviewData("final", { findingsText: f })).toMatchObject({ rounds: 1, findings: 1, fixed: 1, source: "findings.md" });
   });
   it("returns nulls when neither source has the task; ledger wins otherwise", () => {
-    expect(reviewData("7", {})).toEqual({ rounds: null, findings: null, fixed: null, parked: null, rejected: null, fixRounds: null, source: "none" });
+    expect(reviewData("7", {})).toEqual({ rounds: null, findings: null, fixed: null, parked: null, rejected: null, open: null, fixRounds: null, source: "none" });
     const f = table(["| task 2 | 1 | a | Minor | w | s | fixed (x) |"]);
     expect(reviewData("2", { ledgerText: "Task 2: reviewed (clean)", findingsText: f }).source).toBe("ledger");
+  });
+  it("counts an unruled finding as open, never fixed", () => {
+    const role = ["Task 2: reviewed (3 findings)", "Review task 2 r1: F1 -> fixed"].join("\n");
+    expect(reviewData("2", { ledgerText: role })).toMatchObject({ findings: 3, fixed: 1, open: 2 });
+    expect(reviewData("2", { ledgerText: "Task 2: reviewed (3 findings)" })).toMatchObject({ findings: 3, fixed: 0, parked: 0, open: 3 });
+    const fixing = ["Task 2: reviewed (1 findings)", "Review task 2 r1: F1 -> fixing (x)"].join("\n");
+    expect(reviewData("2", { ledgerText: fixing })).toMatchObject({ findings: 1, open: 1 });
+  });
+  it("lets a lone Scoped re-review line fall through to findings.md", () => {
+    const f = table(["| ticket | 1 | a.ts:1 | Minor | w | s | fixed (x) |"]);
+    const r = reviewData("final", { ledgerText: "Scoped re-review (fix base a..b, m): clean", findingsText: f });
+    expect(r).toMatchObject({ source: "findings.md", rounds: 1, findings: 1 });
+    expect(reviewData("2", { ledgerText: "Task 2: fix round 1/5 (x)" }).source).toBe("none");
   });
 });
