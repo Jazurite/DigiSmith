@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "ticket": "DGS-683",
+  "generated_at": "2026-11-02T16:10:44.606Z",
+  "reader_versions": {
+    "claude-code": "1"
+  },
+  "steps": {
+    "other": {
+      "claude-sonnet-5-5": {
+        "input": 1138,
+        "output": 442857,
+        "cache_read": 56191508,
+        "cache_write_5m": 0,
+        "cache_write_1h": 1553804,
+        "responses": 507
+      },
+      "claude-opus-5-5": {
+        "input": 44,
+        "output": 22759,
+        "cache_read": 1924943,
+        "cache_write_5m": 0,
+        "cache_write_1h": 106453,
+        "responses": 21
+      }
+    },
+    "implementation": {
+      "claude-sonnet-5-5": {
+        "input": 126,
+        "output": 24425,
+        "cache_read": 4051744,
+        "cache_write_5m": 89212,
+        "cache_write_1h": 28738,
+        "responses": 51
+      },
+      "claude-haiku-5-5": {
+        "input": 66,
+        "output": 31478,
+        "cache_read": 1614604,
+        "cache_write_5m": 112851,
+        "cache_write_1h": 0,
+        "responses": 31
+      }
+    }
+  },
+  "tasks": {
+    "1": {
+      "claude-sonnet-5-5": {
+        "input": 30,
+        "output": 3487,
+        "cache_read": 1050559,
+        "cache_write_5m": 0,
+        "cache_write_1h": 9687,
+        "responses": 11
+      },
+      "claude-haiku-5-5": {
+        "input": 38,
+        "output": 21679,
+        "cache_read": 1010176,
+        "cache_write_5m": 73618,
+        "cache_write_1h": 0,
+        "responses": 18
+      }
+    },
+    "2": {
+      "claude-sonnet-5-5": {
+        "input": 22,
+        "output": 3106,
+        "cache_read": 832118,
+        "cache_write_5m": 0,
+        "cache_write_1h": 7063,
+        "responses": 8
+      },
+      "claude-haiku-5-5": {
+        "input": 28,
+        "output": 9799,
+        "cache_read": 604428,
+        "cache_write_5m": 39233,
+        "cache_write_1h": 0,
+        "responses": 13
+      }
+    },
+    "3": {
+      "claude-sonnet-5-5": {
+        "input": 44,
+        "output": 9364,
+        "cache_read": 1205120,
+        "cache_write_5m": 48549,
+        "cache_write_1h": 6862,
+        "responses": 18
+      }
+    },
+    "4": {
+      "claude-sonnet-5-5": {
+        "input": 28,
+        "output": 8049,
+        "cache_read": 873444,
+        "cache_write_5m": 40663,
+        "cache_write_1h": 4607,
+        "responses": 13
+      }
+    }
+  },
+  "sessions": [
+    {
+      "session_id": "4d7f77d7-1c19-4502-942e-703ad9d263a0",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "ef9c308e-9480-4799-b05d-5cd384baafba",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "9db356ab-fcc7-4d32-9a8c-efb79eef48f1",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "f43deb3d-80ad-404c-9f13-cecbfd329c69",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "3e0cd25b-df2e-49dd-89d8-95eccd59c2ae",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "42e303c0-daf0-48aa-be4a-e5a3745bf489",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "4cf348f1-ca94-4a57-bec5-2b149f97b0d2",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "14bb4fe2-9b35-43c4-85f5-2ca10a689618",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "6fec832b-2bb5-4e43-8516-28182fb64614",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "fa98a8da-9d96-4722-acc4-114c3a0aeceb",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "d047d99f-5724-40ec-9fc1-0bb5e03bad20",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "a7588722-885d-4b4a-9d6f-8e31d069a222",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "d759efa3-e92e-4bfa-83ba-0d48bed21e56",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "7d86b887-a9a5-44be-929d-b78d230c003d",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "88730d54-3f0f-49c6-9ab2-2cec57ba3ee8",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "044d54e7-c3dd-4600-9b74-75e3d1f2f29f",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "37be3a94-c8e8-4e84-a5ad-dbf874c29600",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "3f0488a7-8a83-4ce6-ba27-7e6901e0e180",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "680d22d7-8643-4c69-9bdf-9e9510a17c78",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "90774e95-cacd-49e0-8962-d34dc0cb9929",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "bb903815-aa67-4ad9-8cfc-98f7cceccb07",
+      "role": "unknown",
+      "attribution": "inferred"
+    },
+    {
+      "session_id": "f253c0e3-4d3b-4cf8-a49c-83c1415f1189",
+      "role": "unknown",
+      "attribution": "inferred"
+    }
+  ],
+  "unattributed": {}
+}
