@@ -17,6 +17,7 @@ import { planIfFree, settle } from "./journal.ts";
 import { acquireLock, appendEvent, clearLock, readLock, readNotes, writeNotes } from "./state.ts";
 import { runBack } from "./switch.ts";
 import type { TickResult } from "./tick.ts";
+import { runRefineLane } from "./director/refine-lane.ts";
 import type { LoTask, Tracker } from "./types.ts";
 
 export interface ScanDeps {
@@ -29,6 +30,8 @@ export interface ScanDeps {
   tick?: () => Promise<TickResult>;
   /** DGS-665: null = a builder slot is free; a string = the refusal text. Optional so older tests keep passing; production always passes it. */
   builderFull?: () => string | null;
+  /** DGS-699: the refine lane. Absent: the lane is off and the scan behaves as before. */
+  refine?: { prompt: (msg: string) => Promise<void>; roleFull: () => string | null; ordersDir?: string };
 }
 export interface ScanResult {
   outcome: "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
@@ -130,7 +133,21 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   return "claimed";
 }
 
+/** The build scan, then the independent refine lane. The lane never changes the build result. */
 export async function runScan(d: ScanDeps): Promise<ScanResult> {
+  const r = await runBuildScan(d);
+  if (d.refine && !["breaker", "guardrail-config", "conductor-config"].includes(r.outcome)) {
+    try {
+      const rows = await runRefineLane(d);
+      if (d.dryRun && rows.length > 0) r.verdicts = [...(r.verdicts ?? []), ...rows];
+    } catch (e) {
+      try { appendEvent(d.dir, d.now(), "refine-failed", { error: errText(e).replace(/\s+/g, " ").slice(0, 200) }); } catch { /* the scan result stands */ }
+    }
+  }
+  return r;
+}
+
+export async function runBuildScan(d: ScanDeps): Promise<ScanResult> {
   const now = d.now();
   const skipped: ScanResult["skipped"] = [];
 

@@ -78,3 +78,9 @@ export async function escalate(d: RecordDeps, a: EscalateArgs): Promise<Escalate
   await recordDecision(d, { ticket: a.ticket, id: "escalate-concept", side: "escalated", what: `asked Jack (needs ${a.id}): ${a.question}`, why: `outside the Director's authority: ${a.id}`, noComment: true });
   return { outcome: "asked" };
 }
+
+/** True when any escalation of the ticket came back (an answer exists). */
+export function hasReturned(dir: string, ticket: string): boolean {
+  for (const l of current(dir).values()) if (l.ticket === ticket && l.state === "returned") return true;
+  return false;
+}
