@@ -32,7 +32,7 @@ function nowPlus7(): string {
   return new Date(Date.now() + 7 * 3600_000).toISOString().replace(/\.\d{3}Z$/, "+07:00");
 }
 
-function parse(p: string, text: string): Driver {
+function parse(p: string, text: string, ticket: string): Driver {
   let v: unknown;
   try {
     v = JSON.parse(text);
@@ -40,7 +40,7 @@ function parse(p: string, text: string): Driver {
     throw new Error(`driver file ${p} is not valid JSON: ${(err as Error).message}`);
   }
   const r = v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
-  const ok = typeof r.ticket === "string" && typeof r.driver === "string" && r.driver !== "" && typeof r.since === "string" && (r.mode === "attended" || r.mode === "factory");
+  const ok = r.ticket === ticket && typeof r.driver === "string" && r.driver !== "" && typeof r.since === "string" && (r.mode === "attended" || r.mode === "factory");
   if (!ok) throw new Error(`driver file ${p} is unreadable: needs ticket, driver, since and mode attended|factory`);
   return r as unknown as Driver;
 }
@@ -54,7 +54,7 @@ export function readDriver(ticket: string, env?: NodeJS.ProcessEnv): Driver | nu
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
-  return parse(p, text);
+  return parse(p, text, ticket);
 }
 
 export function claimDriver(d: Omit<Driver, "since"> & { since?: string }, env?: NodeJS.ProcessEnv): Driver {

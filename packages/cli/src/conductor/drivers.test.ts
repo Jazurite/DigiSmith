@@ -48,4 +48,9 @@ describe("drivers", () => {
     expect(() => readDriver("DGS-9", env)).toThrow(/not valid JSON/);
     expect(() => claimDriver({ ticket: "DGS-9", driver: "a", mode: "attended" }, env)).toThrow(/unreadable driver file/);
   });
+  it("a record whose ticket differs from the file key is unreadable", () => {
+    fs.mkdirSync(path.join(depot, "drivers"), { recursive: true });
+    fs.writeFileSync(path.join(depot, "drivers", "DGS-9.json"), JSON.stringify({ ticket: "DGS-1", driver: "a", since: "x", mode: "attended" }));
+    expect(() => readDriver("DGS-9", env)).toThrow(/unreadable/);
+  });
 });
