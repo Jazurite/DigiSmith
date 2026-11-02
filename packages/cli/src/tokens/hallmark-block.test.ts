@@ -26,6 +26,26 @@ describe("renderBlock", () => {
     expect(b).toMatch(/\n\nAgent time:.*\n\nReviews:.*\n\n\| Task/);
     expect(b).toMatch(/\n\nUpdated .*\n\nHallmark totals end$/);
   });
+  it("says task or tasks by count", () => {
+    expect(renderBlock([rows[0]], totals, { now: NOW })).toContain("over 1 task (sum");
+    expect(renderBlock(rows, totals, { now: NOW })).toContain("over 2 tasks (sum");
+  });
+  it("adds a Partial line for partial stamps, alone and with missing sessions", () => {
+    const p = [{ ...rows[0], partial: true }, { ...rows[0], task: "3", partial: true }, rows[1]];
+    const only = renderBlock(p, totals, { now: NOW });
+    expect(only).toContain("Partial: 2 task stamp(s) were posted with partial data");
+    expect(only).not.toContain("session(s) without transcript");
+    const both = renderBlock(p, totals, { now: NOW, missing: 1 });
+    expect(both).toContain("Partial: 1 session(s) without transcript\n\nPartial: 2 task stamp(s) were posted with partial data");
+    expect(renderBlock(rows, totals, { now: NOW })).not.toContain("task stamp(s)");
+  });
+  it("matches sentinels as whole lines only", () => {
+    const prose = `We say ${START} in prose, and ${END} too, and \\--- end Hallmark --- inline.`;
+    expect(sentinelCounts(prose)).toEqual({ start: 0, end: 0, legacy: 0 });
+    const block = renderBlock(rows, totals, { now: NOW });
+    expect(applyBlock(prose, block)).toBe(`${prose}\n\n${block}`);
+    expect(sentinelCounts(`a\r\n${START}\r\n${END}`)).toEqual({ start: 1, end: 1, legacy: 0 });
+  });
   it("adds a Partial line", () => {
     expect(renderBlock(rows, totals, { now: NOW, missing: 2 })).toContain("Partial: 2 session(s) without transcript");
     expect(renderBlock(rows, totals, { now: NOW })).not.toContain("Partial:");

@@ -4,10 +4,11 @@ import type { Counts } from "./types.ts";
 export const START = "Hallmark totals begin (dg clickup ticket-total)";
 export const END = "Hallmark totals end";
 // The first form: ClickUp returns a line that starts with --- with a backslash in front.
-export const LEGACY_START = /\\?--- Hallmark \(dg clickup ticket-total\) ---/g;
-export const LEGACY_END = /\\?--- end Hallmark ---/g;
+// Whole lines only: a prose line that merely contains the text is not a sentinel.
+export const LEGACY_START = /^\\?--- Hallmark \(dg clickup ticket-total\) ---(?=\r?$)/gm;
+export const LEGACY_END = /^\\?--- end Hallmark ---(?=\r?$)/gm;
 const hits = (text: string, re: RegExp): { index: number; length: number }[] => [...text.matchAll(re)].map((m) => ({ index: m.index as number, length: m[0].length }));
-const literal = (text: string, needle: string) => hits(text, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"));
+const literal = (text: string, needle: string) => hits(text, new RegExp(`^${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\r?$)`, "gm"));
 
 /** Sentinel lines left in a description: the new ones (once each) and any legacy ones (none). */
 export function sentinelCounts(text: string): { start: number; end: number; legacy: number } {
@@ -22,6 +23,7 @@ export interface BlockRow {
   findings: number | null;
   fixRounds: number | null;
   stamped: boolean;
+  partial?: boolean; // the stamp was posted with partial data
 }
 
 export interface BlockTotals {
@@ -55,8 +57,10 @@ export function renderBlock(rows: BlockRow[], totals: BlockTotals, opts: { now?:
     "| --- | --- | --- | --- | --- |",
     ...rows.map((r) => `| ${r.task}${r.stamped ? "" : " (not stamped)"} | ${formatDuration(r.agentSeconds)} | ${r.cost_usd === null ? "cost not priced" : usd(r.cost_usd)} | ${r.findings ?? nr} | ${r.fixRounds ?? nr} |`),
   ].join("\n");
-  const parts = [START, totalLine(totals), `Agent time: ${formatDuration(seconds)} over ${rows.length} tasks (sum of task windows)`, reviews];
+  const parts = [START, totalLine(totals), `Agent time: ${formatDuration(seconds)} over ${rows.length} ${rows.length === 1 ? "task" : "tasks"} (sum of task windows)`, reviews];
   if ((opts.missing ?? 0) > 0) parts.push(`Partial: ${opts.missing} session(s) without transcript`);
+  const stampsPartial = rows.filter((r) => r.stamped && r.partial).length;
+  if (stampsPartial > 0) parts.push(`Partial: ${stampsPartial} task stamp(s) were posted with partial data`);
   parts.push(table, `Updated ${utc7(opts.now ?? new Date().toISOString()).slice(0, 16)} UTC+7`, END);
   return parts.join("\n\n");
 }

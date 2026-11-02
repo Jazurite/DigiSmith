@@ -200,6 +200,14 @@ describe("ticket-total", () => {
     expect(out(console.log as never)).toContain("Partial: 1 session(s) without transcript");
   });
 
+  it("a partial stamp reaches the block as a Partial line", async () => {
+    seed(); appendStamp(KEY, { ...stamp("1", 0.4635, 104, 0, 0), partial: true });
+    await run(fake({ description: "", markdown_description: "" }));
+    const log = out(console.log as never);
+    expect(log).toContain("Partial: 1 task stamp(s) were posted with partial data");
+    expect(log).not.toContain("session(s) without transcript");
+  });
+
   it("a second run replaces the block in place", async () => {
     seed(); appendStamp(KEY, stamp("1", 0.4635, 104, 0, 0));
     const f = fake({ description: "Intro", markdown_description: "Intro" });

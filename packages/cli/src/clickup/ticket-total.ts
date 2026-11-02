@@ -23,7 +23,7 @@ function rowsFor(key: string, data: ReturnType<typeof collectRecords>): BlockRow
     const s = latest.get(task);
     if (s) {
       const costs = Object.values(s.models).map((m) => m.cost_usd);
-      return { task, agentSeconds: s.agent_seconds, cost_usd: costs.some((c) => c === null) ? null : costs.reduce((a: number, c) => a + (c as number), 0), rounds: s.reviews.rounds, findings: s.reviews.findings, fixRounds: s.reviews.fix_rounds, stamped: true };
+      return { task, agentSeconds: s.agent_seconds, cost_usd: costs.some((c) => c === null) ? null : costs.reduce((a: number, c) => a + (c as number), 0), rounds: s.reviews.rounds, findings: s.reviews.findings, fixRounds: s.reviews.fix_rounds, stamped: true, partial: s.partial };
     }
     // No stamp: window and cost come from the registry and transcripts only. The ledger is gone by now,
     // so the "dispatch ... agent=<id>" rule cannot apply and subagent responses outside the window are missed.
