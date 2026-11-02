@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-695 report</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-695 Board docs are not a merge — Implementation Report</title>
 <style>body{font:16px/1.5 system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .2em}</style></head><body>
-<h1>DGS-695: board-docs commits are not "already merged"</h1>
+<h1>DGS-695 Board docs are not a merge — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-695</strong></span><span>Date: 2026-11-02</span></div>
 <h2>What changed</h2>
 <ul>
 <li><code>readMainLog</code> reads changed files in the same single git call; rows are <code>{ sha, subject, files }</code>.</li>
