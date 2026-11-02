@@ -33,11 +33,16 @@ function nowPlus7(): string {
 }
 
 function parse(p: string, text: string): Driver {
+  let v: unknown;
   try {
-    return JSON.parse(text) as Driver;
+    v = JSON.parse(text);
   } catch (err) {
     throw new Error(`driver file ${p} is not valid JSON: ${(err as Error).message}`);
   }
+  const r = v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  const ok = typeof r.ticket === "string" && typeof r.driver === "string" && r.driver !== "" && typeof r.since === "string" && (r.mode === "attended" || r.mode === "factory");
+  if (!ok) throw new Error(`driver file ${p} is unreadable: needs ticket, driver, since and mode attended|factory`);
+  return r as unknown as Driver;
 }
 
 export function readDriver(ticket: string, env?: NodeJS.ProcessEnv): Driver | null {
@@ -60,7 +65,13 @@ export function claimDriver(d: Omit<Driver, "since"> & { since?: string }, env?:
     fs.writeFileSync(p, JSON.stringify(rec, null, 2) + "\n", { flag: "wx" });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new DriverTaken(d.ticket, readDriver(d.ticket, env)?.driver ?? "unknown");
+      let name = "unreadable driver file";
+      try {
+        name = readDriver(d.ticket, env)?.driver ?? "unknown";
+      } catch {
+        // a bad file still means the ticket is taken
+      }
+      throw new DriverTaken(d.ticket, name);
     }
     throw err;
   }

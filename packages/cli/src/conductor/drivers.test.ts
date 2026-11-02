@@ -39,4 +39,13 @@ describe("drivers", () => {
   it("handover of a ticket without a driver throws", () => {
     expect(() => handoverDriver("DGS-9", "a", "b", env)).toThrow(/no driver/);
   });
+  it("a driver file with the wrong shape is unreadable, and still blocks a claim", () => {
+    fs.mkdirSync(path.join(depot, "drivers"), { recursive: true });
+    fs.writeFileSync(path.join(depot, "drivers", "DGS-9.json"), "{}");
+    expect(() => readDriver("DGS-9", env)).toThrow(/unreadable/);
+    expect(() => claimDriver({ ticket: "DGS-9", driver: "a", mode: "attended" }, env)).toThrow(DriverTaken);
+    fs.writeFileSync(path.join(depot, "drivers", "DGS-9.json"), "not json");
+    expect(() => readDriver("DGS-9", env)).toThrow(/not valid JSON/);
+    expect(() => claimDriver({ ticket: "DGS-9", driver: "a", mode: "attended" }, env)).toThrow(/unreadable driver file/);
+  });
 });
