@@ -5,6 +5,7 @@ import { readLimitsFile } from "../autonomous/guardrails.ts";
 import { autonomousDir, readLock } from "../autonomous/state.ts";
 import { countSlots, refusal, type Count, type Kind } from "./limit.ts";
 import { listRuns } from "./read.ts";
+import { readDriver } from "../conductor/drivers.ts";
 
 // 2 days is above the stale window (at most 1440 minutes), so a run that could still count is always read.
 const WINDOW_DAYS = 2;
@@ -47,4 +48,17 @@ export function currentCount(env: NodeJS.ProcessEnv, cwd: string, nowMs: number 
 export function startRefusal(env: NodeJS.ProcessEnv, cwd: string, kind: Kind, ticket: string): string | null {
   if (kind === "builder" && readLock(autonomousDir(env))?.ticket === ticket) return null;
   return refusal(currentCount(env, cwd).count, kind);
+}
+
+/**
+ * DGS-683: the refusal text when another conductor drives `ticket`, or null. Only a builder or reviewer start is checked.
+ * No driver file means the start goes on as before (the starter is not claimed here). The starter is DIGISMITH_NAME.
+ * A ticket outside the driver key format (^[A-Z]+-\d+$) has no driver record, so it is not checked.
+ */
+export function driverRefusal(env: NodeJS.ProcessEnv, role: string, ticket: string): string | null {
+  if (role !== "builder" && role !== "reviewer") return null;
+  if (!/^[A-Z]+-\d+$/.test(ticket)) return null;
+  const d = readDriver(ticket, env);
+  if (d === null || d.driver === env.DIGISMITH_NAME) return null;
+  return `${ticket} is driven by ${d.driver} (since ${d.since}): ask that conductor`;
 }

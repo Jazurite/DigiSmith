@@ -6,6 +6,7 @@ import yargs from "yargs";
 import runCommand from "./index.ts";
 import { buildCli } from "../index.ts";
 import { findRunDir } from "./paths.ts";
+import { claimDriver } from "../conductor/drivers.ts";
 
 let tmp: string;
 let savedDepot: string | undefined;
@@ -262,5 +263,59 @@ describe("dg run limit (DGS-665)", () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/^limit: role 1 of 1 in use/);
     expect((await dgc("start", "--ticket", "DGS-2", "--role", "maestro", "--order", "/o.md")).status).toBe(0);
+  });
+});
+
+describe("dg run start and the ticket driver (DGS-683)", () => {
+  let savedName: string | undefined;
+  beforeEach(() => { savedName = process.env.DIGISMITH_NAME; delete process.env.DIGISMITH_NAME; });
+  afterEach(() => { if (savedName === undefined) delete process.env.DIGISMITH_NAME; else process.env.DIGISMITH_NAME = savedName; });
+  const start = (role: string, ticket = "DGS-9") => dg("start", "--ticket", ticket, "--role", role, "--order", "/o.md");
+
+  it("starts when the starter is the driver", async () => {
+    claimDriver({ ticket: "DGS-9", driver: "tc-dgs-9", mode: "attended" }, process.env);
+    process.env.DIGISMITH_NAME = "tc-dgs-9";
+    const r = await start("builder");
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toMatch(/^builder-/);
+  });
+  it("refuses a builder or reviewer when another conductor drives the ticket, and writes no record", async () => {
+    claimDriver({ ticket: "DGS-9", driver: "tc-dgs-9", mode: "attended", since: "2026-11-02T10:00:00+07:00" }, process.env);
+    process.env.DIGISMITH_NAME = "digismith-conductor";
+    for (const role of ["builder", "reviewer"]) {
+      const r = await start(role);
+      expect(r.status).toBe(1);
+      expect(r.stderr).toBe("DGS-9 is driven by tc-dgs-9 (since 2026-11-02T10:00:00+07:00): ask that conductor");
+    }
+    expect((await dg("list")).stdout.trim()).not.toMatch(/builder-|reviewer-/);
+  });
+  it("refuses when DIGISMITH_NAME is unset and a driver exists", async () => {
+    claimDriver({ ticket: "DGS-9", driver: "tc-dgs-9", mode: "attended" }, process.env);
+    expect((await start("builder")).status).toBe(1);
+  });
+  it("starts as before when the ticket has no driver, and does not claim it", async () => {
+    process.env.DIGISMITH_NAME = "digismith-conductor";
+    expect((await start("builder")).status).toBe(0);
+    expect(fs.existsSync(path.join(tmp, "drivers"))).toBe(false);
+  });
+  it("does not check a Scout (one role slot, so one role per test)", async () => {
+    claimDriver({ ticket: "DGS-9", driver: "tc-dgs-9", mode: "attended" }, process.env);
+    process.env.DIGISMITH_NAME = "digismith-conductor";
+    const r = await start("scout");
+    expect(r.stderr).toBe("");
+    expect(r.status).toBe(0);
+  });
+  it("does not check role other", async () => {
+    claimDriver({ ticket: "DGS-9", driver: "tc-dgs-9", mode: "attended" }, process.env);
+    process.env.DIGISMITH_NAME = "digismith-conductor";
+    const r = await start("other");
+    expect(r.stderr).toBe("");
+    expect(r.status).toBe(0);
+  });
+  it("does not check a ticket key outside the driver key format (lower case)", async () => {
+    process.env.DIGISMITH_NAME = "x";
+    const r = await start("builder", "abc-9");
+    expect(r.stderr).toBe("");
+    expect(r.status).toBe(0);
   });
 });
