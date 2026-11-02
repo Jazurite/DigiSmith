@@ -19,6 +19,8 @@ export interface Collected {
   records: UsageRecord[];
   entries: RegistryEntry[];
   inferred: string[];
+  // Registered plus inferred sessions: the ticket's own, derived once here.
+  ticketSessions: string[];
   missingSessions: string[];
 }
 
@@ -51,7 +53,7 @@ export function collectRecords(opts: Pick<CountOptions, "ticket" | "registry" | 
     }
   }
   const records = [...byResponse.values()].map((v) => v.r).sort((a, b) => a.ts.localeCompare(b.ts));
-  return { records, entries, inferred, missingSessions };
+  return { records, entries, inferred, ticketSessions: [...ticketSessions], missingSessions };
 }
 
 export function countTicket(opts: CountOptions): Snapshot {

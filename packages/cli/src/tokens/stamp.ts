@@ -22,6 +22,9 @@ function priceOf(r: UsageRecord): number | null {
 }
 
 // Closed windows of one task: a task_start paired with the next task_end of the same task and session.
+// A second task_start while one is open in that session is ignored (the first start wins). Windows of
+// different sessions are paired separately and may overlap; each counts in full, so agentSeconds is the
+// plain sum of closed windows, not wall-clock time.
 function closedWindows(entries: RegistryEntry[], task: string): { start: string; end: string }[] {
   const marks = entries
     .map((e, order) => ({ e, t: Date.parse(e.ts), order }))
@@ -48,15 +51,14 @@ export function taskUsage(
   entries: RegistryEntry[],
   taskAgents: Record<string, string[]> | undefined,
   task: string,
-  inferredSessions: string[] = [],
+  ticketSessions: Iterable<string>,
 ): TaskUsage {
-  const ticketSessions = new Set<string>(inferredSessions);
-  for (const e of entries) if (e.kind === "session") ticketSessions.add(e.session_id);
+  const own = new Set(ticketSessions);
   const models: Record<string, ModelUsage> = {};
   let counts = emptyCounts();
   let cost: number | null = 0;
   for (const r of records) {
-    if (!ticketSessions.has(r.session_id)) continue; // unattributed, as in buildSnapshot
+    if (!own.has(r.session_id)) continue; // unattributed, as in buildSnapshot
     if ((ledgerTask(r, taskAgents) ?? taskForRecord(r, entries)) !== task) continue;
     const c: Counts = { input: r.input, output: r.output, cache_read: r.cache_read, cache_write_5m: r.cache_write_5m, cache_write_1h: r.cache_write_1h, responses: 1 };
     const p = priceOf(r);
