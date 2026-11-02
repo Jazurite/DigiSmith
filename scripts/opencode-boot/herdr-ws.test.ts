@@ -12,8 +12,8 @@ echo "$@" >> "$FAKE_LOG"
 echo "\${HERDR_SOCKET_PATH-unset}" >> "$FAKE_LOG.env"
 S="$2"; shift 2
 case "$1 $2" in
-  "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"},{"name":"tc-dgs-8","pane_id":"w7:p6","workspace_id":"w7"}]}}' ;;
-  "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
+  "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"},{"name":"tc-dgs-8","pane_id":"w7:p6","workspace_id":"w7"},{"name":"scout-a","pane_id":"w3:p3","workspace_id":"w3"}]}}' ;;
+  "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b|scout-a) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
   "tab get") if [ "$3" = "w7:t9" ]; then echo "not json"; exit 0; fi; case "$3" in w7:t2) L=tc-dgs-9;; w7:t3) L=nw-5;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
   "tab list") echo "{\\"id\\":\\"cli:tab:list\\",\\"result\\":{\\"tabs\\":[{\\"tab_id\\":\\"$4:t1\\",\\"workspace_id\\":\\"$4\\"}]}}" ;;
   *) echo '{"result":{}}' ;;
@@ -70,7 +70,7 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
 
   it("scope with several default pairs: default list shows only default workspaces, Suite list only w7", () => {
     const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
-    expect(names(run(env, ["agent", "list"])).sort()).toEqual(["dgs-1", "dgs-2", "dgs-683-b"])
+    expect(names(run(env, ["agent", "list"])).sort()).toEqual(["dgs-1", "dgs-2", "dgs-683-b", "scout-a"])
     expect(names(run(env, ["--session", "Suite", "agent", "list"])).sort()).toEqual(["digismith-conductor", "tc-dgs-8", "tc-dgs-9"])
   })
 
@@ -281,6 +281,85 @@ describe("herdr-ws Suite close rule (T11)", () => {
     expect(refused(run(env, ["pane", "move", "w2:p1", "--tab", "w9:t1"]))).toBe(true)
     expect(refused(run(env, ["pane", "move", "w2:p1", "--target-pane", "w9:p1"]))).toBe(true)
     expect(refused(run(env, ["pane", "swap", "--source-pane", "w2:p1", "--target-pane", "w9:p1"]))).toBe(true)
+  })
+})
+
+describe("herdr-ws cross-project audit log (T12)", () => {
+  let depot: string
+  beforeEach(() => { depot = path.join(dir, "depot") })
+  const base = () => ({ HERDR_WS: "w2", HERDR_SCOPE: "Suite:w7,default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot, DIGISMITH_NAME: "digismith-conductor" })
+  const logFile = (n: string) => path.join(depot, "drivers", n)
+  const lines = (n: string) => fs.readFileSync(logFile(n), "utf8").trim().split("\n").map((l) => JSON.parse(l))
+
+  it("an act on another Floor workspace writes one line to _unmapped.log when the agent name has no ticket key", () => {
+    const r = run(base(), ["agent", "prompt", "scout-a", "hi"])
+    expect(ok(r)).toBe(true)
+    const l = lines("_unmapped.log")
+    expect(l).toHaveLength(1)
+    expect(l[0]).toMatchObject({ who: "digismith-conductor", target: "scout-a", workspace: "w3", verb: "agent prompt" })
+    expect(l[0].time).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+07:00$/)
+  })
+
+  it("the key is the first DGS-<n> of the agent name, uppercased (dgs-2 gives DGS-2.log)", () => {
+    run(base(), ["agent", "prompt", "dgs-2", "hi"])
+    expect(lines("DGS-2.log")[0]).toMatchObject({ target: "dgs-2", workspace: "w3" })
+    expect(fs.existsSync(logFile("_unmapped.log"))).toBe(false)
+  })
+
+  it("a target agent named with a ticket key writes drivers/<KEY>.log", () => {
+    run(base(), ["agent", "prompt", "dgs-683-b", "hi"])
+    expect(lines("DGS-683.log")[0]).toMatchObject({ target: "dgs-683-b", workspace: "w3", verb: "agent prompt" })
+    expect(fs.existsSync(logFile("_unmapped.log"))).toBe(false)
+  })
+
+  it("a pane target is mapped to its agent's ticket key; a tab target is unmapped", () => {
+    run(base(), ["pane", "send-text", "w3:p2", "x"])
+    expect(lines("DGS-683.log")[0]).toMatchObject({ target: "w3:p2", workspace: "w3", verb: "pane send-text" })
+    run(base(), ["tab", "close", "w3:t5"])
+    expect(lines("_unmapped.log")[0]).toMatchObject({ target: "w3:t5", verb: "tab close" })
+  })
+
+  it("create and start name their workspace through --workspace and --pane", () => {
+    run(base(), ["tab", "create", "--workspace", "w3", "--label", "x"])
+    run(base(), ["agent", "start", "scout-a", "--pane", "w3:p3"])
+    const l = lines("_unmapped.log")
+    expect(l.map((x) => [x.verb, x.workspace])).toEqual([["tab create", "w3"], ["agent start", "w3"]])
+  })
+
+  it("own workspace, read verbs, Suite acts and an unset HERDR_WS write nothing", () => {
+    run(base(), ["agent", "prompt", "dgs-1", "hi"])
+    run(base(), ["agent", "list"])
+    run(base(), ["agent", "get", "dgs-2"])
+    run(base(), ["pane", "read", "w3:p1"])
+    run(base(), ["tab", "list"])
+    run({ ...base(), HERDR_WS: "" }, ["agent", "prompt", "dgs-2", "hi"])
+    run(base(), ["--session", "Suite", "agent", "get", "tc-dgs-9"])
+    run(base(), ["--session", "Suite", "tab", "rename", "w7:t2", "tc-y"])
+    expect(fs.existsSync(path.join(depot, "drivers"))).toBe(false)
+  })
+
+  it("a refused call writes nothing", () => {
+    expect(refused(run(base(), ["agent", "prompt", "w9-nobody", "hi"]))).toBe(true)
+    expect(refused(run(base(), ["pane", "send-text", "w4:p1", "x"]))).toBe(true)
+    expect(fs.existsSync(path.join(depot, "drivers"))).toBe(false)
+  })
+
+  it("who is unknown when DIGISMITH_NAME is unset; the depot falls back to HOME/.digismith-depot", () => {
+    const e: Record<string, string> = { ...base(), HOME: dir }
+    delete e.DIGISMITH_NAME
+    delete e.DIGISMITH_DEPOT_DIR
+    run(e, ["agent", "prompt", "scout-a", "hi"])
+    const f = path.join(dir, ".digismith-depot", "drivers", "_unmapped.log")
+    expect(JSON.parse(fs.readFileSync(f, "utf8").trim()).who).toBe("unknown")
+  })
+
+  it("an unwritable depot does not block an allowed call: exit 0, one line on stderr", () => {
+    fs.writeFileSync(depot, "a file, not a directory")
+    const r = run(base(), ["agent", "prompt", "dgs-2", "hi"])
+    expect(ok(r)).toBe(true)
+    expect(r.log).toMatch(/agent prompt dgs-2 hi/) // the call was forwarded
+    expect(r.stderr.trim().split("\n")).toHaveLength(1)
+    expect(r.stderr).toMatch(/herdr-ws: audit log not written/)
   })
 })
 

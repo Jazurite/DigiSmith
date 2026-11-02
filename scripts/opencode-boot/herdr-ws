@@ -4,7 +4,7 @@ Scope: HERDR_SCOPE = comma list "session:workspace" (for example Suite:w7,defaul
 --session S as the first argument selects the session (S must be in the scope; no --session = default). Allowed groups: agent, pane, tab.
 Every target must sit in a workspace the scope names for that session. Lists are filtered. create needs --workspace in that set.
 start and prompt-type verbs check the target. The wrapper builds the herdr argv itself: it never forwards a --session or --socket of the caller."""
-import json, os, re, subprocess, sys
+import datetime, json, os, re, subprocess, sys
 HERDR = "/Users/workbox/.local/bin/herdr"
 H = [HERDR, "--session", "default"]  # H[0] is the herdr path; the session is set per call by run()
 SESSION_RE = re.compile(r"^[A-Za-z][\w-]*$")
@@ -85,6 +85,21 @@ def relocate_check(args):
     if SESSION == "Suite":
         for x in panes:
             if not ticket_name(agent_of_pane(x)): deny("in Suite only panes of tc- or nw- conductors can be moved or swapped")
+    return panes[0]
+def audit(tgt, tws):
+    # DGS-683 spec 6.3/7.1 item 5: a non-read act in the Floor on a workspace other than the caller's own appends one JSON line to <depot>/drivers/<KEY>.log.
+    # Logged when the call is forwarded (an attempt), never blocks the call: a write failure prints one line on stderr.
+    own = os.environ.get("HERDR_WS", "")
+    if SESSION != "default" or not own or verb in ("list", "get", "read") or tws == own: return
+    try:
+        name = agent_of_pane(tgt) if re.match(r"^w\d+:p", tgt) else tgt
+        m = re.search(r"dgs-\d+", name, re.I)
+        depot = os.environ.get("DIGISMITH_DEPOT_DIR") or os.path.join(os.path.expanduser("~"), ".digismith-depot")
+        os.makedirs(os.path.join(depot, "drivers"), exist_ok=True)
+        t = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).isoformat(timespec="seconds")
+        rec = {"time": t, "who": os.environ.get("DIGISMITH_NAME") or "unknown", "target": tgt, "workspace": tws, "verb": "%s %s" % (grp, verb)}
+        with open(os.path.join(depot, "drivers", (m.group(0).upper() if m else "_unmapped") + ".log"), "a") as f: f.write(json.dumps(rec) + "\n")
+    except Exception as e: sys.stderr.write("herdr-ws: audit log not written: %s\n" % e)
 if len(a) < 2: deny("usage: herdr-ws [--session S] <agent|pane|tab> <verb> [target] ...")
 grp, verb, rest = a[0], a[1], a[2:]
 if grp not in ("agent", "pane", "tab"): deny("group %s not allowed" % grp)
@@ -117,17 +132,23 @@ if verb == "list":
         except Exception: deny("could not filter agent list")
     sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)
 if a.count("--workspace") > 1 or a.count("--pane") > 1: deny("--workspace and --pane may appear only once")
+TGT, TWS = "", ""  # what the call acts on, and that target's workspace (for the audit log)
 if verb == "create":
     if "--workspace" not in rest or rest.index("--workspace") + 1 >= len(rest) or rest[rest.index("--workspace") + 1] not in WSS:
         deny("create needs --workspace in %s" % ",".join(sorted(WSS)))
+    TWS = rest[rest.index("--workspace") + 1]; TGT = TWS
     cmd = a
 else:
     if not rest: deny("target missing")
-    tgt = rest[0]
+    tgt = rest[0]; TGT = tgt
     if verb == "start":  # agent start <name> --pane <id>
-        if "--pane" not in rest or rest.index("--pane") + 1 >= len(rest) or ws_of(rest[rest.index("--pane") + 1]) not in WSS: deny("--pane outside the scope")
-    elif grp == "pane" and verb in ("move", "swap"): relocate_check(rest)
-    elif ws_of(tgt) not in WSS: deny("target %s is not in the scope of session %s" % (tgt, SESSION))
+        if "--pane" not in rest or rest.index("--pane") + 1 >= len(rest): deny("--pane outside the scope")
+        TWS = ws_of(rest[rest.index("--pane") + 1])
+        if TWS not in WSS: deny("--pane outside the scope")
+    elif grp == "pane" and verb in ("move", "swap"): TGT = relocate_check(rest); TWS = ws_of(TGT)
+    else:
+        TWS = ws_of(tgt)
+        if TWS not in WSS: deny("target %s is not in the scope of session %s" % (tgt, SESSION))
     cmd = a
 if SESSION == "Suite":
     # DGS-683: in Suite the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed.
@@ -140,5 +161,6 @@ if SESSION == "Suite":
         if not ticket_name(current_label(grp, rest[0])): deny("in Suite only tc- or nw- conductors can be renamed")
         if not ticket_name(rest[1]): deny("in Suite a new name must keep the tc- or nw- prefix")
 elif verb in ("close",) and grp == "tab" and rest and rest[0] in {w + ":t1" for w in WSS}: deny("tab 1 (maestro) cannot be closed here")
+audit(TGT, TWS)
 r = run(cmd)
 sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)
