@@ -4,9 +4,10 @@ import type { Git } from "./gitx.ts";
 import { readMainConfig } from "./guardrails.ts";
 import { TICKET_KEY } from "../ticket-key.ts";
 import { DEFAULT_PROTECTED, touchedProtected } from "./protected-paths.ts";
+import { readApproval, uncoveredHits } from "./director/authority-backstop.ts";
 
 export interface GateDeps { git: Git; repo: string; dir: string; now: () => Date }
-type Code = "bad-key" | "config" | "no-branch" | "no-commits" | "protected-path";
+type Code = "bad-key" | "config" | "no-branch" | "no-commits" | "protected-path" | "authority-path";
 export type GateResult = { go: true } | { go: false; code: Code; reason: string };
 
 const firstLine = (e: unknown): string => (e instanceof Error ? e.message : String(e)).split("\n")[0];
@@ -39,6 +40,10 @@ export function runMergeGate(d: GateDeps, ticket: string): GateResult {
     const files: string[] = [];
     for (let i = 1; i < tokens.length; i += 2) files.push(tokens[i]);
     const hits = touchedProtected(files, cfg.guardrails.protectedPaths ?? DEFAULT_PROTECTED);
+    // DGS-699 backstop: a file on an authority path needs Jack's written yes (the refinement gate's approval record, in the state dir).
+    // A covered change still gets the protected-path refusal below, so it goes to the Maestro. A Maestro who merges by hand past this gate is not stopped by code.
+    const uncovered = uncoveredHits(files, readApproval(d.dir, ticket));
+    if (uncovered.length > 0) return refuse("authority-path", `authority path: needs Jack's written yes: ${uncovered.join(", ")}`);
     if (hits.length > 0) return refuse("protected-path", `protected path: ${hits.join(", ")}`);
   } catch (e) { return refuse("config", `git failed: ${firstLine(e)}`); }
   return { go: true };

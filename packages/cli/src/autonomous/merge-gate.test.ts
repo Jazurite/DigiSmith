@@ -24,6 +24,11 @@ const commit = (rel: string, text = "x\n"): void => {
   git("add", "-A");
   git("commit", "-q", "-m", `edit ${rel}`);
 };
+// DGS-699: a branch that touches an authority path is refused as authority-path unless Jack's approval record covers it; these cases test the protected-path refusal that follows.
+const approveFor = (paths: string[], ticket = "DGS-9"): void => {
+  mkdirSync(join(dir, "director", "authority-approvals"), { recursive: true });
+  writeFileSync(join(dir, "director", "authority-approvals", `${ticket}.json`), JSON.stringify({ ticket, paths, line: "x", at: "t" }));
+};
 const gate = (ticket = "DGS-9") => runMergeGate({ git: realGit, repo, dir, now: () => new Date("2026-10-22T01:00:00.000Z") }, ticket);
 
 function setup(config: string | null): void {
@@ -81,6 +86,7 @@ describe("runMergeGate", () => {
     branch();
     put(".digismith/config.yml", "profile: x\nnightwatch:\n  protected_paths:\n    - nothing/\n");
     commit("hooks/a");
+    approveFor([".digismith/config.yml"]);
     expect(gate()).toMatchObject({ go: false, code: "protected-path" });
   });
 
@@ -176,6 +182,7 @@ describe("runMergeGate", () => {
     setup("profile: x\n");
     branch();
     commit(p);
+    approveFor([p]);
     expect(gate()).toMatchObject({ go: false, code: "protected-path" });
   });
 });
@@ -189,5 +196,102 @@ describe("the repo's own config", () => {
   });
   it("still parses with parseConfig", () => {
     expect(() => parseConfig(text)).not.toThrow();
+  });
+});
+
+describe("runMergeGate: the authority backstop (DGS-699)", () => {
+  const D = "packages/cli/src/autonomous/director/";
+  const approve = (ticket: string, paths: string[]): void => {
+    mkdirSync(join(dir, "director", "authority-approvals"), { recursive: true });
+    writeFileSync(join(dir, "director", "authority-approvals", `${ticket}.json`), JSON.stringify({ ticket, paths, line: "x", at: "t" }));
+  };
+
+  it("a branch diff touching an authority path with no approval record is refused with code authority-path", () => {
+    setup("profile: x\n");
+    branch();
+    commit(`${D}refine.ts`);
+    const r = gate();
+    expect(r).toMatchObject({ go: false, code: "authority-path" });
+    expect((r as { reason: string }).reason).toContain("authority path: needs Jack's written yes");
+    expect((r as { reason: string }).reason).toContain(`${D}refine.ts`);
+    expect(readOpen(dir)[0].cause).toContain("merge-refused: authority path");
+  });
+  it("with an approval record listing that path the gate falls through to the existing protected-path refusal (still not go)", () => {
+    setup("profile: x\n");
+    branch();
+    commit(`${D}refine.ts`);
+    approve("DGS-9", [`${D}refine.ts`]);
+    expect(gate()).toMatchObject({ go: false, code: "protected-path" });
+  });
+  it("an approval record that lists other paths does not cover it", () => {
+    setup("profile: x\n");
+    branch();
+    commit(`${D}refine.ts`);
+    approve("DGS-9", ["packages/cli/src/autonomous/guardrails.ts"]);
+    expect(gate()).toMatchObject({ go: false, code: "authority-path" });
+  });
+  it("an approval record for director/authority.ts does not cover a diff file director/refine.ts; the folder does", () => {
+    setup("profile: x\n");
+    branch();
+    commit(`${D}refine.ts`);
+    approve("DGS-9", ["director/authority.ts"]);
+    expect(gate()).toMatchObject({ code: "authority-path" });
+    approve("DGS-9", [D]);
+    expect(gate()).toMatchObject({ code: "protected-path" });
+  });
+  it("a diff touching no authority path behaves exactly as before", () => {
+    setup("profile: x\n");
+    branch();
+    commit("packages/cli/src/autonomous/scan.ts");
+    expect(gate()).toMatchObject({ go: false, code: "protected-path" });
+    git("checkout", "-q", "main");
+    branch("DGS-8__y");
+    commit("src/ok.ts");
+    expect(gate("DGS-8")).toEqual({ go: true });
+  });
+  it("profiles/emma.yml is not an authority hit; .digismith/profiles/x.yml is; rate-limit.ts is not, limit-check.ts is", () => {
+    setup("profile: x\n");
+    branch();
+    commit("profiles/emma.yml");
+    expect(gate()).toEqual({ go: true });
+    git("checkout", "-q", "main");
+    branch("DGS-8__y");
+    commit("packages/cli/src/run/rate-limit.ts");
+    expect(gate("DGS-8")).toEqual({ go: true });
+    git("checkout", "-q", "main");
+    branch("DGS-7__z");
+    commit("packages/cli/src/run/limit-check.ts");
+    expect(gate("DGS-7")).toMatchObject({ code: "authority-path" });
+    git("checkout", "-q", "main");
+    branch("DGS-6__w");
+    commit(".digismith/profiles/x.yml");
+    expect(gate("DGS-6")).toMatchObject({ code: "authority-path" });
+  });
+  it("a diff that edits authority-backstop.ts, merge-gate.ts or breaker.ts is an authority hit", () => {
+    setup("profile: x\n");
+    let n = 5;
+    for (const f of [`${D}authority-backstop.ts`, "packages/cli/src/autonomous/merge-gate.ts", "packages/cli/src/autonomous/breaker.ts"]) {
+      git("checkout", "-q", "main");
+      branch(`DGS-${n}__a`);
+      commit(f);
+      expect(gate(`DGS-${n}`)).toMatchObject({ code: "authority-path" });
+      n++;
+    }
+  });
+  it("the approval record is read from the autonomous state dir and never from the repo root", () => {
+    setup("profile: x\n");
+    branch();
+    commit(`${D}refine.ts`);
+    mkdirSync(join(repo, "director", "authority-approvals"), { recursive: true });
+    writeFileSync(join(repo, "director", "authority-approvals", "DGS-9.json"), JSON.stringify({ paths: [D] }));
+    expect(gate()).toMatchObject({ code: "authority-path" });   // a record in the repo does not count
+  });
+  it("a damaged approval record covers nothing", () => {
+    setup("profile: x\n");
+    branch();
+    commit(`${D}refine.ts`);
+    mkdirSync(join(dir, "director", "authority-approvals"), { recursive: true });
+    writeFileSync(join(dir, "director", "authority-approvals", "DGS-9.json"), "{nope");
+    expect(gate()).toMatchObject({ code: "authority-path" });
   });
 });
