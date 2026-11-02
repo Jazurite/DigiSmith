@@ -78,7 +78,7 @@ The same two commands, run after the fact. `task-stamp` needs only the registry 
   dg clickup task-stamp --task <Key> --plan-task <N> --ledger <workspace>/progress.md --yes
   ```
   Same key rule as the checklist sync (ClickUp key only; any other key skip). Non-zero exit: print a warning, append `Task stamp: failed (<first stderr line>)` to the ledger, go on. The same call runs for `final` after the `task-end --task final` / `step-end implementation` block (it needs `task_end final`) and before the Finish section deletes the workspace (the ledger must still exist).
-- `skills/finishing-a-development-branch/SKILL.md`: after the `step-end ... finishing` line in each of the integration options that write the snapshot (lines ~289, 349, 362, 400), run `dg clickup ticket-total --task <Key> --yes` once. Same failure rule.
+- `skills/finishing-a-development-branch/SKILL.md`: after the `step-end ... finishing` line in the merge, push-and-PR and keep-as-is options (lines ~289, 349, 362; not the discard option), run `dg clickup ticket-total --task <Key> --yes` once. Same failure rule.
 - Order inside a task: `task-tokens` line, `complete` line, `task-end`, **then** `task-stamp`. The stamp needs `task_end`.
 
 ## Protected paths this change touches
