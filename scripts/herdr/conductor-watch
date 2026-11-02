@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""Watchdog for herdr agents (no Claude, no tokens).
+
+Every --interval seconds it reads each watched agent's herdr status. When an agent stays
+`blocked` (a permission or question prompt) longer than --blocked-after, or idle/done/gone
+longer than --idle-after, it alerts once per episode: macOS notification, herdr notification
+and a log line. It never answers prompts and never changes an agent.
+
+usage: conductor-watch [--interval 120] [--blocked-after 120] [--idle-after 1800] [--once] TARGET...
+  TARGET is a herdr pane id (w3:p1) or a live agent name (emma-conductor) in the default session,
+  or Castle/<pane id or agent name> (for example Castle/emma-conductor, Castle/w7:p1) in another session.
+  --once checks once, prints one "<target> <state>" line per target and exits.
+log: ~/.digismith-depot/observability/conductor-watch.log
+"""
+import argparse, json, os, re, subprocess, time, datetime
+
+p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+p.add_argument("targets", nargs="+")
+p.add_argument("--interval", type=int, default=120)
+p.add_argument("--blocked-after", type=int, default=120)
+p.add_argument("--idle-after", type=int, default=1800)
+p.add_argument("--once", action="store_true", help="check once and exit (for testing)")
+a = p.parse_args()
+
+log_path = os.path.expanduser("~/.digismith-depot/observability/conductor-watch.log")
+os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+
+def note(msg):
+    with open(log_path, "a") as f:
+        f.write(f"{datetime.datetime.now().astimezone().isoformat(timespec='seconds')} {msg}\n")
+
+
+SESSION_TARGET = re.compile(r"^([A-Za-z][\w-]*)/(.+)$")
+
+
+def status(target):
+    argv = ["herdr", "agent", "get", target]
+    m = SESSION_TARGET.match(target)
+    if m:  # Castle/emma-conductor -> herdr --session Castle agent get emma-conductor
+        argv = ["herdr", "--session", m.group(1), "agent", "get", m.group(2)]
+    try:
+        out = subprocess.run(argv, capture_output=True, text=True, timeout=20).stdout
+        agent = json.loads(out)["result"]["agent"]
+        return agent.get("agent_status") or "unknown", agent.get("name") or target
+    except Exception:
+        return "gone", target
+
+
+def alert(target, name, state, minutes):
+    title = f"herdr: {name} is {state}"
+    body = f"{name} ({target}) has been {state} for {minutes} min. Open herdr to check it."
+    subprocess.run(["osascript", "-e", f'display notification "{body}" with title "{title}" sound name "Submarine"'],
+                   capture_output=True)
+    subprocess.run(["herdr", "notification", "show", title, "--body", body, "--sound", "request"], capture_output=True)
+    note(f"ALERT {name} ({target}) {state} {minutes}min")
+
+
+seen = {}  # target -> (state, since, alerted)
+note(f"start targets={a.targets} interval={a.interval}s blocked_after={a.blocked_after}s idle_after={a.idle_after}s")
+while True:
+    now = time.time()
+    for t in a.targets:
+        state, name = status(t)
+        prev = seen.get(t)
+        if prev is None or prev[0] != state:
+            seen[t] = (state, now, False)
+            note(f"{name} ({t}) -> {state}")
+        state, since, alerted = seen[t]
+        limit = a.blocked_after if state == "blocked" else a.idle_after if state in ("idle", "done", "gone", "unknown") else None
+        if limit is not None and not alerted and now - since >= limit:
+            alert(t, name, state, int((now - since) // 60))
+            seen[t] = (state, since, True)
+    if a.once:
+        for t in a.targets:
+            print(f"{t} {seen[t][0]}")
+        break
+    time.sleep(a.interval)
