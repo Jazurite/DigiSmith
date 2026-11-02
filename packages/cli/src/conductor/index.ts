@@ -14,7 +14,13 @@ export interface ConductorDeps {
 
 /** The agent names of one herdr session, through herdr-ws (read-only verb). */
 export function realLive(session: string, run: (file: string, args: string[]) => string = (f, a) => execFileSync(f, a, { encoding: "utf8", timeout: 3000 })): string[] {
-  const out = run(herdrWsPath(), ["--session", session, "agent", "list"]);
+  let out: string;
+  try {
+    out = run(herdrWsPath(), ["--session", session, "agent", "list"]);
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    throw new Error(code === "ETIMEDOUT" ? `agent list in ${session}: herdr-ws did not answer within 3 seconds` : `agent list in ${session} failed: ${(e as Error).message}`);
+  }
   const agents = (JSON.parse(out) as { result?: { agents?: { name?: unknown }[] } }).result?.agents;
   // an answer without the list must not read as "nothing runs": sweep would call every ticket conductor gone
   if (!Array.isArray(agents)) throw new Error("agent list: no result.agents array");

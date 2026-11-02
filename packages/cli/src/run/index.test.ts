@@ -298,6 +298,19 @@ describe("dg run start and the ticket driver (DGS-683)", () => {
     expect((await start("builder")).status).toBe(0);
     expect(fs.existsSync(path.join(tmp, "drivers"))).toBe(false);
   });
+  it("a corrupt driver file makes the start exit 1 and writes no record", async () => {
+    fs.mkdirSync(path.join(tmp, "drivers"), { recursive: true });
+    fs.writeFileSync(path.join(tmp, "drivers", "DGS-9.json"), "not json");
+    process.env.DIGISMITH_NAME = "digismith-conductor";
+    const r = await start("builder");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/not valid JSON/);
+    expect((await dg("list")).stdout.trim()).not.toMatch(/builder-/);
+    fs.writeFileSync(path.join(tmp, "drivers", "DGS-9.json"), "{}");
+    const r2 = await start("reviewer");
+    expect(r2.status).toBe(1);
+    expect(r2.stderr).toMatch(/unreadable/);
+  });
   it("does not check a Scout (one role slot, so one role per test)", async () => {
     claimDriver({ ticket: "DGS-9", driver: "tc-dgs-9", mode: "attended" }, process.env);
     process.env.DIGISMITH_NAME = "digismith-conductor";

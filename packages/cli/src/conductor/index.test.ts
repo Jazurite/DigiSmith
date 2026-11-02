@@ -124,8 +124,12 @@ describe("realLive", () => {
     expect(() => realLive("Castle", () => JSON.stringify({ result: {} }))).toThrow(/no result.agents array/);
   });
   it("lets a failing herdr-ws call and bad JSON throw", () => {
-    expect(() => realLive("Castle", () => { throw new Error("exit 1"); })).toThrow(/exit 1/);
+    expect(() => realLive("Castle", () => { throw new Error("exit 1"); })).toThrow(/agent list in Castle failed: exit 1/);
     expect(() => realLive("Castle", () => "not json")).toThrow();
+  });
+  it("a timeout kill surfaces as a readable message", () => {
+    const timeout = Object.assign(new Error("spawnSync herdr-ws ETIMEDOUT"), { code: "ETIMEDOUT" });
+    expect(() => realLive("Castle", () => { throw timeout; })).toThrow("agent list in Castle: herdr-ws did not answer within 3 seconds");
   });
   it("an empty list is a real answer: nothing runs", () => {
     expect(realLive("Castle", () => JSON.stringify({ result: { agents: [] } }))).toEqual([]);
