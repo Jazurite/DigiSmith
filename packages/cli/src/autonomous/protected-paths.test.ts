@@ -20,4 +20,8 @@ describe("touchedProtected", () => {
       "packages/cli/src/autonomous/scan.ts", "scripts/nexus-api/src/scheduler/registry.ts", ".digismith/mandate.yml", ".digismith/profiles/a.yml"];
     expect(touchedProtected(probe, DEFAULT_PROTECTED)).toEqual(probe);
   });
+  it("skills/director/ and skills/director/SKILL.md are protected by DEFAULT_PROTECTED", () => {
+    expect(DEFAULT_PROTECTED).toContain("skills/director/");
+    expect(touchedProtected(["skills/director/SKILL.md", "skills/director/brief.md", "skills/directory/x"], DEFAULT_PROTECTED)).toEqual(["skills/director/SKILL.md", "skills/director/brief.md"]);
+  });
 });

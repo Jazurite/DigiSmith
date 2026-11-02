@@ -1,5 +1,5 @@
 export const DEFAULT_PROTECTED: readonly string[] = [
-  "hooks/", "hooks/hooks.json", ".digismith/config.yml", "skills/finishing-*/", "skills/reviewer/",
+  "hooks/", "hooks/hooks.json", ".digismith/config.yml", "skills/finishing-*/", "skills/reviewer/", "skills/director/",
   "packages/cli/src/reviewer/", "packages/cli/src/autonomous/", "scripts/nexus-api/src/scheduler/",
   ".digismith/mandate.yml", ".digismith/profiles/",
 ];
