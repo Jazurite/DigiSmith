@@ -26,6 +26,8 @@ digismith conductor close --self [--project <P>]                   # inside a ti
 digismith conductor handover --ticket <KEY> --from <A> --to <B>    # change the driver of a ticket, only from the named driver
 digismith conductor sweep                                          # one line per ticket conductor: running or gone
 
+Notes on `dg conductor`: `start-ticket` overwrites a stale registry entry of the same name (`<Project>/tc-<ticket>`), and a failed start then removes it. `handover` is a plain driver-record change: it checks that `--from` is the current driver but not that `--to` is a registry conductor.
+
 digismith clickup check-credentials                                # verify ClickUp credentials are present
 digismith clickup list-tasks --list <id>                           # list every task on a list
 digismith clickup get-task <task> [--markdown]                    # fetch a single task by ID (--markdown adds markdown_description)
