@@ -86,7 +86,8 @@ describe("herdr-bootstrap.sh", () => {
     const r = run({ DRY_RUN: "1" });
     expect(r.status).toBe(0);
     expect(r.stderr).toMatch(/dry-run: --session Castle workspace create/);
-    expect(r.stderr).toMatch(/dry-run: --session Castle agent start/);
+    expect(r.stderr).toMatch(/dry-run: would start and brief digismith-conductor/);
+    expect(r.stderr).not.toMatch(/started and briefed/);
     for (const f of ["Castle.ws", "default.ws", "Castle.agents", "default.agents"]) expect(read(f).trim()).toBe("");
     expect(fs.readFileSync(regFile(), "utf8")).toBe(regBefore);
   });
@@ -119,6 +120,42 @@ describe("herdr-bootstrap.sh", () => {
     const r = run({ PGREP: "false" });   // pgrep finds no claude with the flags: herdr restored it as a plain resume
     expect(r.stderr).toMatch(/tc-dgs-9 restored as resume sid-tc-dgs-9: relaunching with flags/);
     expect(read("calls.log")).toMatch(/agent start tc-dgs-9 --kind claude --pane w3:p90 --timeout 90000 -- --resume sid-tc-dgs-9 --name tc-dgs-9/);
+  });
+  it("an entry with no floor keeps an empty floor field: a closed one is skipped, an open one gets no HERDR_WS", () => {
+    fs.writeFileSync(regFile(), JSON.stringify({
+      ...REG,
+      "Emma/closed-standing": { session: "Castle", kind: "standing", status: "closed" },
+      "DigiSmith/open-standing": { session: "Castle", kind: "standing", status: "open" },
+    }));
+    run();
+    expect(read("Castle.agents")).not.toContain("closed-standing");
+    expect(read("Castle.agents")).toContain("open-standing");
+    const line = read("calls.log").split("\n").find((l) => /DIGISMITH_NAME=open-standing/.test(l)) ?? "";
+    expect(line).not.toMatch(/HERDR_WS/);
+  });
+  it("a Floor id that is not w<digits> is skipped, not fatal: the scope keeps the valid ones", () => {
+    fs.writeFileSync(regFile(), JSON.stringify({ ...REG, "Emma/odd": { session: "Castle", kind: "standing", floor: "main" } }));
+    const r = run();
+    expect(r.status).toBe(0);
+    expect(/HERDR_SCOPE=(\S+) DIGISMITH_NAME=digismith-conductor/.exec(read("calls.log"))?.[1]).toBe("Castle:w3,default:w2,default:w3");
+  });
+  it("never sends /exit to a working agent, and never resumes with an empty session id", () => {
+    run();
+    fs.appendFileSync(path.join(fake, "Castle.agents"), "");
+    const agents = read("Castle.agents").replace(/digismith-conductor (\S+) idle/, "digismith-conductor $1 working");
+    fs.writeFileSync(path.join(fake, "Castle.agents"), agents);
+    const r = run({ PGREP: "false" });
+    expect(r.stderr).toMatch(/digismith-conductor is working and pgrep does not see its flags: not restarted/);
+    expect(read("calls.log")).not.toMatch(/agent prompt digismith-conductor \/exit/);
+  });
+  it("a working agent is not briefed again", () => {
+    run();
+    fs.writeFileSync(path.join(fake, "Castle.prompts"), "");   // no STANDBY text any more
+    const agents = read("Castle.agents").replace(/ idle/g, " working");
+    fs.writeFileSync(path.join(fake, "Castle.agents"), agents);
+    const before = read("calls.log").split("\n").filter((l) => /agent prompt/.test(l)).length;
+    run();
+    expect(read("calls.log").split("\n").filter((l) => /agent prompt/.test(l)).length).toBe(before);
   });
   it("a closed entry is skipped", () => {
     fs.writeFileSync(regFile(), JSON.stringify({ ...REG, "Emma/old": { session: "Castle", kind: "project", status: "closed", floor: "w3" } }));

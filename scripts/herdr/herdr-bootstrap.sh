@@ -61,8 +61,9 @@ body_of(){ case "$1" in DigiSmith) echo "$DG_PROMPT_BODY";; Emma) echo "$EMMA_PR
 # Floor workspaces of the registry: every `floor` field, and the workspace of every entry in the default session (same rule as scopeFor in registry.ts)
 floors(){
   jq -r '[to_entries[]|.value|select(type=="object")|select((.session // "default")=="default" or .floor != null)
-          |(.floor // (if (.session // "default")=="default" then .workspace else null end))|select(. != null)]
-         |unique|sort_by(.[1:]|tonumber)|.[]' "$REG" 2>/dev/null
+          |(.floor // (if (.session // "default")=="default" then .workspace else null end))|select(. != null)
+          |select(type=="string" and test("^w[0-9]+$"))]   # the registry only accepts w<digits>; anything else is skipped like an invalid entry
+         |unique|sort_by(.[1:]|tonumber)|.[]' "$REG"
 }
 scope_for(){ # castle-workspace-id -> HERDR_SCOPE
   local out="$CASTLE_S:$1" f; for f in $(floors); do out="$out,$FLOOR_S:$f"; done; echo "$out"
@@ -90,6 +91,7 @@ ensure_agent(){ # session name pane cwd env-text role body mode
   status=$(hx "$s" agent get "$name" 2>/dev/null | jq -r '.result.agent.agent_status // empty')
   if [ -z "$status" ]; then
     if [ "$mode" = relaunch ]; then log "ticket conductor $name not running, start it with dg conductor start-ticket"; return; fi
+    if [ "$DRY_RUN" = 1 ]; then log "dry-run: would start and brief $name in pane $pane"; return; fi
     hm "$s" pane run "$pane" "cd '$cwd' && export $envtext" >/dev/null
     if hm "$s" agent start "$name" --kind claude --pane "$pane" --timeout 90000 -- "${flags[@]}" >/dev/null 2>&1; then
       hm "$s" agent prompt "$name" "$prompt" --wait >/dev/null 2>&1 && log "$name started and briefed (standby)"
@@ -99,11 +101,15 @@ ensure_agent(){ # session name pane cwd env-text role body mode
     return
   fi
   if [ "$status" = blocked ]; then log "$name is blocked: answer its question in pane $pane, then run this script again"; return; fi
-  if [ "$mode" = create ] && ! hx "$s" agent read "$name" --source recent --lines 400 2>/dev/null | grep -q "STANDBY"; then
+  # a working agent is never briefed as a new standby instance (a rerun in the middle of work)
+  if [ "$mode" = create ] && [ "$status" != working ] && ! hx "$s" agent read "$name" --source recent --lines 400 2>/dev/null | grep -q "STANDBY"; then
     hm "$s" agent prompt "$name" "$prompt" --wait >/dev/null 2>&1 && log "$name was up but not briefed: briefed now (standby)"
     return
   fi
   if $PGREP -f "claude.*--name $name --disallowedTools" >/dev/null; then log "$name already runs with its flags: nothing to do"; return; fi
+  # never stop a working agent (it may run with the flags in another order), and never resume without a session id
+  if [ "$status" = working ]; then log "$name is working and pgrep does not see its flags: not restarted, check pane $pane by hand"; return; fi
+  if [ -z "$sid" ]; then log "$name has no session id: not relaunched, check pane $pane by hand"; return; fi
   # restored by herdr as plain `claude --resume <id>`: relaunch with the same session id and the flags
   log "$name restored as resume ${sid:-?}: relaunching with flags"
   hm "$s" agent prompt "$name" "/exit" >/dev/null 2>&1; [ "$DRY_RUN" = 1 ] || sleep 4
@@ -148,7 +154,7 @@ done
 
 # 2. the Castle conductors, from conductors.json
 if [ -f "$REG" ]; then
-  while IFS=$'\t' read -r key kinds floor status; do
+  while IFS='|' read -r key kinds floor status; do   # "|" is not IFS whitespace: an empty floor stays an empty field
     project=${key%%/*}; name=${key#*/}
     ws=$(castle_ws_of "$project")
     [ -n "$ws" ] || { log "no Castle workspace for project $project (entry $key): add one ensure_ws line"; continue; }
@@ -158,7 +164,7 @@ if [ -f "$REG" ]; then
       *,project,*|*,factory,*|*,standing,*) ensure_conductor "$name" "$ws" "$(cwd_of "$project")" "$project" "$(body_of "$project")" create "$floor" "$kinds";;
     esac
   done < <(jq -r --arg c "$CASTLE_S" 'to_entries[]|select(.value|type=="object")|select(.value.session==$c)
-                 |[.key, (((.value.kind // "project")|if type=="array" then . else [.] end)|join(",")), (.value.floor // ""), (.value.status // "open")]|@tsv' "$REG")
+                 |[.key, (((.value.kind // "project")|if type=="array" then . else [.] end)|join(",")), (.value.floor // ""), (.value.status // "open")]|join("|")' "$REG")
 
   # 3. write the resolved Castle workspace ids back (only the workspace field), atomic
   if [ "$DRY_RUN" != 1 ]; then
@@ -171,14 +177,14 @@ if [ -f "$REG" ]; then
 
   # 4. the old Floor conductors: entries with no session (until the migration ends)
   if [ "$FLOOR_CONDUCTORS" = 1 ]; then
-    while IFS=$'\t' read -r key kinds status; do
+    while IFS='|' read -r key kinds status; do
       project=${key%%/*}; name=${key#*/}
       [ "$status" = closed ] && continue
       case "$project" in DigiSmith) fws=$DG;; Emma) fws=$EM;; Soveron) fws=$SV;; *) continue;; esac
       ensure_maestro "$name" "$fws" "$(cwd_of "$project")" "$project" "$(body_of "$project")"
     done < <(jq -r 'to_entries[]|select(.value|type=="object")|select((.value.session // "default")=="default")
                    |select(((.value.kind // "project")|if type=="array" then . else [.] end)|index("project"))
-                   |[.key, "project", (.value.status // "open")]|@tsv' "$REG")
+                   |[.key, "project", (.value.status // "open")]|join("|")' "$REG")
   fi
 else
   log "no $REG: no conductors to start"
