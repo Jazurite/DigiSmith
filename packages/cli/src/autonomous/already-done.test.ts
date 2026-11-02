@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { blockerProblem, mergedOnMain, scopeOf } from "./already-done.ts";
 import { realGit } from "./gitx.ts";
@@ -12,8 +12,11 @@ let repo: string;
 let n = 0;
 
 const g = (cwd: string, ...args: string[]): string => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-const commit = (subject: string, body = ""): void => {
-  writeFileSync(join(repo, "f.txt"), `${++n}\n`);
+const commit = (subject: string, body = "", files?: Record<string, string>): void => {
+  for (const [path, text] of Object.entries(files ?? { "f.txt": `${++n}\n` })) {
+    mkdirSync(dirname(join(repo, path)), { recursive: true });
+    writeFileSync(join(repo, path), text);
+  }
   g(repo, "add", "-A");
   g(repo, "commit", "-q", "-m", subject, ...(body ? ["-m", body] : []));
 };
@@ -108,6 +111,76 @@ describe("mergedOnMain", () => {
     g(repo, "push", "-q", "origin", "DGS-7__a");
     g(repo, "checkout", "-q", "main");
     expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
+  });
+});
+
+describe("board-docs commits do not count", () => {
+  const board = (key: string, slug = "x"): string => `.digismith/board/${key}—${slug}`;
+  it("a docs(dgs-7) commit with only files under its board folder does not count", () => {
+    commit("docs(dgs-7): spec", "", { [`${board("DGS-7")}/spec.md`]: "a", [`${board("DGS-7")}/plan.md`]: "b" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("a key-scoped commit touching the board folder and src/x.ts counts", () => {
+    commit("docs(dgs-7): spec and code", "", { [`${board("DGS-7")}/spec.md`]: "a", "src/x.ts": "b" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).not.toBeNull();
+  });
+  it("a docs(dgs-7) commit in another key's board folder counts", () => {
+    commit("docs(dgs-7): spec", "", { [`${board("DGS-8", "y")}/spec.md`]: "a" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).not.toBeNull();
+  });
+  it("board folder DGS-70—z is not the own folder of key DGS-7", () => {
+    commit("docs(dgs-7): spec", "", { [`${board("DGS-70", "z")}/spec.md`]: "a" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).not.toBeNull();
+  });
+  it("a feat(dgs-7) commit with only board files does not count", () => {
+    commit("feat(dgs-7): x", "", { [`${board("DGS-7")}/spec.md`]: "a" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("an empty commit and a merge commit with a key-scoped subject count", () => {
+    g(repo, "commit", "-q", "--allow-empty", "-m", "chore(dgs-7): empty");
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).not.toBeNull();
+    g(repo, "checkout", "-q", "-b", "side");
+    commit("wip stuff", "", { "side.txt": "s" });
+    g(repo, "checkout", "-q", "main");
+    commit("wip other");
+    g(repo, "merge", "-q", "--no-ff", "-m", "merge(dgs-9): join", "side");
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-9")).not.toBeNull();
+  });
+  it("a rename from src/a.ts into the board folder counts", () => {
+    commit("chore: add a", "", { "src/a.ts": "a" });
+    mkdirSync(join(repo, board("DGS-7")), { recursive: true });
+    g(repo, "mv", "src/a.ts", `${board("DGS-7")}/a.ts`);
+    g(repo, "commit", "-q", "-m", "docs(dgs-7): move a");
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).not.toBeNull();
+  });
+  it("a scope in upper case with only board files does not count", () => {
+    commit("docs(DGS-7): spec", "", { [`${board("DGS-7")}/spec.md`]: "a" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("blockerProblem: a board-only docs commit is not a main hit", () => {
+    g(repo, "checkout", "-q", "-b", "DGS-7__a");
+    commit("wip stuff");
+    g(repo, "checkout", "-q", "main");
+    commit("docs(dgs-7): spec", "", { [`${board("DGS-7")}/spec.md`]: "a" });
+    pushMain();
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
+  });
+  it("rule (b): an ancestor branch whose only key-scoped commits are board docs is not counted", () => {
+    g(repo, "checkout", "-q", "-b", "DGS-7__a");
+    commit("docs(dgs-7): spec", "", { [`${board("DGS-7")}/spec.md`]: "a" });
+    g(repo, "checkout", "-q", "main");
+    g(repo, "merge", "-q", "--ff-only", "DGS-7__a");
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7", [])).toBeNull();
   });
 });
 
