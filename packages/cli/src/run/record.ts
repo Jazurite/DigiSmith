@@ -67,7 +67,8 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
     base_sha: input.baseSha ?? (wt ? git(wt, "rev-parse", "HEAD") : null),
     branch: input.branch ?? (wt ? currentBranch(wt) : null),
     worktree,
-    herdr: { session: input.pane ? (env.HERDR_SESSION || "default") : null, workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
+    herdr: { session: input.pane ? "default" : null,   // a --pane names a Floor pane; HERDR_SESSION is only for the auto path
+     workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
     budget,
     created_at: now.toISOString(),
     source: "start" as const,

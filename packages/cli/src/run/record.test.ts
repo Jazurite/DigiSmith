@@ -86,7 +86,7 @@ describe("createRun", () => {
     expect(r.base_sha).toBe("abc");
     expect(r.budget).toEqual({ turns: 50 });
     expect(r.herdr).toEqual({ session: "default", workspace: "w2", tab: "T", pane: "p1" });
-    expect(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", workspace: "w7", pane: "p2" }, { ...env, HERDR_SESSION: "Castle" }).herdr.session).toBe("Castle");
+    expect(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", workspace: "w2", pane: "w2:p5" }, { ...env, HERDR_SESSION: "Castle" }).herdr.session).toBe("default");   // a --pane run is a Floor pane, whatever session the caller sits in
     expect(() => createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", budget: "[1]" }, env)).toThrow(/budget/);
   });
   it("gives a new id for every start, even in the same second", () => {
