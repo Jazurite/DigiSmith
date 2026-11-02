@@ -166,6 +166,19 @@ describe("board-docs commits do not count", () => {
     pushMain();
     expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
   });
+  it("a lower-case board folder name still matches the key (case-insensitive)", () => {
+    commit("docs(dgs-7): spec", "", { [`${board("dgs-7")}/spec.md`]: "a" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("a key-scoped commit that touches a file git quotes (tab or quote in the name) counts", () => {
+    commit("docs(dgs-7): spec", "", { [`${board("DGS-7")}/spec.md`]: "a", [`${board("DGS-7")}/a"b.md`]: "b" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).not.toBeNull();
+    commit("docs(dgs-8): spec", "", { [`${board("DGS-8")}/a\tb.md`]: "b" });
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-8")).not.toBeNull();
+  });
   it("blockerProblem: a board-only docs commit is not a main hit", () => {
     g(repo, "checkout", "-q", "-b", "DGS-7__a");
     commit("wip stuff");

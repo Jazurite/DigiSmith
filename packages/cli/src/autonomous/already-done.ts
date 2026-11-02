@@ -40,8 +40,8 @@ const namesKey = (subject: string, want: string): boolean => scopeOf(subject).in
 
 /** Refinement docs: files exist and every one lies in the key's own board folder (`.digismith/board/<KEY>—`). Merge and empty commits have no files and so count. */
 export const isBoardDocs = (key: string, files: string[]): boolean => {
-  const prefix = `.digismith/board/${key.toUpperCase()}—`;
-  return files.length > 0 && files.every((f) => f.startsWith(prefix));
+  const prefix = `.digismith/board/${key.toLowerCase()}—`;
+  return files.length > 0 && files.every((f) => f.toLowerCase().startsWith(prefix));
 };
 
 const counts = (row: { subject: string; files: string[] }, want: string): boolean => namesKey(row.subject, want) && !isBoardDocs(want, row.files);
