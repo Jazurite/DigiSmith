@@ -2,13 +2,21 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { findByKind, floorWorkspaces, putEntry, readRegistry, readRegistryChecked, registryProblems, removeEntry, resolveConductor, scopeFor } from "./registry.ts";
+import { findByKind, floorWorkspaces, putEntry, readRegistry, readRegistryChecked, readRegistryFile, registryPath, registryProblems, removeEntry, resolveConductor, scopeFor } from "./registry.ts";
 
 let depot: string;
 let env: NodeJS.ProcessEnv;
 const write = (o: unknown) => fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify(o));
 beforeEach(() => { depot = fs.mkdtempSync(path.join(os.tmpdir(), "reg-")); env = { DIGISMITH_DEPOT_DIR: depot }; });
 afterEach(() => fs.rmSync(depot, { recursive: true, force: true }));
+
+describe("registry path", () => {
+  it("honours DIGISMITH_DEPOT_DIR and defaults to the home depot", () => {
+    expect(registryPath({ DIGISMITH_DEPOT_DIR: "/x/depot" })).toBe("/x/depot/conductors.json");
+    expect(registryPath({ DIGISMITH_DEPOT_DIR: "" })).toBe(path.join(os.homedir(), ".digismith-depot", "conductors.json"));
+    expect(registryPath({})).toBe(path.join(os.homedir(), ".digismith-depot", "conductors.json"));
+  });
+});
 
 describe("registry", () => {
   it("an old entry means session default, kind project, floor = workspace", () => {
@@ -57,6 +65,12 @@ describe("registry", () => {
     expect(Object.keys(r.entries).sort()).toEqual(["B/b", "C/c"]);
     expect(r.problems.map((p) => p.key)).toEqual(["A/a"]);
     expect(registryProblems(env).map((p) => p.key)).toEqual(["A/a"]);
+  });
+  it("readRegistryFile reads an explicit path, with the same per-entry rule", () => {
+    write({ "A/a": { kind: "boss" }, "B/b": { workspace: "w3" } });
+    const r = readRegistryFile(path.join(depot, "conductors.json"));
+    expect(Object.keys(r.entries)).toEqual(["B/b"]);
+    expect(r.problems[0].key).toBe("A/a");
   });
   it("putEntry and removeEntry keep the other keys", () => {
     write({ "A/a": { workspace: "w3", note: "/x" } });
