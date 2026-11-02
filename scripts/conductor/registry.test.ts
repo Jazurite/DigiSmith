@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { findByKind, floorWorkspaces, putEntry, readRegistry, readRegistryChecked, removeEntry, resolveConductor, scopeFor } from "./registry.ts";
+import { findByKind, floorWorkspaces, putEntry, readRegistry, readRegistryChecked, registryProblems, removeEntry, resolveConductor, scopeFor } from "./registry.ts";
 
 let depot: string;
 let env: NodeJS.ProcessEnv;
@@ -56,6 +56,7 @@ describe("registry", () => {
     const r = readRegistryChecked(env);
     expect(Object.keys(r.entries).sort()).toEqual(["B/b", "C/c"]);
     expect(r.problems.map((p) => p.key)).toEqual(["A/a"]);
+    expect(registryProblems(env).map((p) => p.key)).toEqual(["A/a"]);
   });
   it("putEntry and removeEntry keep the other keys", () => {
     write({ "A/a": { workspace: "w3", note: "/x" } });

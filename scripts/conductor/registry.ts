@@ -2,6 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { depotDir } from "../depot-dir.ts";
 
+// The conductor registry (conductors.json). The tolerant reads (resolveConductor for other keys, findByKind, floorWorkspaces)
+// skip an invalid entry; registryProblems(env) lists those per-entry problems so a caller can report them.
+
 export type Kind = "project" | "factory" | "standing" | "ticket";
 
 export interface ConductorEntry {
@@ -111,6 +114,11 @@ export function readRegistryChecked(env?: NodeJS.ProcessEnv): { entries: Record<
     }
   }
   return { entries, problems };
+}
+
+/** The per-entry problems the tolerant reads skip. */
+export function registryProblems(env?: NodeJS.ProcessEnv): RegistryProblem[] {
+  return readRegistryChecked(env).problems;
 }
 
 /** Strict: throws on the first invalid entry. */
