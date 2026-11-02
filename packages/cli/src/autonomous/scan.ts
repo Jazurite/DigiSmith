@@ -17,6 +17,7 @@ import { planIfFree, settle } from "./journal.ts";
 import { acquireLock, appendEvent, clearLock, readLock, readNotes, writeNotes } from "./state.ts";
 import { runBack } from "./switch.ts";
 import type { TickResult } from "./tick.ts";
+import { recordDecision } from "./director/record.ts";
 import { runRefineLane } from "./director/refine-lane.ts";
 import type { LoTask, Tracker } from "./types.ts";
 
@@ -34,6 +35,8 @@ export interface ScanDeps {
   refine?: { prompt: (msg: string) => Promise<void>; roleFull: () => string | null; ordersDir?: string };
   /** DGS-699: wakes the Director when there is something to do. Called once at the end of every scan; its failure changes nothing. */
   wake?: () => Promise<void>;
+  /** DGS-699 Part 2: the ticket's driver. Set when a Director exists: a build claim names this conductor as driver and prompts it, never the Director. */
+  driver?: { name: string; prompt: (ticket: string, text: string) => Promise<void> };
 }
 export interface ScanResult {
   outcome: "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
@@ -86,7 +89,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   try {
     // a key outside the driver key format (a non-DigiSmith id) has no driver record, as in driverRefusal
     if (/^[A-Z]+-\d+$/.test(key)) {
-      const who = factoryConductorName(d.conductorsJson);
+      const who = d.driver?.name ?? factoryConductorName(d.conductorsJson);
       try {
         claimDriver({ ticket: key, driver: who, mode: "factory" }, denv);
         driverName = who;
@@ -118,7 +121,9 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
       key, name: t.name, taskId: t.id, signOff: t.signOff ?? "Auto", claimedAtUtc7, stamp: stampOf(now), specPlan: specPlanText(t),
     }), { flag: "wx" });
     wroteOrder = true;
-    await promptConductor(d.exec, d.conductorsJson, `Autonomous order: build ${key}, read ${order}`);
+    const text = `Autonomous order: build ${key}, read ${order}`;
+    if (d.driver) await d.driver.prompt(key, text);
+    else await promptConductor(d.exec, d.conductorsJson, text);
   } catch (e) {
     // Remove only the order file this scan created, so a later scan in the same minute can write it again.
     if (wroteOrder) rmSync(order, { force: true });
@@ -132,6 +137,13 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   }
   close("succeeded");
   appendEvent(d.dir, now, "claim", { ticket: key, order, taskId: t.id });
+  if (d.driver) {
+    try {
+      await recordDecision({ dir: d.dir, now: d.now, tracker: d.tracker }, { ticket: key, id: "claim-build", side: "within", what: `claimed ${key} and handed the order to ${d.driver.name}`, why: "ready to do ticket, first in priority, due and age order" });
+    } catch (e) {
+      try { appendEvent(d.dir, now, "comment-failed", { ticket: key, error: `claim-build decision not recorded: ${errText(e)}` }); } catch { /* the claim stands */ }
+    }
+  }
   return "claimed";
 }
 

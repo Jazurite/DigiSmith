@@ -22,6 +22,7 @@ import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
 import { runScan } from "./scan.ts";
 import { startViaSteward } from "./steward-started.ts";
+import { directorWiring } from "./director/wiring.ts";
 import { runScheduleRelease } from "./schedule-release.ts";
 import { makeScanGuard } from "./scan-guard.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
@@ -88,6 +89,12 @@ function lazyTracker(make: () => Tracker): Tracker {
 
 const CONDUCTOR = "digismith-conductor";
 
+/** The Director wiring for `d`; null when the registry has no Director (everything then stays as before). */
+function wiringOf(d: AutonomousDeps): ReturnType<typeof directorWiring> {
+  const mainRepo = d.mainRepo ?? MAIN_CHECKOUT;
+  return directorWiring({ dir: d.dir, now: d.now, conductorsJson: d.conductorsJson, exec: d.exec, execOut: d.execOut, mainRepo, limitEnv: limitEnv(d) });
+}
+
 /** The real tick for `d`: the state and the lock are read on each call, `repo` is the checkout git fetch runs in. */
 function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Promise<TickResult> {
   const exec = d.execOut ?? realExecOut;
@@ -117,6 +124,9 @@ function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Prom
       tracker: { setStatus: (s) => tracker.setStatus(taskId, s) }, runEvent: realRunEvent(),
       startViaSteward: () => startViaSteward(state?.ticket ?? "", repo ?? d.mainRepo ?? MAIN_CHECKOUT),
     });
+    // With a Director in the registry a tick order goes to the ticket's driver (the conductor), never to the Director.
+    const dw = state === null ? null : wiringOf(d);
+    if (dw !== null && state !== null) writers.prompt = dw.tickPrompt(state.ticket);
     return runTick({ dir: d.dir, now: d.now, observers, dryRun, ...writers });
   };
 }
@@ -243,6 +253,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
               .option("orders", { type: "string", requiresArg: true, describe: "orders dir (default ~/.digismith-depot/sessions/DigiSmith/orders)" }),
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
+              const w = wiringOf(d);
               const r = await runScan({
                 tracker: lazyTracker(d.tracker), dir: d.dir, ordersDir: (argv.orders as string | undefined) ?? d.ordersDir,
                 conductorsJson: d.conductorsJson, repo: argv.repo as string, now: d.now, scanId: d.scanId(),
@@ -250,6 +261,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
                 tick: makeTick(d, false, argv.repo as string),
                 guard: makeScanGuard(d.git ?? realGit, argv.repo as string),
                 builderFull: () => refusal(currentCount(limitEnv(d), d.mainRepo ?? MAIN_CHECKOUT, d.now().getTime()).count, "builder"),
+                ...(w ? { refine: w.refine, wake: w.wake, driver: w.driver } : {}),
               });
               const lines: string[] = [];
               lines.push(`scan: ${r.outcome}${r.claimed ? ` ${r.claimed}` : ""} (${r.candidates} candidates, ${r.skipped.length} skipped)`);
@@ -352,6 +364,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
               const r = await runWatch({
                 env: process.env, dir: d.dir, cwd: repo, now: Date.now, panes: herdrPaneLookup(), dryRun: argv.dryRun as boolean,
                 guardrailProblems: makeScanGuard(d.git ?? realGit, repo).guardrailProblems,
+                wake: wiringOf(d)?.wake,
                 runDg: (args) => new Promise((resolve) => {
                   execFile(process.execPath, [entry, ...args], { timeout: 60_000 }, (err) => resolve({ ok: !err }));
                 }),

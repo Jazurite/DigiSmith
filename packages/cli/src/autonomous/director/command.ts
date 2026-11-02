@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../../clickup/lib.ts";
 import { readOpen } from "../attention.ts";
+import { realExec } from "../conductor.ts";
 import { fmtUtc7 } from "../clock.ts";
 import { readJournal } from "../journal.ts";
 import { MAIN_CHECKOUT } from "../observers-real.ts";
@@ -20,6 +22,7 @@ import { planLoop, type Plan, type PlanWorld } from "./plan.ts";
 import { readDecisions, recordDecision, retryPendingComments } from "./record.ts";
 import { readRefineLock, refineRelease, refineRound, type RefineLock } from "./refine.ts";
 import { rankSeats, type SeatReading } from "./seat.ts";
+import { promptDriver } from "./target.ts";
 import type { Move } from "./unblock.ts";
 
 export interface DirectorDeps {
@@ -44,7 +47,7 @@ function pendingCount(dir: string): number {
 }
 
 /** The world `plan` and `do` read, from the files in the autonomous dir. */
-export function readWorld(d: DirectorDeps): PlanWorld {
+export function readWorld(d: Pick<DirectorDeps, "dir" | "now" | "roleOf">): PlanWorld {
   const lock = readLock(d.dir);
   const rl = readRefineLock(d.dir);
   return {
@@ -214,7 +217,7 @@ export function createDirectorCommand(depsFactory: () => DirectorDeps = defaultD
 
 // ---- the real dependencies: built only when a handler runs ----
 
-const notWired = (what: string) => async (): Promise<never> => { throw new Error(`${what} is wired with the Castle registry (DGS-699 Part 2)`); };
+const notWired = (what: string) => async (): Promise<never> => { throw new Error(`${what} is not done by code: a herdr worker is started by the Director session from skills/director/refine-brief.md (runbook S0 to S6); record it with dg director decide --id restart-run`); };
 
 function runSelf(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -230,10 +233,19 @@ function boardDirIn(repo: string, ticket: string): string | null {
   } catch { return null; }
 }
 
+/** The role of a run from its run record (the depot of the environment); null when unknown. */
+export function roleOfRun(run: string): string | null {
+  try {
+    const rd = findRunDir(run, process.env);
+    return rd === null ? null : readRun(rd).role || null;
+  } catch { return null; }
+}
+
 export function defaultDirectorDeps(): DirectorDeps {
   let tracker: Tracker | null = null;
   const t = (): Tracker => (tracker ??= new ClickUpLoTracker(createClient(), DIGISMITH_SPACE_ID));
   const dir = autonomousDir();
+  const conductorsJson = join(process.env.DIGISMITH_DEPOT_DIR || join(homedir(), ".digismith-depot"), "conductors.json");
   const find = async (ticket: string) => {
     for (const s of ["refinement", "to do", "concept", "in progress", "claimed"]) {
       const hit = (await t().listByStatus(s)).find((x) => (x.key ?? x.id) === ticket);
@@ -245,18 +257,13 @@ export function defaultDirectorDeps(): DirectorDeps {
     dir,
     now: () => new Date(),
     tracker: t,
-    roleOf: (run) => {
-      try {
-        const rd = findRunDir(run, process.env);
-        return rd === null ? null : readRun(rd).role || null;
-      } catch { return null; }
-    },
+    roleOf: roleOfRun,
     boardDir: (ticket) => boardDirIn(MAIN_CHECKOUT, ticket),
     checkReadyCtx: { repo: MAIN_CHECKOUT, fileExists: existsSync },
     readDescription: async (ticket) => (await find(ticket)).text,
     taskIdOf: async (ticket) => (await find(ticket)).id,
     effects: {
-      promptDriver: notWired("prompting a driver"),
+      promptDriver: (ticket, text) => promptDriver(realExec, conductorsJson, dir, ticket, text),
       promptSelf: notWired("prompting the refine worker"),
       startRefine: notWired("starting the refine worker"),
       releaseBuild: (ticket, reason) => runSelf(["autonomous", "release", "--ticket", ticket, "--result", "stopped", "--reason", reason]),
