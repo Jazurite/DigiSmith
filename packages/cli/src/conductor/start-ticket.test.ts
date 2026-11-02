@@ -26,6 +26,7 @@ function seed(extra: Record<string, unknown> = {}, starter: Record<string, unkno
     ...extra,
   }));
 }
+const paneRun = () => calls.find((c) => c.args[2] === "pane" && c.args[3] === "run")!;
 const A = { ticket: "DGS-9", under: "digismith-conductor", project: "DigiSmith" };
 
 beforeEach(() => {
@@ -53,8 +54,8 @@ describe("startTicketConductor", () => {
       ["--session", "Castle", "agent", "prompt"],
     ]);
     expect(calls[0].args).toEqual(expect.arrayContaining(["--workspace", "w7", "--label", "tc-dgs-9", "--cwd", repo]));
-    expect(calls[1].args[4]).toBe("w7:p9");
-    expect(calls[1].args[5]).toBe(`cd '${repo}' && export HERDR_SCOPE=Castle:w7,default:w2 DIGISMITH_NAME=tc-dgs-9 HERDR_WS=w2`);
+    expect(paneRun().args[4]).toBe("w7:p9");
+    expect(paneRun().args[5]).toBe(`cd '${repo}' && export HERDR_SCOPE=Castle:w7,default:w2 DIGISMITH_NAME=tc-dgs-9 HERDR_WS=w2`);
     expect(calls[2].args.slice(4)).toEqual([
       "tc-dgs-9", "--kind", "claude", "--pane", "w7:p9", "--timeout", "90000", "--",
       "--name", "tc-dgs-9", "--disallowedTools", "Bash(herdr *)", "--allowedTools", "Bash(herdr-ws *)", `Bash(${calls[0].file} *)`,
@@ -69,7 +70,7 @@ describe("startTicketConductor", () => {
     seed({}, { kind: ["project", "factory"] });
     await startTicketConductor(A, { exec, env, repo });
     expect(readDriver("DGS-9", env)?.mode).toBe("factory");
-    expect(calls[1].args[5]).not.toContain("HERDR_WS");
+    expect(paneRun().args[5]).not.toContain("HERDR_WS");
   });
   it("a second start for the same ticket names the driver and calls no herdr", async () => {
     claimDriver({ ticket: "DGS-9", driver: "factory", mode: "factory" }, env);

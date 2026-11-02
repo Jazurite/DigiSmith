@@ -8,6 +8,7 @@ export async function closeTicketConductor(a: { name: string; project: string },
   const key = `${a.project}/${a.name}`;
   const e = resolveConductor(key, env);
   if (!e) throw new Error(`no conductor ${key} in the registry`);
+  if (e.status !== "open") throw new Error(`${key} is ${e.status}, not open`);
   if (!e.kinds.includes("ticket") || e.ticket === undefined) throw new Error(`${key} is not a ticket conductor`);
   const tab = env.HERDR_TAB_ID;
   if (tab === undefined || tab === "") throw new Error("HERDR_TAB_ID is not set: close --self runs inside the conductor's own tab");

@@ -41,6 +41,14 @@ describe("closeTicketConductor", () => {
     await expect(closeTicketConductor({ name: "digismith-conductor", project: "DigiSmith" }, { exec, env })).rejects.toThrow(/not a ticket conductor/);
     expect(calls).toEqual([]);
   });
+  it("refuses a closed entry even when a driver file exists", async () => {
+    const f = JSON.parse(fs.readFileSync(path.join(depot, "conductors.json"), "utf8"));
+    f["DigiSmith/tc-dgs-9"].status = "closed";
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify(f));
+    await expect(closeTicketConductor(A, { exec, env })).rejects.toThrow(/not open/);
+    expect(readDriver("DGS-9", env)).not.toBeNull();
+    expect(calls).toEqual([]);
+  });
   it("refuses an unknown entry", async () => {
     await expect(closeTicketConductor({ name: "tc-dgs-5", project: "DigiSmith" }, { exec, env })).rejects.toThrow(/no conductor/);
   });
