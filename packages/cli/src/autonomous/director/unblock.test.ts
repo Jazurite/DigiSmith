@@ -10,7 +10,12 @@ import { movesFor, retryRunKey, stuckLockMove, type History, type Move } from ".
 const NOW = new Date("2026-11-03T03:00:00.000Z");
 const MIN = 60_000;
 const ago = (m: number): string => new Date(NOW.getTime() - m * MIN).toISOString();
-const ctx = (over: Partial<{ lockTicket: string | null; refineTicket: string | null; roleOf: (run: string) => string | null }> = {}) => ({ lockTicket: "DGS-1", refineTicket: null as string | null, now: NOW, ...over });
+const ROLE: Record<string, string> = { "lock": "builder", "refine": "other" };
+const ctx = (over: Partial<{ lockTicket: string | null; refineTicket: string | null; roleOf: (run: string) => string | null }> = {}) => ({
+  lockTicket: "DGS-1", refineTicket: null as string | null, now: NOW,
+  roleOf: (run: string): string | null => (run.startsWith("w") ? ROLE.refine : run.startsWith("rev") ? "reviewer" : ROLE.lock),
+  ...over,
+});
 const hist = (over: Partial<History> = {}): History => ({ decisions: [], journal: [], ...over });
 let n = 0;
 const item = (over: Partial<OpenItem> = {}): OpenItem => ({ id: `r1.lost.${n++}`, ts: ago(50), ticket: "DGS-1", run: "r1", kind: "lost", cause: "pane-gone", since: ago(50), ...over });
@@ -22,6 +27,24 @@ const kind = (m: Move): string => m.kind;
 describe("lost builder", () => {
   it("pane-gone, retryEligible, no retry line in the journal: none (the tick restarts it)", () => {
     expect(kind(movesFor(item({ retryEligible: true }), hist(), ctx()))).toBe("none");
+  });
+  it("F1: a retry line of an EARLIER run does not count for a later run of the same ticket", () => {
+    const old = retryLine("DGS-1", "r1.lost.old", 300);   // detail.run is r1 and the item is another
+    const r2 = item({ run: "r2", retryEligible: true, since: ago(40) });
+    expect(kind(movesFor(r2, hist({ journal: [old] }), ctx()))).toBe("none");   // the tick still restarts r2
+    const failed = item({ run: "r2", kind: "failed", cause: "gateway-5xx" });
+    expect(movesFor(failed, hist({ journal: [old] }), ctx())).toMatchObject({ kind: "retry-once", run: "r2" });
+    // the line of the same run (by item id, or by run) does count
+    expect(kind(movesFor(r2, hist({ journal: [retryLine("DGS-1", r2.id, 40)] }), ctx()))).toBe("release");
+    expect(kind(movesFor(item({ run: "r1", retryEligible: true }), hist({ journal: [old] }), ctx()))).toBe("release");
+  });
+  it("F2: an unknown role fails closed (list-only), never a release; a Builder role on the refine ticket is list-only too", () => {
+    const unknownRole = ctx({ roleOf: () => null });
+    for (const k of ["lost", "stalled", "failed"] as AttentionKind[]) {
+      expect(kind(movesFor(item({ kind: k, cause: k === "failed" ? "classifier-block" : "pane-gone", retryEligible: false, since: ago(100) }), hist(), unknownRole))).toBe("list-only");
+    }
+    expect(kind(movesFor(item({ ticket: "DGS-2", kind: "lost" }), hist(), ctx({ lockTicket: null, refineTicket: "DGS-2", roleOf: () => "builder" })))).toBe("list-only");
+    expect(kind(movesFor(item({ kind: "failed", cause: "classifier-block" }), hist(), ctx({ roleOf: () => "reviewer" })))).toBe("list-only");
   });
   it("the tick's retry is in the journal and the item is still open 30 minutes later: release build stopped with escalate; at 29: none", () => {
     const it = item({ retryEligible: true });
@@ -116,12 +139,16 @@ describe("blocked, failed, refused, others", () => {
       expect((m as { escalate: { question: string } }).escalate.question).toContain(cause);
     }
   });
-  it("failed or any item with cause class unknown: list-only with the reason 'cause class unknown'", () => {
-    for (const k of ["failed", "stalled", "lost", "refused", "blocked"] as AttentionKind[]) {
-      const m = movesFor(item({ kind: k, cause: "unknown" }), hist(), ctx());
-      if (k === "failed") expect(m).toMatchObject({ kind: "list-only", why: "cause class unknown" });
-    }
+  it("failed with cause class unknown: list-only with the reason 'cause class unknown'", () => {
+    expect(movesFor(item({ kind: "failed", cause: "unknown" }), hist(), ctx())).toMatchObject({ kind: "list-only", why: "cause class unknown" });
     expect(movesFor(item({ kind: "failed", cause: "something-new" }), hist(), ctx())).toMatchObject({ kind: "list-only", why: "cause class unknown" });
+    expect(movesFor(item({ kind: "failed", cause: "something-new", causeClass: "durable" }), hist(), ctx())).toMatchObject({ kind: "release" });
+  });
+  it("the other kinds with cause 'unknown' follow their own rows (spec 7 applies 'unknown' to failed items; pane-gone and the stalled causes are not in CAUSES)", () => {
+    expect(movesFor(item({ kind: "lost", cause: "unknown", retryEligible: true }), hist(), ctx())).toMatchObject({ kind: "none" });
+    expect(movesFor(item({ kind: "stalled", cause: "unknown" }), hist(), ctx())).toMatchObject({ kind: "reprompt" });
+    expect(movesFor(item({ kind: "refused", cause: "unknown" }), hist(), ctx())).toMatchObject({ kind: "list-only", why: "refused for another cause" });
+    expect(movesFor(item({ kind: "blocked", cause: "unknown" }), hist(), ctx())).toMatchObject({ kind: "list-only" });
   });
   it("refused merge-refused: list-only; gate-wait after 30 minutes", () => {
     expect(movesFor(item({ kind: "refused", cause: "merge-refused: protected path", since: ago(10) }), hist(), ctx())).toMatchObject({ kind: "list-only" });
@@ -151,6 +178,21 @@ describe("ids and the property", () => {
     expect(a).toEqual(b);
     expect(a.id).toMatch(/^m-[0-9a-f]{8}$/);
     expect(movesFor(item({ kind: "stalled", cause: "silent-working-180-min", run: "r9" }), hist(), ctx()).id).not.toBe(a.id);
+  });
+  it("F3: releases of different runs, and failed vs escalated refine-releases, have different ids; a repeat of the same move has the same id", () => {
+    const a = movesFor(item({ run: "r1", kind: "failed", cause: "classifier-block" }), hist(), ctx());
+    const b = movesFor(item({ run: "r2", kind: "failed", cause: "classifier-block" }), hist(), ctx());
+    expect(a.id).not.toBe(b.id);
+    expect(movesFor(item({ run: "r1", kind: "failed", cause: "classifier-block" }), hist(), ctx()).id).toBe(a.id);
+    const rc = ctx({ lockTicket: null, refineTicket: "DGS-2" });
+    const failed = movesFor(item({ ticket: "DGS-2", run: "w2" }), hist({ decisions: [dec({ ticket: "DGS-2", run: "w1", id: "restart-run" })] }), rc);
+    const escalated = movesFor(item({ ticket: "DGS-2", run: "w2" }), hist({ decisions: [dec({ ticket: "DGS-2", run: "w1", id: "restart-run" }), dec({ ticket: "DGS-2", run: "w9", id: "restart-run" })] }), rc);
+    expect(failed).toMatchObject({ result: "failed" });
+    expect(escalated).toMatchObject({ result: "escalated" });
+    expect(failed.id).not.toBe(escalated.id);
+    const g1 = movesFor(item({ kind: "refused", cause: "merge-refused: protected path", since: ago(31), run: "r1" }), hist(), ctx());
+    const g2 = movesFor(item({ kind: "refused", cause: "merge-refused: protected path", since: ago(31), run: "r2" }), hist(), ctx());
+    expect(g1.id).not.toBe(g2.id);
   });
   it("over every cause and every attention kind no build-lane release has a result other than stopped, and no move answers a prompt or closes the breaker", () => {
     const kinds: AttentionKind[] = ["blocked", "stalled", "lost", "refused", "failed", "unknown"];

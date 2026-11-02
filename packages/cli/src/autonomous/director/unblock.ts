@@ -24,8 +24,8 @@ export interface UnblockCtx {
   lockTicket: string | null;     // the factory ticket (lock.json)
   refineTicket: string | null;   // the refine-lock ticket
   now: Date;
-  /** Optional: the role of a run ("builder", "reviewer", ...). A reviewer or scout run is always list-only. */
-  roleOf?: (run: string) => string | null;
+  /** Required: the role of a run from its run record ("builder", "reviewer", "scout", "other", ...), null when unknown. Fail closed: only a builder (lock ticket) or an "other"/"refine" run (refine ticket) is acted on. */
+  roleOf: (run: string) => string | null;
 }
 
 const WAIT_MIN = 30;
@@ -33,10 +33,12 @@ const ESCALATE_ID = "product-taste-names-scope";
 
 type Body = Move extends infer M ? (M extends { id: string } ? Omit<M, "id"> : never) : never;
 const mid = (kind: string, ticket: string, run: string): string => `m-${createHash("sha1").update(`${kind}|${ticket}|${run}`).digest("hex").slice(0, 8)}`;
+/** The id input is kind (plus the result of a release), ticket and run, so two releases of different runs, or a failed and an escalated refine-release, never share an id. */
 const withId = (b: Body, run = ""): Move => {
-  const ticket = "ticket" in b ? b.ticket : "item" in b ? "" : "";
+  const ticket = "ticket" in b ? b.ticket : "";
   const r = "run" in b ? b.run : "item" in b ? b.item : run;
-  return { ...b, id: mid(b.kind, ticket, r) } as Move;
+  const label = "result" in b ? `${b.kind}:${b.result}` : b.kind;
+  return { ...b, id: mid(label, ticket, r) } as Move;
 };
 
 /** The run key a retry-once decision is recorded under (distinct from a re-prompt of the same run). */
@@ -52,13 +54,14 @@ function find(h: History, ticket: string, run: string, id: string): Decision | n
   return null;
 }
 
-/** The tick's own retry of the ticket (journal action "retry"), unless the journal settled it retryable (never delivered). */
-function tickRetry(journal: JournalLine[], ticket: string): { ts: string } | null {
+/** The tick's own retry of THIS run (journal action "retry", detail.run or detail.item matches), unless the journal settled it retryable (never delivered). */
+function tickRetry(journal: JournalLine[], ticket: string, run: string, itemId: string): { ts: string } | null {
   const last = new Map<string, JournalLine>();
   for (const l of journal) last.set(l.key, l);
   let found: JournalLine | null = null;
   for (const l of journal) {
     if (l.status !== "planned" || l.ticket !== ticket || l.action !== "retry") continue;
+    if (l.detail?.run !== run && l.detail?.item !== itemId) continue;
     const end = last.get(l.key);
     if (end !== undefined && end.status === "settled" && end.result === "retryable") continue;
     found = l;
@@ -69,8 +72,8 @@ function tickRetry(journal: JournalLine[], ticket: string): { ts: string } | nul
 const listOnly = (item: OpenItem, why: string): Move => withId({ kind: "list-only", item: item.id, why });
 const none = (ticket: string, run: string): Move => ({ id: mid("none", ticket, run), kind: "none" });
 
-function releaseBuild(ticket: string, reason: string, question: string): Move {
-  return withId({ kind: "release", lane: "build", ticket, result: "stopped", reason, escalate: { id: ESCALATE_ID, question } });
+function releaseBuild(ticket: string, run: string, reason: string, question: string): Move {
+  return withId({ kind: "release", lane: "build", ticket, result: "stopped", reason, escalate: { id: ESCALATE_ID, question } }, run);
 }
 
 function classOf(item: OpenItem): "transient" | "durable" | "unknown" {
@@ -80,10 +83,10 @@ function classOf(item: OpenItem): "transient" | "durable" | "unknown" {
 
 function buildLane(item: OpenItem, h: History, now: Date, ticket: string): Move {
   const run = item.run;
-  const stoppedAfterWait = (what: string): Move => releaseBuild(ticket, `${what}: stopped by the Director after ${WAIT_MIN} minutes`, `The Builder run ${run} ${what} and did not recover. Say how to go on`);
+  const stoppedAfterWait = (what: string): Move => releaseBuild(ticket, run, `${what}: stopped by the Director after ${WAIT_MIN} minutes`, `The Builder run ${run} ${what} and did not recover. Say how to go on`);
   switch (item.kind) {
     case "lost": {
-      const retry = tickRetry(h.journal, ticket);
+      const retry = tickRetry(h.journal, ticket, run, item.id);
       if (retry === null && item.retryEligible === true) return none(ticket, run);   // the tick restarts it
       return ageMin(retry?.ts ?? item.since, now) >= WAIT_MIN ? stoppedAfterWait(`was lost (${item.cause})`) : none(ticket, run);
     }
@@ -95,8 +98,8 @@ function buildLane(item: OpenItem, h: History, now: Date, ticket: string): Move 
     case "failed": {
       const cls = classOf(item);
       if (cls === "unknown") return listOnly(item, "cause class unknown");
-      if (cls === "durable") return releaseBuild(ticket, `failed: ${item.cause}`, `The Builder run ${run} failed with a cause only a person can fix: ${item.cause}. Say how to go on`);
-      const tick = tickRetry(h.journal, ticket);
+      if (cls === "durable") return releaseBuild(ticket, run, `failed: ${item.cause}`, `The Builder run ${run} failed with a cause only a person can fix: ${item.cause}. Say how to go on`);
+      const tick = tickRetry(h.journal, ticket, run, item.id);
       if (tick !== null) return ageMin(tick.ts, now) >= WAIT_MIN ? stoppedAfterWait(`failed (${item.cause}) and the retry did not help`) : none(ticket, run);
       const used = find(h, ticket, retryRunKey(run), "reprompt-run");
       if (used === null) return withId({ kind: "retry-once", ticket, run, to: "driver" });
@@ -105,7 +108,7 @@ function buildLane(item: OpenItem, h: History, now: Date, ticket: string): Move 
     case "refused": {
       if (!item.cause.startsWith("merge-refused")) return listOnly(item, "refused for another cause");
       const age = ageMin(item.since, now);
-      return age >= WAIT_MIN ? withId({ kind: "gate-wait", ticket, ageMin: age }) : listOnly(item, "waiting for the Maestro (protected-path merge), under 30 minutes");
+      return age >= WAIT_MIN ? withId({ kind: "gate-wait", ticket, ageMin: age }, run) : listOnly(item, "waiting for the Maestro (protected-path merge), under 30 minutes");
     }
     case "blocked": return listOnly(item, "a prompt waits for Jack (answer-prompt): the Director never answers it");
     default: return listOnly(item, "not an item the Director acts on");
@@ -119,7 +122,7 @@ function refineLane(item: OpenItem, h: History, now: Date, ticket: string): Move
     if (find(h, ticket, run, "restart-run") !== null) return none(ticket, run);   // already started again for this run
     const restarts = h.decisions.filter((d) => d.ticket === ticket && d.id === "restart-run").length;
     if (restarts === 0) return withId({ kind: "start-again", ticket, run });
-    return withId({ kind: "refine-release", lane: "refine", ticket, result: restarts === 1 ? "failed" : "escalated", reason: `the refine worker was lost ${restarts + 1} times (${item.cause})` });
+    return withId({ kind: "refine-release", lane: "refine", ticket, result: restarts === 1 ? "failed" : "escalated", reason: `the refine worker was lost ${restarts + 1} times (${item.cause})` }, run);
   };
   switch (item.kind) {
     case "lost": return lostLike();
@@ -131,7 +134,7 @@ function refineLane(item: OpenItem, h: History, now: Date, ticket: string): Move
     case "failed": {
       const cls = classOf(item);
       if (cls === "unknown") return listOnly(item, "cause class unknown");
-      if (cls === "durable") return withId({ kind: "refine-release", lane: "refine", ticket, result: "escalated", reason: `the refine worker failed: ${item.cause}` });
+      if (cls === "durable") return withId({ kind: "refine-release", lane: "refine", ticket, result: "escalated", reason: `the refine worker failed: ${item.cause}` }, run);
       return lostLike();
     }
     case "blocked": return listOnly(item, "a prompt waits for Jack (answer-prompt): the Director never answers it");
@@ -143,10 +146,13 @@ function refineLane(item: OpenItem, h: History, now: Date, ticket: string): Move
 export function movesFor(item: OpenItem, h: History, ctx: UnblockCtx): Move {
   if (item.ticket === null) return listOnly(item, "item has no ticket");
   if (item.run === "breaker") return listOnly(item, "breaker: closing it is Jack's (close-breaker)");
-  const role = ctx.roleOf?.(item.run) ?? null;
-  if (role === "reviewer" || role === "scout") return listOnly(item, `a ${role} run belongs to a conductor`);
-  if (item.ticket === ctx.refineTicket) return refineLane(item, h, ctx.now, item.ticket);
-  if (item.ticket === ctx.lockTicket) return buildLane(item, h, ctx.now, item.ticket);
+  const role = ctx.roleOf(item.run);
+  if (item.ticket === ctx.refineTicket) {
+    return role === "other" || role === "refine" ? refineLane(item, h, ctx.now, item.ticket) : listOnly(item, `run role ${role ?? "unknown"} is not the refine worker: a conductor owns it`);
+  }
+  if (item.ticket === ctx.lockTicket) {
+    return role === "builder" ? buildLane(item, h, ctx.now, item.ticket) : listOnly(item, `run role ${role ?? "unknown"} is not the Builder: a conductor owns it`);
+  }
   return listOnly(item, "not the factory ticket or the refine ticket: a conductor owns it");
 }
 
