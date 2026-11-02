@@ -61,8 +61,10 @@ function readRaw(env?: NodeJS.ProcessEnv, from?: string): Record<string, unknown
 }
 
 class EntryError extends Error {
-  constructor(message: string, readonly field?: string) {
+  field?: string; // no parameter property: node --experimental-strip-types cannot run it
+  constructor(message: string, field?: string) {
     super(message);
+    this.field = field;
   }
 }
 
