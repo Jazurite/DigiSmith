@@ -103,15 +103,23 @@ def agent_of_pane(p):
             if x.get("pane_id") == p: return x.get("name", "")
     except Exception: pass
     return ""
+def current_label(g, t):
+    # the name the Suite rules judge: a tab's label (tab get), an agent's name, or the agent that owns a pane; "" when unknown (fail closed)
+    if g == "tab":
+        try: return find(json.loads(run(["tab", "get", t]).stdout), "label") or ""
+        except Exception: return ""
+    if g == "agent": return agent_of_pane(t) if re.match(r"^w\d+:p", t) else t
+    return agent_of_pane(t)
 if SESSION == "Suite":
-    # DGS-683: in Suite the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed
-    label = None
-    if grp == "tab" and verb == "close":
-        try: label = find(json.loads(run(["tab", "get", rest[0]]).stdout), "label")
-        except Exception: label = ""
-    elif grp == "agent" and verb == "stop": label = agent_of_pane(rest[0]) if re.match(r"^w\d+:p", rest[0]) else rest[0]
-    elif grp == "pane" and verb == "close": label = agent_of_pane(rest[0])
-    if label is not None and not ticket_name(label or ""): deny("in Suite only tc- or nw- conductors can be closed")
+    # DGS-683: in Suite the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed.
+    # A label can be changed by rename, so rename is judged too: the CURRENT name and the NEW name must both be tc-/nw-.
+    # herdr has no "agent stop" verb today; it stays here because the spec names it (7.1 item 4).
+    if (grp == "tab" and verb == "close") or (grp == "agent" and verb == "stop") or (grp == "pane" and verb == "close"):
+        if not ticket_name(current_label(grp, rest[0])): deny("in Suite only tc- or nw- conductors can be closed")
+    elif verb == "rename":
+        if rest[0].startswith("-") or len(rest) < 2 or rest[1].startswith("-"): deny("in Suite rename needs a target and a new name")
+        if not ticket_name(current_label(grp, rest[0])): deny("in Suite only tc- or nw- conductors can be renamed")
+        if not ticket_name(rest[1]): deny("in Suite a new name must keep the tc- or nw- prefix")
 elif verb in ("close",) and grp == "tab" and rest and rest[0] in {w + ":t1" for w in WSS}: deny("tab 1 (maestro) cannot be closed here")
 r = run(cmd)
 sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)

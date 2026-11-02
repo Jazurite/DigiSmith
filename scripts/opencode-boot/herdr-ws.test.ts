@@ -12,9 +12,9 @@ echo "$@" >> "$FAKE_LOG"
 echo "\${HERDR_SOCKET_PATH-unset}" >> "$FAKE_LOG.env"
 S="$2"; shift 2
 case "$1 $2" in
-  "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"}]}}' ;;
+  "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"},{"name":"tc-dgs-8","pane_id":"w7:p6","workspace_id":"w7"}]}}' ;;
   "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
-  "tab get") case "$3" in w7:t2) L=tc-dgs-9;; w7:t3) L=nw-5;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
+  "tab get") if [ "$3" = "w7:t9" ]; then echo "not json"; exit 0; fi; case "$3" in w7:t2) L=tc-dgs-9;; w7:t3) L=nw-5;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
   "tab list") echo "{\\"id\\":\\"cli:tab:list\\",\\"result\\":{\\"tabs\\":[{\\"tab_id\\":\\"$4:t1\\",\\"workspace_id\\":\\"$4\\"}]}}" ;;
   *) echo '{"result":{}}' ;;
 esac
@@ -71,7 +71,7 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
   it("scope with several default pairs: default list shows only default workspaces, Suite list only w7", () => {
     const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
     expect(names(run(env, ["agent", "list"])).sort()).toEqual(["dgs-1", "dgs-2", "dgs-683-b"])
-    expect(names(run(env, ["--session", "Suite", "agent", "list"])).sort()).toEqual(["digismith-conductor", "tc-dgs-9"])
+    expect(names(run(env, ["--session", "Suite", "agent", "list"])).sort()).toEqual(["digismith-conductor", "tc-dgs-8", "tc-dgs-9"])
   })
 
   it("a session outside the scope is refused", () => {
@@ -217,5 +217,36 @@ describe("herdr-ws Suite close rule (T11)", () => {
   it("Suite's :t1 tab is protected by its label, not its position", () => {
     expect(refused(suite("tab", "close", "w7:t4"))).toBe(true) // not tab 1, label digismith-conductor
     expect(ok(suite("tab", "close", "w7:t3"))).toBe(true)
+  })
+
+  it("rename bypass: a tc- conductor cannot take over a non-ticket label, so the two-call attack fails", () => {
+    expect(refused(suite("tab", "rename", "w7:t1", "tc-x"))).toBe(true) // current label digismith-conductor
+    expect(refused(suite("tab", "close", "w7:t1"))).toBe(true)
+    expect(refused(suite("agent", "rename", "digismith-conductor", "tc-x"))).toBe(true)
+    expect(refused(suite("pane", "rename", "w7:p1", "tc-x"))).toBe(true)
+  })
+
+  it("rename keeps the prefix: tc- to tc- passes, tc- to anything else or --clear is refused", () => {
+    expect(ok(suite("tab", "rename", "w7:t2", "tc-dgs-10"))).toBe(true)
+    expect(ok(suite("tab", "rename", "w7:t3", "nw-6", "extra"))).toBe(true)
+    expect(ok(suite("agent", "rename", "tc-dgs-9", "tc-dgs-10"))).toBe(true)
+    expect(ok(suite("pane", "rename", "w7:p2", "tc-label"))).toBe(true)
+    expect(refused(suite("tab", "rename", "w7:t2", "digismith-conductor"))).toBe(true)
+    expect(refused(suite("agent", "rename", "tc-dgs-9", "--clear"))).toBe(true)
+    expect(refused(suite("tab", "rename", "w7:t2"))).toBe(true)
+  })
+
+  it("rename in default is not restricted by the Suite rule", () => {
+    expect(ok(run(env, ["tab", "rename", "w2:t5", "anything"]))).toBe(true)
+  })
+
+  it("fails closed: tab get that prints non-JSON refuses the close and the rename", () => {
+    expect(refused(suite("tab", "close", "w7:t9"))).toBe(true)
+    expect(refused(suite("tab", "rename", "w7:t9", "tc-x"))).toBe(true)
+  })
+
+  it("agent stop with a pane-id target follows the owning agent", () => {
+    expect(ok(suite("agent", "stop", "w7:p6"))).toBe(true) // tc-dgs-8
+    expect(refused(suite("agent", "stop", "w7:p1"))).toBe(true) // digismith-conductor
   })
 })
