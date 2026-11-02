@@ -302,3 +302,6 @@ Approved by the Maestro 2026-11-01 (checkpoint 1). No question is open.
 ## 14. Out of scope
 
 DGS-640 shifts, DGS-641's split of the roles and the Nightwatch behaviour, a conductor on OpenCode, an Oculus workspace, an extra conductor for overload (parked 2026-10-25), any change to Builder, Reviewer or finishing skills.
+
+
+Suite is now Castle: the herdr session and every name were renamed in DGS-683 (the registry, scripts, daemon files, runbook). Read "Suite" in this spec and plan.md as "Castle".
