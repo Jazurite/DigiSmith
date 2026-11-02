@@ -171,6 +171,52 @@ describe("doMove", () => {
     for (const k of kinds) expect(checkAuthority(authorityIdOf({ id: "m", kind: k } as Move) as string)).toEqual({ ok: true });
   });
 
+  it("F2: the started line posts no ClickUp comment; the done line posts one", async () => {
+    const f = item({ kind: "failed", cause: "classifier-block", id: "r1.failed.0" });
+    const w = world([f]);
+    const e = effects();
+    let commentsAtEffect = -1;
+    const orig = e.releaseBuild;
+    e.releaseBuild = async (t, r) => { commentsAtEffect = tracker.comments.length; return orig(t, r); };
+    await doMove(deps({ effects: e }), w, idOf(w, "release"));
+    expect(commentsAtEffect).toBe(0);
+    expect(tracker.comments.some((c) => c.text.includes("Director decision") && c.text.includes("stopped the ticket"))).toBe(true);
+  });
+
+  it("F1: a release whose escalate step failed is run again without a second release, and the escalation is made", async () => {
+    const f = item({ kind: "failed", cause: "classifier-block", id: "r1.failed.0" });
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(join(dir, "escalations.jsonl"));   // an append to a directory fails: the escalate step throws
+    const e = effects();
+    const w = world([f]);
+    const id = idOf(w, "release");
+    const first = await doMove(deps({ effects: e }), w, id);
+    expect(first.code).toBe(5);
+    expect(calls.filter((c) => c.startsWith("release"))).toHaveLength(1);
+    rmSync(join(dir, "escalations.jsonl"), { recursive: true });
+    // the lock is gone now: the move left the plan, but its first line saved it
+    const w2 = world([f], { lockTicket: null });
+    expect(planLoop(w2).moves).toEqual([]);
+    const second = await doMove(deps({ effects: e }), w2, id);
+    expect(second.code).toBe(0);
+    expect(calls.filter((c) => c.startsWith("release"))).toHaveLength(1);   // not released twice
+    expect(tracker.comments.some((c) => c.text.includes("classifier-block") && c.text.startsWith("Director ("))).toBe(true);
+    expect((await doMove(deps({ effects: e }), w2, id)).text).toContain("already done");
+  });
+
+  it("F4: a second process cannot run the same move while it runs; the marker is removed afterwards", async () => {
+    const w = world([item()]);
+    const id = idOf(w, "reprompt");
+    const e = effects();
+    let inner: { code: number; text: string } | null = null;
+    e.promptDriver = async () => { inner = await doMove(deps({ effects: effects() }), world([item()]), id); };
+    expect((await doMove(deps({ effects: e }), w, id)).code).toBe(0);
+    expect(inner).toMatchObject({ code: 5 });
+    expect(inner!.text).toContain("another process");
+    const { existsSync } = await import("node:fs");
+    expect(existsSync(join(dir, "director", "moves", `${id}.running`))).toBe(false);
+  });
+
   it("gate-wait only records", async () => {
     const w = world([item({ kind: "refused", cause: "merge-refused: protected path", since: ago(40), id: "r1.refused.0" })]);
     const r = await doMove(deps(), w, idOf(w, "gate-wait"));

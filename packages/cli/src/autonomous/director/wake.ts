@@ -49,9 +49,12 @@ export async function wakeDirector(d: WakeDeps, p: Plan): Promise<"sent" | "none
     const ansi = (await d.exec(herdr, [...sess, "pane", "read", a.pane, "--format", "ansi"], { env, timeoutMs: 15000 })).stdout;
     if (classifyInputBox(ansi) !== "empty") return "skipped";
     await d.exec(herdr, [...sess, "agent", "prompt", t.agent, WAKE_TEXT], { env, timeoutMs: 30000 });
-    mkdirSync(join(d.dir, "director"), { recursive: true });
-    atomicWrite(join(d.dir, "director"), LAST, `${JSON.stringify({ hash: p.hash, at: now.toISOString() })}\n`);
-    appendEvent(d.dir, now, "director-tick", { hash: p.hash, moves: p.moves.length });
+    // The prompt is out: a failure to remember it must not turn "sent" into "skipped" (the next tick would send it again).
+    try {
+      mkdirSync(join(d.dir, "director"), { recursive: true });
+      atomicWrite(join(d.dir, "director"), LAST, `${JSON.stringify({ hash: p.hash, at: now.toISOString() })}\n`);
+    } catch { /* best effort */ }
+    try { appendEvent(d.dir, now, "director-tick", { hash: p.hash, moves: p.moves.length }); } catch { /* best effort */ }
     return "sent";
   } catch {
     return "skipped";

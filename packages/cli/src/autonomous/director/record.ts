@@ -3,10 +3,10 @@ import { join } from "node:path";
 import { fmtUtc7 } from "../clock.ts";
 import type { Tracker } from "../types.ts";
 
-export interface DecisionInput { ticket: string; run?: string | null; id: string; side: "within" | "escalated"; what: string; why: string; noComment?: boolean; move?: string; outcome?: Outcome }
+export interface DecisionInput { ticket: string; run?: string | null; id: string; side: "within" | "escalated"; what: string; why: string; noComment?: boolean; move?: string; outcome?: Outcome; payload?: unknown }
 /** A move is written "started" before its effect, then "done" or "failed" after it. */
 export type Outcome = "started" | "done" | "failed";
-export interface Decision { ts: string; tsUtc7: string; ticket: string; run: string | null; id: string; side: "within" | "escalated"; what: string; why: string; by: "director"; move?: string; outcome?: Outcome }
+export interface Decision { ts: string; tsUtc7: string; ticket: string; run: string | null; id: string; side: "within" | "escalated"; what: string; why: string; by: "director"; move?: string; outcome?: Outcome; payload?: unknown }
 export interface RecordDeps { dir: string; now: () => Date; tracker: Tracker }
 
 export const NO_COMMENT = new Set(["reprompt-run", "pick-seat"]);
@@ -35,7 +35,7 @@ export async function sendOrQueue(d: RecordDeps, ref: string, text: string): Pro
 /** Journal first (a failure throws and sends nothing), then the ClickUp comment. */
 export async function recordDecision(d: RecordDeps, e: DecisionInput): Promise<void> {
   const now = d.now();
-  const line: Decision = { ts: now.toISOString(), tsUtc7: fmtUtc7(now), ticket: e.ticket, run: e.run ?? null, id: e.id, side: e.side, what: e.what, why: e.why, by: "director", ...(e.move === undefined ? {} : { move: e.move }), ...(e.outcome === undefined ? {} : { outcome: e.outcome }) };
+  const line: Decision = { ts: now.toISOString(), tsUtc7: fmtUtc7(now), ticket: e.ticket, run: e.run ?? null, id: e.id, side: e.side, what: e.what, why: e.why, by: "director", ...(e.move === undefined ? {} : { move: e.move }), ...(e.outcome === undefined ? {} : { outcome: e.outcome }), ...(e.payload === undefined ? {} : { payload: e.payload }) };
   appendFileSync(join(directorDir(d.dir), "decisions.jsonl"), `${JSON.stringify(line)}\n`);
   if (NO_COMMENT.has(e.id) || e.noComment === true) return;
   await sendOrQueue(d, e.ticket, `Director decision (${line.tsUtc7} UTC+7): ${e.what}. Why: ${e.why}.`);

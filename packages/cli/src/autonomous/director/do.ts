@@ -1,3 +1,5 @@
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { checkAuthority, type AuthorityCheck } from "./authority.ts";
 import { escalate } from "./escalate.ts";
 import { planLoop, type PlanWorld } from "./plan.ts";
@@ -43,7 +45,7 @@ function specOf(m: Move): Spec | null {
 
 const REPROMPT = (run: string): string => `Director: run ${run} has not answered for a long time. Re-prompt it, and report its state.`;
 
-async function effect(d: DoDeps, m: Move): Promise<string> {
+async function effect(d: DoDeps, w: PlanWorld, m: Move): Promise<string> {
   const e = d.effects;
   switch (m.kind) {
     case "reprompt":
@@ -57,7 +59,8 @@ async function effect(d: DoDeps, m: Move): Promise<string> {
       await e.startRefine(m.ticket);
       return "refine worker started";
     case "release": {
-      await e.releaseBuild(m.ticket, m.reason);
+      // idempotent: when the lock is already clear (an earlier run released and then failed in the escalate step) the release is skipped
+      if (w.lockTicket === m.ticket) await e.releaseBuild(m.ticket, m.reason);
       if (m.escalate === null) return "released stopped";
       const r = await escalate(d, { ticket: m.ticket, taskId: "", id: m.escalate.id, question: m.escalate.question, viaRelease: true });
       return r.outcome === "refused" ? `released stopped; ${r.text}` : `released stopped and escalated (${r.outcome})`;
@@ -77,12 +80,31 @@ async function effect(d: DoDeps, m: Move): Promise<string> {
  * run the effect, write done or failed. A move is "already done" only for the SAME id; another run or result is a new move.
  */
 export async function doMove(d: DoDeps, w: PlanWorld, id: string): Promise<{ code: 0 | 4 | 5; text: string }> {
+  // One process per move: an exclusive-create marker held while the move runs (two simultaneous `dg director do` cannot both pass).
+  const marks = join(d.dir, "director", "moves");
+  const mark = join(marks, `${id}.running`);
+  try {
+    mkdirSync(marks, { recursive: true });
+    writeFileSync(mark, `${process.pid}\n`, { flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST") return { code: 5, text: `move ${id} is being run by another process (marker ${mark}); if none is running, remove the marker` };
+    throw e;
+  }
+  try { return await runMove(d, w, id); } finally { rmSync(mark, { force: true }); }
+}
+
+async function runMove(d: DoDeps, w: PlanWorld, id: string): Promise<{ code: 0 | 4 | 5; text: string }> {
   const mine = readDecisions(d.dir).filter((x) => x.move === id);
   const last = mine[mine.length - 1];
   if (last?.outcome === "done") return { code: 0, text: `move ${id} is already done` };
   if (last?.outcome === "started") return { code: 5, text: `move ${id} was started earlier and its outcome is unknown: check by hand before running it again` };
 
-  const m = planLoop(w).moves.find((x) => x.id === id);
+  // A failed move that left the plan (a release that cleared the lock, then failed to escalate) is run again from the move saved in its first line.
+  let m = planLoop(w).moves.find((x) => x.id === id);
+  if (m === undefined && last?.outcome === "failed") {
+    const saved = mine.find((x) => x.outcome === "started")?.payload as Move | undefined;
+    if (saved !== undefined && saved.id === id) m = saved;
+  }
   if (m === undefined) return { code: 4, text: `unknown move id ${id}: run dg director plan` };
   const authId = authorityIdOf(m);
   const spec = specOf(m);
@@ -91,10 +113,11 @@ export async function doMove(d: DoDeps, w: PlanWorld, id: string): Promise<{ cod
   if (!ok.ok) return { code: 5, text: ok.text };
 
   const base = { ticket: spec.ticket, run: spec.runKey, id: authId, side: "within" as const, move: id };
-  await recordDecision(d, { ...base, what: spec.what, why: spec.why, outcome: "started" });
+  // "started" is the journal line before the effect: no ClickUp comment yet (the effect has not happened); the comment goes out with "done".
+  await recordDecision(d, { ...base, what: spec.what, why: spec.why, outcome: "started", noComment: true, payload: m });
   try {
-    const text = await effect(d, m);
-    await recordDecision(d, { ...base, what: `${spec.what}: ${text}`, why: spec.why, outcome: "done", noComment: true });
+    const text = await effect(d, w, m);
+    await recordDecision(d, { ...base, what: `${spec.what}: ${text}`, why: spec.why, outcome: "done" });
     return { code: 0, text: `${m.kind} ${spec.ticket}: ${text}` };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
