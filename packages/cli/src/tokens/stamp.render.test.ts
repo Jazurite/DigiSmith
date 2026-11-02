@@ -39,12 +39,19 @@ describe("renderStamp", () => {
     u.agentSeconds = 1200;
     expect(renderStamp({ key: "K-1", task: "2", usage: u, review: noReview })).toContain("Window: 2026-10-27 23:50:00 to 2026-10-28 00:10:00 UTC+7 (agent time 20 min)");
   });
+  it("uses the earliest start over unsorted windows and plural responses", () => {
+    const u = usage();
+    u.windows = [{ start: "2026-10-27T10:00:00Z", end: "2026-10-27T10:05:00Z" }, { start: "2026-10-27T09:00:00Z", end: "2026-10-27T09:10:00Z" }];
+    const t = renderStamp({ key: "K-1", task: "1", usage: u, review: noReview });
+    expect(t).toContain("Window: 2026-10-27 16:00:00 to 17:05:00 UTC+7");
+    expect(t).toContain("(10 responses) = $0.4478");
+  });
   it("marks unpriced model and partly priced total", () => {
     const u = usage();
     u.models["mystery"] = { input: 1, output: 2, cache_read: 3, cache_write_5m: 4, cache_write_1h: 0, responses: 1, cost_usd: null };
     u.total = { ...u.total, cost_usd: null, priced: false };
     const t = renderStamp({ key: "K-1", task: "1", usage: u, review: noReview }).split("\n");
-    expect(t.find((l) => l.startsWith("mystery:"))).toBe("mystery: in 1, out 2, cache read 3, cache write 4 (1 responses) cost not priced");
+    expect(t.find((l) => l.startsWith("mystery:"))).toBe("mystery: in 1, out 2, cache read 3, cache write 4 (1 response) cost not priced");
     expect(t.find((l) => l.startsWith("Task total:"))).toContain("= $0.4635 (partly priced)");
   });
   it("adds the partial line after the total line", () => {

@@ -108,7 +108,8 @@ export function renderStamp(i: StampInput): string {
   const lines: string[] = [i.task === "final" ? `Hallmark final review of ${i.key}` : `Hallmark task ${i.task} of ${i.key}`];
 
   if (usage.windows.length > 0) {
-    const start = utc7(usage.windows[0].start);
+    const firstStart = usage.windows.reduce((a, w) => (Date.parse(w.start) < Date.parse(a) ? w.start : a), usage.windows[0].start);
+    const start = utc7(firstStart);
     const lastEnd = usage.windows.reduce((a, w) => (Date.parse(w.end) > Date.parse(a) ? w.end : a), usage.windows[0].end);
     const end = utc7(lastEnd);
     const endText = end.slice(0, 10) === start.slice(0, 10) ? end.slice(11) : end;
@@ -120,7 +121,7 @@ export function renderStamp(i: StampInput): string {
   let partial = 0;
   let anyPriced = false;
   for (const [model, m] of Object.entries(usage.models)) {
-    const head = `${model}: ${countsText(m)} (${m.responses} responses)`;
+    const head = `${model}: ${countsText(m)} (${m.responses} ${m.responses === 1 ? "response" : "responses"})`;
     if (m.cost_usd === null) lines.push(`${head} cost not priced`);
     else { lines.push(`${head} = ${usd(m.cost_usd)}`); partial += m.cost_usd; anyPriced = true; }
   }
