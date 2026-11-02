@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  AUTHORITY, AUTHORITY_PATHS, approvalCovers, checkAuthority, fullPathCovered, isAuthorityFile, isCovered, namesAuthorityPath, parseApproval,
+  AUTHORITY, AUTHORITY_PATHS, AUTHORITY_PATH_SPELLINGS, approvalCovers, checkAuthority, fullPathCovered, isAuthorityFile, isCovered, namesAuthorityPath, parseApproval,
 } from "./authority.ts";
 
 const WITHIN = ["claim-refine", "claim-build", "start-worker", "pick-seat", "apply-refinement-gate", "reprompt-run", "restart-run", "release-stopped", "escalate-concept", "start-ticket-conductor", "record-decision"];
@@ -150,5 +150,40 @@ describe("fullPathCovered", () => {
   it("limit.ts does not cover rate-limit.ts (not at a / boundary)", () => {
     expect(fullPathCovered("packages/cli/src/run/rate-limit.ts", ["limit.ts"])).toBe(false);
     expect(fullPathCovered("packages/cli/src/run/limit.ts", ["limit.ts"])).toBe(true);
+  });
+});
+
+describe("approvals written the way Jack writes them (F1, F2)", () => {
+  it("F1: a trailing period, ./ or ../ on an approval path does not break coverage", () => {
+    const a = parseApproval("Authority change approved by Jack: 2026-11-03: ./director/authority.ts., ../director/refine.ts.");
+    expect(a?.paths).toEqual(["director/authority.ts", "director/refine.ts"]);
+    expect(approvalCovers(a, ["director/authority.ts", "director/refine.ts"])).toEqual([]);
+    expect(isCovered("director/authority.ts", ["director/authority.ts."])).toBe(true);
+    expect(isCovered("director/authority.ts", ["./director/authority.ts"])).toBe(true);
+  });
+  it("F2: a short-spelling approval covers the config keys", () => {
+    expect(isCovered("nightwatch.limits", ["config.yml"])).toBe(true);
+    expect(isCovered("protected_paths", ["config.yml"])).toBe(true);
+    expect(isCovered("protected_paths", [".digismith/config.yml"])).toBe(true);
+    expect(isCovered("nightwatch.limits", [".digismith/"])).toBe(true);
+    expect(isCovered("nightwatch.limits", ["mandate.yml"])).toBe(false);
+    expect(isCovered("nightwatch.limits", ["guardrails.ts"])).toBe(false);
+  });
+  it("F2: a slash-less folder token is covered by the folder approval, and only by a folder approval", () => {
+    expect(isCovered("skills/director", ["skills/director/"])).toBe(true);
+    expect(isCovered("skills/director", ["skills/director"])).toBe(true);
+    expect(isCovered("skills/director", ["skills/other/"])).toBe(false);
+    expect(isCovered("skills/director", ["skills/director/SKILL.md"])).toBe(false);
+    expect(isCovered("run/limit", ["packages/cli/src/run/limit/"])).toBe(true);
+  });
+  it("every spelling is covered by an approval of its own full path or an equal short form, and by nothing unrelated", () => {
+    for (const p of AUTHORITY_PATHS) {
+      for (const tok of namesAuthorityPath(`edit ${p} now`)) expect(isCovered(tok, [p])).toBe(true);
+    }
+    for (const sp of AUTHORITY_PATH_SPELLINGS) {
+      expect(isCovered(sp, [sp])).toBe(true);
+      if (/.\/./.test(sp.replace(/\/$/, ""))) expect(isCovered(sp.replace(/\/$/, ""), [sp])).toBe(true);
+      expect(isCovered(sp, ["unrelated/other.ts"])).toBe(false);
+    }
   });
 });

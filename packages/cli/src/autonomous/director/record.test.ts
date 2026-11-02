@@ -1,7 +1,7 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeTracker } from "../fake-tracker.test-util.ts";
 import { directorDir, hasDecision, readDecisions, recordDecision, retryPendingComments, type RecordDeps } from "./record.ts";
 
@@ -104,5 +104,32 @@ describe("retryPendingComments", () => {
   });
   it("with no queue it does nothing", async () => {
     expect(await retryPendingComments(deps())).toBe(0);
+  });
+  it("F3: a comment queued while the retry is awaiting a send is kept", async () => {
+    tracker.comment = async () => { throw new Error("down"); };
+    await recordDecision(deps(), base);
+    let first = true;
+    tracker.comment = async (r, t) => {
+      if (first) { first = false; appendFileSync(join(dir, "comment-pending.jsonl"), `${JSON.stringify({ ref: "DGS-9", text: "late" })}\n`); }
+      tracker.comments.push({ ref: r, text: t });
+    };
+    expect(await retryPendingComments(deps())).toBe(1);
+    expect(readFileSync(join(dir, "comment-pending.jsonl"), "utf8")).toContain("late");
+  });
+  it("F3: a leftover retrying file from a crash is processed", async () => {
+    writeFileSync(join(dir, "comment-pending.retrying.jsonl"), `${JSON.stringify({ ref: "DGS-1", text: "old" })}\n`);
+    expect(await retryPendingComments(deps())).toBe(1);
+    expect(tracker.comments).toEqual([{ ref: "DGS-1", text: "old" }]);
+    expect(existsSync(join(dir, "comment-pending.retrying.jsonl"))).toBe(false);
+  });
+  it("F4: a failing queue write does not throw out of recordDecision; stderr reports it", async () => {
+    tracker.comment = async () => { throw new Error("down"); };
+    mkdirSync(join(dir, "comment-pending.jsonl")); // an append to a directory fails
+    const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await expect(recordDecision(deps(), base)).resolves.toBeUndefined();
+      expect(err).toHaveBeenCalledWith(expect.stringContaining("queue write failed"));
+    } finally { err.mockRestore(); }
+    expect(readDecisions(dir)).toHaveLength(1);
   });
 });

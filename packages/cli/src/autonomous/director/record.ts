@@ -1,7 +1,6 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUtc7 } from "../clock.ts";
-import { atomicWrite } from "../state.ts";
 import type { Tracker } from "../types.ts";
 
 export interface DecisionInput { ticket: string; run?: string | null; id: string; side: "within" | "escalated"; what: string; why: string; noComment?: boolean }
@@ -22,8 +21,12 @@ export async function sendOrQueue(d: RecordDeps, ref: string, text: string): Pro
   try {
     await d.tracker.comment(ref, text);
   } catch {
-    mkdirSync(d.dir, { recursive: true });
-    appendFileSync(join(d.dir, PENDING), `${JSON.stringify({ ref, text, queuedAt: d.now().toISOString() })}\n`);
+    try {
+      mkdirSync(d.dir, { recursive: true });
+      appendFileSync(join(d.dir, PENDING), `${JSON.stringify({ ref, text, queuedAt: d.now().toISOString() })}\n`);
+    } catch (e) {
+      process.stderr.write(`director: comment for ${ref} lost, queue write failed: ${(e as Error).message}\n`);
+    }
   }
 }
 
@@ -60,12 +63,20 @@ export function hasDecision(dir: string, ticket: string, run: string | null, id:
   return null;
 }
 
-/** Sends the queue; what still fails stays queued. Returns how many were sent. */
+/**
+ * Sends the queue; what still fails stays queued. Returns how many were sent.
+ * The queue is renamed to comment-pending.retrying.jsonl first, so a comment queued meanwhile lands in a fresh file;
+ * a leftover retrying file (a crash) is processed before anything else.
+ */
 export async function retryPendingComments(d: RecordDeps): Promise<number> {
   const file = join(d.dir, PENDING);
-  if (!existsSync(file)) return 0;
+  const work = join(d.dir, "comment-pending.retrying.jsonl");
+  if (!existsSync(work)) {
+    if (!existsSync(file)) return 0;
+    try { renameSync(file, work); } catch { return 0; }
+  }
   const queue: { ref: string; text: string }[] = [];
-  for (const l of readFileSync(file, "utf8").split("\n")) {
+  for (const l of readFileSync(work, "utf8").split("\n")) {
     if (l.trim() === "") continue;
     try { queue.push(JSON.parse(l)); } catch { /* skipped */ }
   }
@@ -74,7 +85,7 @@ export async function retryPendingComments(d: RecordDeps): Promise<number> {
   for (const q of queue) {
     try { await d.tracker.comment(q.ref, q.text); sent++; } catch { left.push(JSON.stringify(q)); }
   }
-  if (left.length === 0) rmSync(file, { force: true });
-  else atomicWrite(d.dir, PENDING, `${left.join("\n")}\n`);
+  if (left.length > 0) appendFileSync(file, `${left.join("\n")}\n`);
+  rmSync(work, { force: true });
   return sent;
 }

@@ -71,7 +71,7 @@ export function namesAuthorityPath(text: string): string[] {
   return [...found.values()];
 }
 
-const norm = (p: string): string => p.trim().toLowerCase();
+const norm = (p: string): string => cleanToken(p.trim()).toLowerCase();
 
 /** "Authority change approved by Jack: <date>: <paths>" at the start of a line. Several lines are merged. */
 export function parseApproval(description: string): { date: string; paths: string[] } | null {
@@ -80,7 +80,7 @@ export function parseApproval(description: string): { date: string; paths: strin
   for (const line of description.split("\n")) {
     const m = /^[ \t]*authority change approved by jack:[ \t]*([^:\n]*?)[ \t]*:[ \t]*(.*)$/i.exec(line);
     if (!m) continue;
-    const ps = m[2].split(",").map((p) => p.trim()).filter((p) => p !== "");
+    const ps = m[2].split(",").map((p) => cleanToken(p.trim())).filter((p) => p !== "");
     if (ps.length === 0) continue;
     if (date === null) date = m[1];
     paths.push(...ps);
@@ -91,22 +91,29 @@ export function parseApproval(description: string): { date: string; paths: strin
 /** Spec 4.4: equal, a /-boundary suffix of a listed path, or under a listed folder. A folder token needs a folder approval. */
 export function isCovered(token: string, listed: readonly string[]): boolean {
   let t = norm(token);
-  if (CONFIG_KEYS.has(t)) t = CONFIG;
-  const folderToken = t.endsWith("/");
-  for (const raw of listed) {
-    const l = norm(raw);
-    if (l === t || l.endsWith(`/${t}`)) {
-      if (!folderToken || l.endsWith("/")) return true;
-      continue;
+  const isKey = CONFIG_KEYS.has(t);
+  if (isKey) t = CONFIG;
+  const ls = listed.map(norm).filter((l) => l !== "" && l !== "/");
+  // A config key is the config file: an approval written as a short spelling ("config.yml") covers it too.
+  if (isKey && ls.some((l) => CONFIG_KEYS.has(l) || l === CONFIG || CONFIG.endsWith(`/${l}`) || (l.endsWith("/") && CONFIG.startsWith(l)))) return true;
+  const cover = (x: string): boolean => {
+    const folderToken = x.endsWith("/");
+    for (const l of ls) {
+      if (l === x || l.endsWith(`/${x}`)) {
+        if (!folderToken || l.endsWith("/")) return true;
+        continue;
+      }
+      if (!l.endsWith("/")) continue;
+      if (x.startsWith(l)) return true;
+      for (let i = x.indexOf("/"); i >= 0; i = x.indexOf("/", i + 1)) {
+        const prefix = x.slice(0, i + 1);
+        if (l === prefix || l.endsWith(`/${prefix}`)) return true;
+      }
     }
-    if (!l.endsWith("/")) continue;
-    if (t.startsWith(l)) return true;
-    for (let i = t.indexOf("/"); i >= 0; i = t.indexOf("/", i + 1)) {
-      const prefix = t.slice(0, i + 1);
-      if (l === prefix || l.endsWith(`/${prefix}`)) return true;
-    }
-  }
-  return false;
+    return false;
+  };
+  // A slash-less token ("skills/director") may name a folder approved as "skills/director/".
+  return cover(t) || (!t.endsWith("/") && t.includes("/") && ls.some((l) => l.endsWith("/")) && cover(`${t}/`));
 }
 
 /** The tokens the approval does not cover (empty = covered). */
