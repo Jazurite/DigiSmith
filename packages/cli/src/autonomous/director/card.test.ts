@@ -1,0 +1,95 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { AUTHORITY } from "./authority.ts";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
+const card = readFileSync(join(ROOT, "skills/director/SKILL.md"), "utf8");
+const brief = readFileSync(join(ROOT, "skills/director/brief.md"), "utf8");
+const refineBrief = readFileSync(join(ROOT, "skills/director/refine-brief.md"), "utf8");
+const docs = readFileSync(join(ROOT, "docs/director.md"), "utf8");
+
+/** The text of the `## Authority` section, up to the next `## ` heading. */
+const authoritySection = (): string => {
+  const m = /^## Authority\n([\s\S]*?)(?=^## |\n?$(?![\s\S]))/m.exec(card);
+  if (!m) throw new Error("no ## Authority section");
+  return m[1];
+};
+const idsInTables = (text: string): string[] => [...text.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm)].map((m) => m[1]);
+
+describe("skills/director/SKILL.md", () => {
+  it("every authority id in authority.ts appears in the card, and every id in the card's authority tables is in authority.ts", () => {
+    const inCard = idsInTables(authoritySection());
+    expect([...inCard].sort()).toEqual(AUTHORITY.map((e) => e.id).sort());
+    expect(new Set(inCard).size).toBe(inCard.length);
+  });
+  it("has the sections Purpose, Lives, Owns, Does not own, Talks to, Reads, Authority, Rules", () => {
+    for (const s of ["Purpose", "Lives", "Owns", "Does not own", "Talks to", "Reads"]) expect(card).toMatch(new RegExp(`^${s}:`, "m"));
+    for (const s of ["Authority", "Rules"]) expect(card).toMatch(new RegExp(`^## ${s}$`, "m"));
+  });
+  it("has frontmatter name director and a description starting 'Use when'", () => {
+    const fm = /^---\nname: (.+)\ndescription: (.+)\n---\n/.exec(card);
+    expect(fm?.[1]).toBe("director");
+    expect(fm?.[2]).toMatch(/^Use when/);
+  });
+  it("says 'Jack changes this list'", () => {
+    expect(card).toContain("Jack changes this list");
+  });
+  it("says to run moves with dg director do and never to start a Reviewer itself (the project conductor starts the plan Reviewer)", () => {
+    expect(card).toContain("dg director do");
+    expect(card).toMatch(/never start a Reviewer yourself/i);
+    expect(card).toMatch(/project conductor starts the plan Reviewer/i);
+  });
+  it("says the Director never edits a ticket description (it cannot write the Authority change approved by Jack line)", () => {
+    expect(card).toMatch(/never edit(s)? a ticket description/i);
+    expect(card).toContain("Authority change approved by Jack");
+  });
+  it("names the Castle session and the LaunchDaemon com.jazurite.herdr-castle", () => {
+    expect(card).toContain("Castle");
+    expect(card).toContain("com.jazurite.herdr-castle");
+  });
+  it("does not mention the express lane except the line 'express lane: DGS-700, later'", () => {
+    const lines = card.split("\n").filter((l) => /express/i.test(l));
+    expect(lines).toEqual(["express lane: DGS-700, later"]);
+  });
+  it("has the loop, the refine flow, the unblock table, escalation and the decision record", () => {
+    for (const h of ["## The loop", "## The refine flow", "## Unblocking", "## Escalation", "## The decision record"]) expect(card).toContain(h);
+  });
+  it("keeps the rules: no prompts, no token read, no sudo, dg run start only, UTC+7, no AI attribution", () => {
+    const rules = card.slice(card.indexOf("## Rules"));
+    for (const s of ["permission, delete or \"keep allowing\" prompt", "token", "sudo", "dg run start", "UTC+7", "AI attribution"]) expect(rules).toContain(s);
+  });
+});
+
+describe("skills/director/brief.md", () => {
+  it("tells the Director session to read the card, run dg director plan, and follow the voice rules", () => {
+    expect(brief).toContain("skills/director/SKILL.md");
+    expect(brief).toContain("dg director plan");
+    expect(brief).toMatch(/conversation voice/i);
+    expect(brief).toMatch(/no questions in chat/i);
+    expect(brief).toContain("UTC+7");
+    expect(brief).toMatch(/AI attribution/i);
+    expect(brief).toContain("~/.digismith-depot/autonomous");
+  });
+});
+
+describe("skills/director/refine-brief.md", () => {
+  it("says: never edit the ticket description, never write the 'Authority change approved by Jack' line, name an authority path only when the plan changes it, and call the protected list 'the protected paths (section 13, DEFAULT_PROTECTED)'", () => {
+    expect(refineBrief).toMatch(/never edit the ticket description/i);
+    expect(refineBrief).toContain("Authority change approved by Jack");
+    expect(refineBrief).toMatch(/never write the .?Authority change approved by Jack/i);
+    expect(refineBrief).toMatch(/name an authority path only when the plan changes it/i);
+    expect(refineBrief).toContain("the protected paths (section 13, DEFAULT_PROTECTED)");
+  });
+  it("has the shape of a refine worker brief: docs only, no worktree, no branch, board folder, STOP: plan-ready, placeholders", () => {
+    for (const s of ["docs only", "no worktree", "no branch", "STOP: plan-ready", "<KEY>", "<board folder>", "<seat>", "done"]) expect(refineBrief).toContain(s);
+    expect(refineBrief).toMatch(/never scope a commit with the ticket key/i);
+  });
+});
+
+describe("docs/director.md", () => {
+  it("names the lanes, the state files, the commands and the express line", () => {
+    for (const s of ["refine-lock.json", "director/decisions.jsonl", "escalations.jsonl", "comment-pending.jsonl", "last-tick.json", "dg director plan", "dg director do", "express lane: DGS-700, later"]) expect(docs).toContain(s);
+  });
+});

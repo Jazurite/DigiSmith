@@ -142,3 +142,12 @@ The morning report has a `Drift` section after `Still building`. For each ticket
 - `<KEY>: git facts unreadable` when git cannot be read.
 
 No drift prints `none`. The same lines go into the ClickUp comment on DGS-548.
+
+## Director
+
+The Director (`skills/director/SKILL.md`, code in `packages/cli/src/autonomous/director/`) adds a refine lane to the scan and a wake-up to the scan and the watchdog.
+
+- **Refine lane.** After the build scan (and also while the build lock is held or the builder limit is full), unless the scan stopped on the breaker, bad guardrails or a bad `conductors.json`, the scan claims the first ready `refinement` ticket. The claim is `refine-lock.json`; no ClickUp status is written. A ticket without a "Done when" line in its description is escalated to `concept` once. With no Director in the registry the lane is off. A lane failure is logged as `refine-failed` and never changes the scan result.
+- **Wake-up.** The scan and the watchdog call a `wake` after each pass. It sends one prompt `Director tick: dg director plan` only when the plan has moves, the Director pane exists and is not working, and its input box is empty. The same move list is not sent again within 10 minutes (`director/last-tick.json`). A failing wake changes nothing.
+- **Merge gate backstop.** The merge gate refuses a branch that touches an authority path without Jack's approval record (code `authority-path`: "authority path: needs Jack's written yes"). A covered change still gets the protected-path refusal.
+
