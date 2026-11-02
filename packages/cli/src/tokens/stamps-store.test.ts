@@ -44,6 +44,20 @@ describe("stamps store", () => {
     appendStamp("DGS-1", stamp("2", "c2"));
     expect(readStamps("DGS-1").map((s) => s.comment_id)).toEqual(["c1", "c2"]);
   });
+  it("keeps a complete-JSON fragment without newline ignored before and after an append", () => {
+    appendStamp("DGS-1", stamp("1", "c1"));
+    appendFileSync(join(dir, "DGS-1.stamps.jsonl"), JSON.stringify(stamp("9", "frag")));
+    const before = readStamps("DGS-1").map((s) => s.comment_id);
+    expect(before).toEqual(["c1"]);
+    appendStamp("DGS-1", stamp("2", "c2"));
+    expect(readStamps("DGS-1").map((s) => s.comment_id)).toEqual(["c1", "c2"]);
+  });
+  it("skips lines that are not valid stamps", () => {
+    const f = join(dir, "DGS-1.stamps.jsonl");
+    const bad = { ...stamp("3", "x"), agent_seconds: "300" };
+    writeFileSync(f, `{"task":"1"}\n${JSON.stringify(bad)}\n${JSON.stringify({ ...stamp("4", "y"), models: null })}\n${JSON.stringify(stamp("5", "ok"))}\n`);
+    expect(readStamps("DGS-1").map((s) => s.comment_id)).toEqual(["ok"]);
+  });
   it("keeps both lines for a repeated task; stampOf returns the latest", () => {
     appendStamp("DGS-1", stamp("1", "old"));
     appendStamp("DGS-1", stamp("1", "new"));

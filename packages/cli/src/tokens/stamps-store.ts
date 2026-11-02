@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, truncateSync } from "node:fs";
 import { join } from "node:path";
 import { TICKET_PATTERN, depotRegistryDir, endsTorn } from "./registry.ts";
 
@@ -41,10 +41,26 @@ function fileFor(ticket: string): string {
   return join(depotRegistryDir(), `${ticket}.stamps.jsonl`);
 }
 
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+function isStamp(v: unknown): v is StampLine {
+  if (!isObj(v)) return false;
+  const str = (k: string) => typeof v[k] === "string";
+  return (
+    str("task") && str("comment_id") && str("window_start") && str("window_end") && str("stamped_at") &&
+    typeof v.agent_seconds === "number" && typeof v.partial === "boolean" && isObj(v.models) && isObj(v.reviews)
+  );
+}
+
 export function appendStamp(ticket: string, stamp: StampLine): void {
   const file = fileFor(ticket);
   mkdirSync(depotRegistryDir(), { recursive: true });
-  appendFileSync(file, `${endsTorn(file) ? "\n" : ""}${JSON.stringify(stamp)}\n`);
+  if (endsTorn(file)) {
+    // Cut the torn fragment so a later read cannot count it: read ignores it, append removes it.
+    const buf = readFileSync(file);
+    truncateSync(file, buf.lastIndexOf(0x0a) + 1);
+  }
+  appendFileSync(file, `${JSON.stringify(stamp)}\n`);
 }
 
 export function readStamps(ticket: string): StampLine[] {
@@ -58,7 +74,7 @@ export function readStamps(ticket: string): StampLine[] {
     if (!raw) continue;
     try {
       const p: unknown = JSON.parse(raw);
-      if (typeof p === "object" && p !== null && typeof (p as StampLine).task === "string") out.push(p as StampLine);
+      if (isStamp(p)) out.push(p);
     } catch {
       // a hand-edited line never breaks a read
     }
