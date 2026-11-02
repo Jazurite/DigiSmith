@@ -50,7 +50,8 @@ case "$G $V" in
     line=$(grep "^$1 " "$AG" | head -1)
     if [ -z "$line" ]; then echo '{"error":{"code":"agent_not_found"}}'; exit 1; fi
     set -- $line
-    printf '{"result":{"agent":{"name":"%s","pane_id":"%s","agent_status":"%s","agent_session":{"value":"sid-%s"}}}}\n' "$1" "$2" "$3" "$1";;
+    sid="sid-$1"; [ -n "${FAKE_NO_SID:-}" ] && sid=""   # FAKE_NO_SID=1: an agent that reports no session id
+    printf '{"result":{"agent":{"name":"%s","pane_id":"%s","agent_status":"%s","agent_session":{"value":"%s"}}}}\n' "$1" "$2" "$3" "$sid";;
   "agent list")
     printf '{"result":{"agents":['; sep=""
     while read -r name pane status; do [ -n "$name" ] && { printf '%s{"name":"%s","pane_id":"%s","agent_status":"%s"}' "$sep" "$name" "$pane" "$status"; sep=","; }; done < "$AG"

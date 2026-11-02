@@ -148,6 +148,13 @@ describe("herdr-bootstrap.sh", () => {
     expect(r.stderr).toMatch(/digismith-conductor is working and pgrep does not see its flags: not restarted/);
     expect(read("calls.log")).not.toMatch(/agent prompt digismith-conductor \/exit/);
   });
+  it("an idle agent with no session id is not relaunched, and the log says so", () => {
+    run();
+    const r = run({ PGREP: "false", FAKE_NO_SID: "1" });
+    expect(r.stderr).toMatch(/digismith-conductor has no session id: not relaunched/);
+    expect(read("calls.log")).not.toMatch(/--resume\s+--name/);
+    expect(read("calls.log")).not.toMatch(/agent prompt digismith-conductor \/exit/);
+  });
   it("a working agent is not briefed again", () => {
     run();
     fs.writeFileSync(path.join(fake, "Castle.prompts"), "");   // no STANDBY text any more
