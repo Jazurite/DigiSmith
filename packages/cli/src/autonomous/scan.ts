@@ -32,6 +32,8 @@ export interface ScanDeps {
   builderFull?: () => string | null;
   /** DGS-699: the refine lane. Absent: the lane is off and the scan behaves as before. */
   refine?: { prompt: (msg: string) => Promise<void>; roleFull: () => string | null; ordersDir?: string };
+  /** DGS-699: wakes the Director when there is something to do. Called once at the end of every scan; its failure changes nothing. */
+  wake?: () => Promise<void>;
 }
 export interface ScanResult {
   outcome: "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
@@ -136,6 +138,12 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
 /** The build scan, then the independent refine lane. The lane never changes the build result. */
 export async function runScan(d: ScanDeps): Promise<ScanResult> {
   const r = await runBuildScan(d);
+  try { return await withRefine(d, r); } finally {
+    if (d.wake && !d.dryRun) { try { await d.wake(); } catch { /* the wake never changes the scan */ } }
+  }
+}
+
+async function withRefine(d: ScanDeps, r: ScanResult): Promise<ScanResult> {
   if (d.refine && !["breaker", "guardrail-config", "conductor-config"].includes(r.outcome)) {
     try {
       const rows = await runRefineLane(d);

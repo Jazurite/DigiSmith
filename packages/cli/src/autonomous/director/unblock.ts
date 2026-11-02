@@ -46,10 +46,11 @@ export const retryRunKey = (run: string): string => `${run}#retry`;
 
 const ageMin = (iso: string, now: Date): number => Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
 
+/** The newest decision for ticket + run + id; null when none, or when the newest line of that move says it failed (a failed move did not happen). */
 function find(h: History, ticket: string, run: string, id: string): Decision | null {
   for (let i = h.decisions.length - 1; i >= 0; i--) {
     const d = h.decisions[i];
-    if (d.ticket === ticket && d.id === id && (d.run ?? null) === run) return d;
+    if (d.ticket === ticket && d.id === id && (d.run ?? null) === run) return d.outcome === "failed" ? null : d;
   }
   return null;
 }
@@ -120,7 +121,10 @@ function refineLane(item: OpenItem, h: History, now: Date, ticket: string): Move
   // The refine worker is one chain per ticket: each restart-run decision of the ticket counts, whatever its run.
   const lostLike = (): Move => {
     if (find(h, ticket, run, "restart-run") !== null) return none(ticket, run);   // already started again for this run
-    const restarts = h.decisions.filter((d) => d.ticket === ticket && d.id === "restart-run").length;
+    // one restart per run: a move's started and done lines count once, and a failed start did not happen
+    const effective = new Map<string, Decision>();
+    for (const d of h.decisions) if (d.ticket === ticket && d.id === "restart-run") effective.set(d.run ?? "", d);
+    const restarts = [...effective.values()].filter((d) => d.outcome !== "failed").length;
     if (restarts === 0) return withId({ kind: "start-again", ticket, run });
     return withId({ kind: "refine-release", lane: "refine", ticket, result: restarts === 1 ? "failed" : "escalated", reason: `the refine worker was lost ${restarts + 1} times (${item.cause})` }, run);
   };

@@ -14,6 +14,7 @@ import sessionsCommand from "./sessions/index.ts";
 import stewardCommand from "./steward/index.ts";
 import reviewerCommand from "./reviewer/index.ts";
 import autonomousCommand from "./autonomous/index.ts";
+import directorCommand from "./autonomous/director/command.ts";
 import runCommand from "./run/index.ts";
 import salvageCommand from "./salvage/index.ts";
 import oculusCommand from "./oculus/index.ts";
@@ -43,6 +44,7 @@ export function buildCli(argv: string[]): Argv {
     .command(stewardCommand)
     .command(reviewerCommand)
     .command(autonomousCommand)
+    .command(directorCommand)
     .command(runCommand)
     .command(salvageCommand)
     .command(oculusCommand)

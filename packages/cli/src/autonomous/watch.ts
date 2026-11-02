@@ -17,6 +17,8 @@ export interface WatchDeps {
   panes: PaneLookup; runDg: RunDg; dryRun: boolean;
   /** The guardrail read of the repo; the watchdog closes guardrails.failed when it is clean. Absent: the item is left alone. */
   guardrailProblems?: () => string[];
+  /** DGS-699: wakes the Director when there is something to do, once after the pass. Its failure changes nothing. */
+  wake?: () => Promise<void>;
 }
 export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number }
 
@@ -79,6 +81,12 @@ function loadState(dir: string): Map<string, string | null> {
 }
 
 export async function runWatch(d: WatchDeps): Promise<WatchResult> {
+  try { return await watchPass(d); } finally {
+    if (d.wake && !d.dryRun) { try { await d.wake(); } catch { /* the wake never changes the pass */ } }
+  }
+}
+
+async function watchPass(d: WatchDeps): Promise<WatchResult> {
   const res: WatchResult = { lines: [], opened: 0, resolved: 0, commented: 0 };
   const nowMs = d.now();
   const nowIso = new Date(nowMs).toISOString();

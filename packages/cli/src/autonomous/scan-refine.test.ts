@@ -275,3 +275,27 @@ describe("the refine lane: status and dry run", () => {
     expect(tracker.comments).toEqual([]);
   });
 });
+
+describe("the wake", () => {
+  it("the wake runs once per scan on every outcome and its failure changes nothing", async () => {
+    let n = 0;
+    const base = await runScan(mk());
+    expect(n).toBe(0);
+    await runScan(mk({ wake: async () => { n++; } }));
+    expect(n).toBe(1);
+    tracker.add({ id: "t2", key: "DGS-2" });
+    const r = await runScan(mk({ wake: async () => { n++; throw new Error("herdr down") } }));
+    expect(n).toBe(2);
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-2" });
+    expect(base.outcome).toBe("none");
+  });
+  it("the wake also runs on a safety stop (breaker) and never on a dry run", async () => {
+    let n = 0;
+    recordRelease(dir, { ticket: "DGS-1", result: "failed" }, now);
+    recordRelease(dir, { ticket: "DGS-2", result: "failed" }, now);
+    expect((await runScan(mk({ wake: async () => { n++; } }))).outcome).toBe("breaker");
+    expect(n).toBe(1);
+    await runScan(mk({ dryRun: true, wake: async () => { n++; } }));
+    expect(n).toBe(1);
+  });
+});
