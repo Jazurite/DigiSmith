@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
   "ticket": "DGS-683",
-  "generated_at": "2026-11-02T15:07:04.569Z",
+  "generated_at": "2026-11-02T15:12:32.000Z",
   "reader_versions": {
     "claude-code": "1"
   },
   "steps": {
     "other": {
       "claude-sonnet-5-5": {
-        "input": 716,
-        "output": 291351,
-        "cache_read": 34059215,
+        "input": 746,
+        "output": 304365,
+        "cache_read": 36436184,
         "cache_write_5m": 0,
-        "cache_write_1h": 961812,
-        "responses": 318
+        "cache_write_1h": 991797,
+        "responses": 332
       },
       "claude-opus-5-5": {
         "input": 44,
