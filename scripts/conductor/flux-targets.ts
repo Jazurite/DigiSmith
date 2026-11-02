@@ -49,23 +49,16 @@ export function resolveTarget(
   if (!SAFE.test(agent)) throw new Error(`refused: agent name ${JSON.stringify(agent)}`);
   const e = readFile(env)[agent];
   const project = flags.project ?? e?.project ?? "DigiSmith";
-  let note = flags.note ?? e?.note;
-  if (!note) {
-    try {
-      const map = JSON.parse(fs.readFileSync(path.join(depotDir(env), "conductors.json"), "utf-8")) as Record<string, { note?: string }>;
-      note = map[`${project}/${agent}`]?.note;
-    } catch {
-      // no conductors.json
-    }
+  let entry: ReturnType<typeof resolveConductor>;
+  try {
+    entry = resolveConductor(`${project}/${agent}`, env);
+  } catch {
+    // an unusable conductors.json: the old default session and the default note path
   }
+  let note = flags.note ?? e?.note ?? entry?.note;
   if (!e && !note && !flags.brief) return undefined;
   note ??= resolveNotePath({ project, conductor: agent }, env);
   const brief = flags.brief ?? e?.brief ?? path.join(".digismith", "sessions", agent, "brief.md");
-  let session = "default";
-  try {
-    session = resolveConductor(`${project}/${agent}`, env)?.session ?? "default";
-  } catch {
-    // an unusable conductors.json: the old default session
-  }
+  const session = entry?.session ?? "default";
   return { agent, project, brief: abs(brief, repoRoot), note: abs(note, repoRoot), wake: flags.wake ?? e?.wake, workers: e?.workers, session };
 }

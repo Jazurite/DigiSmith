@@ -65,6 +65,12 @@ describe("resolveNotePath", () => {
     fs.rmSync(path.join(depot, "conductors.json"));
     expect(resolveNotePath(args, env)).toBe(path.join(depot, "sessions/DigiSmith/digismith-conductor/note.md"));
   });
+  it("reads the note of a Suite entry, and falls through for an entry with no note", () => {
+    const env = { DIGISMITH_DEPOT_DIR: depot };
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "P/s": { session: "Suite", workspace: "w7", note: "/s.md" }, "P/t": { session: "Suite", workspace: "w8" } }));
+    expect(resolveNotePath({ project: "P", conductor: "s" }, env)).toBe("/s.md");
+    expect(resolveNotePath({ project: "P", conductor: "t" }, env)).toBe(path.join(depot, "sessions/P/t/note.md"));
+  });
   it("ignores a broken conductors.json", () => {
     fs.writeFileSync(path.join(depot, "conductors.json"), "{nope");
     expect(resolveNotePath({ project: "P", conductor: "c" }, { DIGISMITH_DEPOT_DIR: depot })).toBe(path.join(depot, "sessions/P/c/note.md"));

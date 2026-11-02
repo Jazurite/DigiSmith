@@ -82,9 +82,8 @@ export function resolveNotePath(args: { project: string; conductor: string; note
   if (env.DIGISMITH_CONDUCTOR_NOTE) return env.DIGISMITH_CONDUCTOR_NOTE;
   const depot = depotDir(env);
   try {
-    const map = JSON.parse(fs.readFileSync(path.join(depot, "conductors.json"), "utf-8")) as Record<string, { note?: string }>;
-    const hit = map[`${args.project}/${args.conductor}`]?.note;
-    if (typeof hit === "string" && hit) return hit;
+    const hit = resolveConductor(`${args.project}/${args.conductor}`, env)?.note;
+    if (hit) return hit;
   } catch {
     // no or broken conductors.json: fall through to the default
   }
