@@ -253,7 +253,12 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
 
   // herdr: server and open tabs
   try {
-    const entry = resolveConductor(`${opts.project}/${opts.conductor}`, env);
+    let entry: ReturnType<typeof resolveConductor>;
+    try {
+      entry = resolveConductor(`${opts.project}/${opts.conductor}`, env);
+    } catch (e) {
+      warnings.push(`conductors.json unusable, reading the default herdr session: ${(e as Error).message}`);
+    }
     const sess = entry ? herdrSessionArgs(entry) : ["--session", "default"];
     const own = entry && entry.session !== "default";
     const st = await deps.runner("herdr", [...sess, "status", "server"]);
@@ -266,6 +271,7 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
       let up = parse(st.stdout);
       if (own) {
         const fl = await deps.runner("herdr", ["--session", "default", "status", "server"]);
+        if (fl.code !== 0) warnings.push(`herdr Floor status failed: ${fl.stderr.trim() || `exit ${fl.code}`}`);
         up = `${entry.session} ${up}; Floor ${fl.code === 0 ? parse(fl.stdout) : "unknown"}`;
       }
       state.health.server = state.health.server === "unknown" ? up : `${up}; ${state.health.server}`;

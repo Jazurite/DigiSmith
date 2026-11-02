@@ -151,7 +151,12 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
   try {
     const workspaces = ((): string[] => {
       if (opts.herdrWorkspace) return [opts.herdrWorkspace];
-      const entry = resolveConductor(`${opts.project}/${opts.conductor}`, deps.env);
+      let entry: ReturnType<typeof resolveConductor>;
+      try {
+        entry = resolveConductor(`${opts.project}/${opts.conductor}`, deps.env);
+      } catch (e) {
+        throw new Error(`conductors.json unusable: ${(e as Error).message}`);
+      }
       if (entry?.kinds.includes("factory")) return floorWorkspaces(deps.env);
       if (entry?.floor) return [entry.floor];
       const on = parseRunsOn(conductorCard?.runs_on);

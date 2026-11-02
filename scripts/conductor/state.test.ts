@@ -263,6 +263,28 @@ describe("DGS-683 health per herdr session", () => {
     expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "status", "server"]);
     expect(s.health.server).toBe("Suite up; Floor up");
   });
+  it("warns when the Floor status call fails", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Suite", workspace: "w7", floor: "w2" } }));
+    const base_ = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
+    const runner = Object.assign(async (cmd: string, args: string[]) => (args.join(" ") === "--session default status server" ? { code: 1, stdout: "", stderr: "no server" } : base_(cmd, args)), { calls: base_.calls });
+    const s = await collectState(base(), deps(runner as never));
+    expect(s.health.server).toBe("Suite up; Floor unknown");
+    expect(s.warnings.some((w) => /Floor.*no server/.test(w))).toBe(true);
+  });
+  it("lists tabs without --workspace for a Suite entry with no workspace", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Suite" } }));
+    const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
+    await collectState(base(), deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list"]);
+  });
+  it("names a bad conductors.json and falls back to the default session", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "X/x": { kind: "boss" } }));
+    const runner = fakeRunner();
+    const s = await collectState(base(), deps(runner));
+    expect(s.warnings.some((w) => /conductors\.json/.test(w) && !/tab list failed/.test(w))).toBe(true);
+    expect(runner.calls).toContainEqual(["herdr", "--session", "default", "tab", "list"]);
+    expect(s.sources.herdr).toBe("ok");
+  });
   it("keeps the old default-session calls with no registry entry", async () => {
     const runner = fakeRunner();
     await collectState(base(), deps(runner));

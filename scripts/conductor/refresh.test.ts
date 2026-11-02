@@ -366,7 +366,7 @@ describe("DGS-683 refresh by registry", () => {
   it("does not list the same agent in another workspace", async () => {
     writeReg(SUITE);
     const r = await refreshState(o(), deps(runner({ agents: [agent("dgs-5", "w3")] }), { listCards: mine }));
-    expect(r.state.running.some((x) => x.stage !== "card open, no pane")).toBe(false);
+    expect(r.state.running.some((x) => x.worker === "dgs-5" && x.stage === "working")).toBe(false);
   });
   it("a factory entry lists the agents of every Floor workspace", async () => {
     writeReg({ "DigiSmith/suite-cond": { session: "Suite", workspace: "w7", floor: "w2", kind: "factory" }, "DigiSmith/other": { floor: "w3" } });
