@@ -96,6 +96,22 @@ else:
         if "--pane" not in rest or rest.index("--pane") + 1 >= len(rest) or ws_of(rest[rest.index("--pane") + 1]) not in WSS: deny("--pane outside the scope")
     elif ws_of(tgt) not in WSS: deny("target %s is not in the scope of session %s" % (tgt, SESSION))
     cmd = a
-if verb in ("close",) and grp == "tab" and rest and rest[0] in {w + ":t1" for w in WSS}: deny("tab 1 (maestro) cannot be closed here")
+def ticket_name(n): return n.startswith("tc-") or n.startswith("nw-")
+def agent_of_pane(p):
+    try:
+        for x in json.loads(run(["agent", "list"]).stdout).get("result", {}).get("agents", []):
+            if x.get("pane_id") == p: return x.get("name", "")
+    except Exception: pass
+    return ""
+if SESSION == "Suite":
+    # DGS-683: in Suite the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed
+    label = None
+    if grp == "tab" and verb == "close":
+        try: label = find(json.loads(run(["tab", "get", rest[0]]).stdout), "label")
+        except Exception: label = ""
+    elif grp == "agent" and verb == "stop": label = agent_of_pane(rest[0]) if re.match(r"^w\d+:p", rest[0]) else rest[0]
+    elif grp == "pane" and verb == "close": label = agent_of_pane(rest[0])
+    if label is not None and not ticket_name(label or ""): deny("in Suite only tc- or nw- conductors can be closed")
+elif verb in ("close",) and grp == "tab" and rest and rest[0] in {w + ":t1" for w in WSS}: deny("tab 1 (maestro) cannot be closed here")
 r = run(cmd)
 sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)

@@ -14,7 +14,7 @@ S="$2"; shift 2
 case "$1 $2" in
   "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"}]}}' ;;
   "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
-  "tab get") case "$3" in w7:t2) L=tc-dgs-9;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
+  "tab get") case "$3" in w7:t2) L=tc-dgs-9;; w7:t3) L=nw-5;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
   "tab list") echo "{\\"id\\":\\"cli:tab:list\\",\\"result\\":{\\"tabs\\":[{\\"tab_id\\":\\"$4:t1\\",\\"workspace_id\\":\\"$4\\"}]}}" ;;
   *) echo '{"result":{}}' ;;
 esac
@@ -176,5 +176,46 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
     for (const line of r.log.trim().split("\n")) expect(line).toMatch(/^--session (Suite|default) /)
     const r2 = run({ HERDR_SCOPE: "default:w2,default:w3" }, ["agent", "get", "dgs-2"])
     for (const line of r2.log.trim().split("\n")) expect(line).toMatch(/^--session default /)
+  })
+})
+
+describe("herdr-ws Suite close rule (T11)", () => {
+  const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
+  const suite = (...a: string[]) => run(env, ["--session", "Suite", ...a])
+
+  it("tab close in Suite: a tc- or nw- label passes, any other label is refused", () => {
+    expect(ok(suite("tab", "close", "w7:t2"))).toBe(true) // tc-dgs-9
+    expect(ok(suite("tab", "close", "w7:t3"))).toBe(true) // nw-5
+    const r = suite("tab", "close", "w7:t1") // digismith-conductor
+    expect(refused(r)).toBe(true)
+    expect(r.log).not.toMatch(/tab close/)
+  })
+
+  it("agent stop in Suite: only tc- or nw- agent names", () => {
+    expect(refused(suite("agent", "stop", "digismith-conductor"))).toBe(true)
+    expect(ok(suite("agent", "stop", "tc-dgs-9"))).toBe(true)
+  })
+
+  it("pane close in Suite: only the pane of a tc- or nw- agent", () => {
+    expect(ok(suite("pane", "close", "w7:p2"))).toBe(true) // tc-dgs-9
+    expect(refused(suite("pane", "close", "w7:p1"))).toBe(true) // digismith-conductor
+    expect(refused(suite("pane", "close", "w7:p9"))).toBe(true) // unknown pane fails closed
+  })
+
+  it("a Suite close outside the Suite workspaces of the scope is still refused", () => {
+    expect(refused(suite("tab", "close", "w8:t2"))).toBe(true)
+    expect(refused(suite("tab", "close", "w2:t2"))).toBe(true)
+  })
+
+  it("the Suite label rule does not apply to default: old :t1 rule for every scope workspace", () => {
+    expect(refused(run(env, ["tab", "close", "w2:t1"]))).toBe(true)
+    expect(refused(run(env, ["tab", "close", "w3:t1"]))).toBe(true)
+    expect(ok(run(env, ["tab", "close", "w2:t5"]))).toBe(true)
+    expect(ok(run(env, ["agent", "stop", "dgs-1"]))).toBe(true)
+  })
+
+  it("Suite's :t1 tab is protected by its label, not its position", () => {
+    expect(refused(suite("tab", "close", "w7:t4"))).toBe(true) // not tab 1, label digismith-conductor
+    expect(ok(suite("tab", "close", "w7:t3"))).toBe(true)
   })
 })
