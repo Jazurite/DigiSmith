@@ -74,7 +74,13 @@ describe("startAuto", () => {
   it("inside herdr: other, pending, the herdr fields, and needsLabel", () => {
     const a = start({ session_id: "sid-4", source: "startup" }, { ...env, HERDR_PANE_ID: "w2:p8W", HERDR_TAB_ID: "w2:t8W", HERDR_WORKSPACE_ID: "w2" })!;
     expect(a.needsLabel).toBe(true);
-    expect(readRun(a.dir)).toMatchObject({ role: "other", role_from: "pending", herdr: { workspace: "w2", tab: "w2:t8W", pane: "w2:p8W" } });
+    expect(readRun(a.dir)).toMatchObject({ role: "other", role_from: "pending", herdr: { session: "default", workspace: "w2", tab: "w2:t8W", pane: "w2:p8W" } });
+  });
+  it("records HERDR_SESSION, default when unset inside herdr, null outside herdr", () => {
+    const inSuite = start({ session_id: "sid-s1", source: "startup" }, { ...env, HERDR_PANE_ID: "w7:p1", HERDR_WORKSPACE_ID: "w7", HERDR_SESSION: "Suite" })!;
+    expect(readRun(inSuite.dir).herdr).toMatchObject({ session: "Suite", pane: "w7:p1" });
+    const outside = start({ session_id: "sid-s2", source: "startup" })!;
+    expect(readRun(outside.dir).herdr.session).toBeNull();
   });
   it("a claude -p child (CLAUDE_CODE_ENTRYPOINT=sdk-cli) is other, none, with no labeller, in herdr and at a Maestro folder", () => {
     const a = start({ session_id: "sid-p1", source: "startup" }, { ...env, CLAUDE_CODE_ENTRYPOINT: "sdk-cli", HERDR_PANE_ID: "w2:p8W" })!;

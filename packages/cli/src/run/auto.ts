@@ -59,7 +59,7 @@ export function startAuto(payload: Record<string, unknown>, env: NodeJS.ProcessE
     schema: RUN_SCHEMA, run, ticket, role: r.role, order: null,
     seat: seatOf(env), model: plainName(payload.model), plugin_version: pluginVersion(),
     base_sha: null, branch: info.branch, worktree: info.worktree,
-    herdr: { workspace: env1(env.HERDR_WORKSPACE_ID), tab: env1(env.HERDR_TAB_ID), pane: env1(env.HERDR_PANE_ID) },
+    herdr: { session: inHerdr ? (env.HERDR_SESSION || "default") : null, workspace: env1(env.HERDR_WORKSPACE_ID), tab: env1(env.HERDR_TAB_ID), pane: env1(env.HERDR_PANE_ID) },
     budget: null, created_at: now.toISOString(),
     source: "auto", project: info.project, session_id: sid, role_from: r.role_from,
   };

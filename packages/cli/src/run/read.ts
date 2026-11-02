@@ -105,7 +105,7 @@ export function formatShow({ record: r, summary: s }: RunRow): string {
     `model     ${r.model ?? "-"}`,
     `branch    ${r.branch ?? "-"}`,
     `worktree  ${r.worktree ?? "-"}`,
-    `herdr     ${[r.herdr.workspace, r.herdr.tab, r.herdr.pane].map((v) => v ?? "-").join(" / ")}`,
+    `herdr     ${[r.herdr.session, r.herdr.workspace, r.herdr.tab, r.herdr.pane].map((v) => v ?? "-").join(" / ")}`,
     `created   ${r.created_at}`,
     `events    ${s.events} (last: ${s.last_type ?? "-"} at ${s.last_ts ?? "-"})`,
     `ended     ${s.ended ? "yes" : "no"}`,

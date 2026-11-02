@@ -18,6 +18,19 @@ afterEach(() => {
   repos = [];
 });
 
+describe("an old record without herdr.session (DGS-683)", () => {
+  const old = (herdr: unknown) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "oldrun-"));
+    fs.writeFileSync(path.join(dir, "run.json"), JSON.stringify({ schema: "nightwatch-run/v1", run: "r", ticket: null, role: "other", herdr }));
+    return dir;
+  };
+  it("reads as default with a pane and null without one", () => {
+    expect(readRun(old({ workspace: "w2", tab: "t", pane: "p1" })).herdr.session).toBe("default");
+    expect(readRun(old({ workspace: null, tab: null, pane: null })).herdr.session).toBeNull();
+    expect(readRun(old({ session: "Suite", workspace: "w7", tab: "t", pane: "p1" })).herdr.session).toBe("Suite");
+  });
+});
+
 describe("createRun", () => {
   it("writes run.json with every field and null for unknown ones", () => {
     const r = createRun({ ticket: "DGS-581", role: "builder", order: "/o/order.md", seat: "dev0" }, env, new Date("2026-10-21T13:30:05Z"));
@@ -29,7 +42,7 @@ describe("createRun", () => {
     expect(onDisk.schema).toBe("nightwatch-run/v1");
     expect(onDisk.seat).toBe("dev0");
     expect(onDisk.model).toBeNull();
-    expect(onDisk.herdr).toEqual({ workspace: null, tab: null, pane: null });
+    expect(onDisk.herdr).toEqual({ session: null, workspace: null, tab: null, pane: null });
     expect(onDisk.budget).toBeNull();
     expect(onDisk.created_at).toBe("2026-10-21T13:30:05.000Z");
   });
@@ -72,7 +85,8 @@ describe("createRun", () => {
     expect(r.branch).toBe("b");
     expect(r.base_sha).toBe("abc");
     expect(r.budget).toEqual({ turns: 50 });
-    expect(r.herdr).toEqual({ workspace: "w2", tab: "T", pane: "p1" });
+    expect(r.herdr).toEqual({ session: "default", workspace: "w2", tab: "T", pane: "p1" });
+    expect(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", workspace: "w7", pane: "p2" }, { ...env, HERDR_SESSION: "Suite" }).herdr.session).toBe("Suite");
     expect(() => createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", budget: "[1]" }, env)).toThrow(/budget/);
   });
   it("gives a new id for every start, even in the same second", () => {

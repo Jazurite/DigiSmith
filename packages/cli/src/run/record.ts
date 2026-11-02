@@ -67,7 +67,7 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
     base_sha: input.baseSha ?? (wt ? git(wt, "rev-parse", "HEAD") : null),
     branch: input.branch ?? (wt ? currentBranch(wt) : null),
     worktree,
-    herdr: { workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
+    herdr: { session: input.pane ? (env.HERDR_SESSION || "default") : null, workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
     budget,
     created_at: now.toISOString(),
     source: "start" as const,
@@ -98,7 +98,10 @@ const DEFAULTS = { source: "start", project: null, session_id: null, role_from: 
 // An old record has no source, project, session_id or role_from: they read as start, null, null, null.
 export function readRun(runDir: string): RunRecord {
   const raw = JSON.parse(fs.readFileSync(path.join(runDir, "run.json"), "utf8")) as RunRecord;
-  return { ...DEFAULTS, ...raw };
+  // An old record has no herdr.session: with a pane it ran in the default session, without one in none (DGS-683).
+  const h = raw.herdr ?? { workspace: null, tab: null, pane: null };
+  const session = h.session !== undefined ? h.session : h.pane ? "default" : null;
+  return { ...DEFAULTS, ...raw, herdr: { ...h, session } };
 }
 
 // The labeller's one edit of an automatic run: a temp file, then an atomic rename, so a reader sees the old or the new file.

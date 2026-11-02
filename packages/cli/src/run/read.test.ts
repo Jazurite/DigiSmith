@@ -94,6 +94,10 @@ describe("a run with no ticket", () => {
     expect(formatShow(row)).toContain("ticket    -\n");
     expect(formatShow(row)).not.toContain("null");
   });
+  it("prints the herdr line with the session first", () => {
+    const a = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md", workspace: "w7", tab: "t1", pane: "p1" }, { ...env, HERDR_SESSION: "Suite" });
+    expect(formatShow({ record: a, summary: summarize([]) })).toContain("herdr     Suite / w7 / t1 / p1\n");
+  });
 });
 
 describe("DGS-598 readers", () => {

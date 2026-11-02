@@ -21,7 +21,7 @@ export type RunRecord = {
   base_sha: string | null;
   branch: string | null;
   worktree: string | null;
-  herdr: { workspace: string | null; tab: string | null; pane: string | null };
+  herdr: { session: string | null; workspace: string | null; tab: string | null; pane: string | null };
   budget: Record<string, unknown> | null;
   created_at: string;
   source: RunSource;
