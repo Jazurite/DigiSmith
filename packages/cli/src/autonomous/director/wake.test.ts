@@ -105,11 +105,12 @@ describe("wakeDirector", () => {
     promptFails = false;
     expect(await wakeDirector(deps(), plan())).toBe("sent");
   });
-  it("F3: the prompt is out, then the state write fails: still sent, and an event is still tried", async () => {
+  it("F3: the prompt is out, then the state write fails: still sent (the event is written anyway)", async () => {
     const { mkdirSync } = await import("node:fs");
     mkdirSync(join(dir, "director", "last-tick.json"), { recursive: true });   // the state file is a directory: the write fails
     expect(await wakeDirector(deps(), plan())).toBe("sent");
     expect(sent()).toHaveLength(1);
+    expect(readEvents(dir, NOW.getTime() - 1000, NOW.getTime() + 1000).map((e) => e.kind)).toEqual(["director-tick"]);
   });
   it("a damaged last-tick.json does not stop the wake", async () => {
     const { mkdirSync, writeFileSync } = await import("node:fs");

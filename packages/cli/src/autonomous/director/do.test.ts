@@ -217,6 +217,37 @@ describe("doMove", () => {
     expect(existsSync(join(dir, "director", "moves", `${id}.running`))).toBe(false);
   });
 
+  it("N1: a failed non-release move that left the plan is exit 4, never run from a saved payload", async () => {
+    const lost = item({ ticket: "DGS-2", run: "w1", kind: "lost", cause: "pane-gone", id: "w1.lost.0" });
+    const lock = { ticket: "DGS-2", taskId: "t2", claimedAt: ago(10), claimedAtUtc7: "", order: "o", scanId: "s", attempt: 1, round: 1 } as const;
+    const w = world([lost], { lockTicket: null, refineLock: lock });
+    const id = idOf(w, "start-again");
+    failNext = "start";
+    expect((await doMove(deps(), w, id)).code).toBe(5);
+    // the refine lock is gone: the move left the plan
+    const w2 = world([lost], { lockTicket: null, refineLock: null });
+    const r = await doMove(deps(), w2, id);
+    expect(r.code).toBe(4);
+    expect(calls).toEqual([]);
+    // the same for a re-prompt that failed and then left the plan
+    const s = item();
+    const w3 = world([s]);
+    const rid = idOf(w3, "reprompt");
+    failNext = "driver";
+    expect((await doMove(deps(), w3, rid)).code).toBe(5);
+    expect((await doMove(deps(), world([s], { lockTicket: null }), rid)).code).toBe(4);
+  });
+
+  it("N2: a move id that is not m-<8 hex> is exit 4 before any marker is made; '../x' does not throw", async () => {
+    const { existsSync } = await import("node:fs");
+    for (const bad of ["../x", "m-xyz", "", "m-0123456789", "a/b", "m-0000000g"]) {
+      const r = await doMove(deps(), world([item()]), bad);
+      expect(r.code).toBe(4);
+    }
+    expect(existsSync(join(dir, "director", "moves"))).toBe(false);
+    expect(existsSync(join(dir, "x.running"))).toBe(false);
+  });
+
   it("gate-wait only records", async () => {
     const w = world([item({ kind: "refused", cause: "merge-refused: protected path", since: ago(40), id: "r1.refused.0" })]);
     const r = await doMove(deps(), w, idOf(w, "gate-wait"));

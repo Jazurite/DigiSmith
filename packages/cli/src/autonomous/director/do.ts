@@ -79,7 +79,11 @@ async function effect(d: DoDeps, w: PlanWorld, m: Move): Promise<string> {
  * dg director do <move-id>: recompute the plan, find the move, check its authority id, write the decision line BEFORE the effect,
  * run the effect, write done or failed. A move is "already done" only for the SAME id; another run or result is a new move.
  */
+const MOVE_ID = /^m-[0-9a-f]{8}$/;
+
 export async function doMove(d: DoDeps, w: PlanWorld, id: string): Promise<{ code: 0 | 4 | 5; text: string }> {
+  // The id names a file below: anything but m-<8 hex> is refused before a marker is made.
+  if (!MOVE_ID.test(id)) return { code: 4, text: `unknown move id ${JSON.stringify(id)}: a move id looks like m-0123abcd; run dg director plan` };
   // One process per move: an exclusive-create marker held while the move runs (two simultaneous `dg director do` cannot both pass).
   const marks = join(d.dir, "director", "moves");
   const mark = join(marks, `${id}.running`);
@@ -99,11 +103,12 @@ async function runMove(d: DoDeps, w: PlanWorld, id: string): Promise<{ code: 0 |
   if (last?.outcome === "done") return { code: 0, text: `move ${id} is already done` };
   if (last?.outcome === "started") return { code: 5, text: `move ${id} was started earlier and its outcome is unknown: check by hand before running it again` };
 
-  // A failed move that left the plan (a release that cleared the lock, then failed to escalate) is run again from the move saved in its first line.
+  // Only a RELEASE that left the plan (it cleared the lock, then failed to escalate) is run again from the move saved in its first line.
+  // Any other failed move that is no longer in the plan is unknown now (exit 4): it never runs from a stale payload.
   let m = planLoop(w).moves.find((x) => x.id === id);
   if (m === undefined && last?.outcome === "failed") {
     const saved = mine.find((x) => x.outcome === "started")?.payload as Move | undefined;
-    if (saved !== undefined && saved.id === id) m = saved;
+    if (saved !== undefined && saved.id === id && saved.kind === "release") m = saved;
   }
   if (m === undefined) return { code: 4, text: `unknown move id ${id}: run dg director plan` };
   const authId = authorityIdOf(m);
