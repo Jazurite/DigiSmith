@@ -32,14 +32,16 @@ Every plan task of an SDD build puts its numbers on the ClickUp ticket as one co
   ```
   A time past midnight shows the end date too. A model with no price shows `cost not priced` and the total line says `partly priced`. No window (no `task_end`): the command stops with "task not ended" and posts nothing.
 - Review data, first source that has the task:
-  1. **Ledger** (`parseTaskAgents` neighbour in `tokens/ledger.ts`): rounds = count of `Task <N>: reviewed (...)` lines; findings = sum of `K` in `reviewed (<K> findings)`; fix rounds = count of `Task <N>: fix round` lines; parked = count of `Task <N>: parked` lines; fixed = findings minus parked.
+  1. **Ledger**: rounds = count of `Task <N>: reviewed (...)` lines. Findings, fixed, parked and rejected come from the verdict lines (`Review task <N> r<R>: F<n> -> fixed|parked|rejected|fixing`, and `Review ticket final r<R>: ...` for the final stamp), read with `parseVerdictEntries` from `packages/cli/src/reviewer/verdicts.ts` (import only; that folder stays untouched). The latest ruling per finding counts; a finding with no final ruling counts as open. A malformed verdict line makes this source fall back to the hand-mode lines. Hand-mode fallback: findings = highest `K` of `reviewed (<K> findings)`, parked = count of `Task <N>: parked` lines, fixed = findings minus parked. Fix rounds = count of `Task <N>: fix round` lines; for `final` = count of `Scoped re-review` lines.
   2. **findings.md** (the board file `| Reviewer type | Round | ... | Verdict |`): rows whose type is `task <N>` or `ticket`/`final` for the final stamp; rounds = highest Round value; findings = rows that are not "approved, no findings"; fixed/parked from the Verdict cell (`fixed`, `parked`); fix rounds = not recorded in this file, shown as `Fix rounds: not recorded`.
   3. Else `Reviews: not recorded | Findings: not recorded | Fix rounds: not recorded`.
 - Idempotence, three checks in order (stop at the first hit; the command then exits 0 and prints `already stamped (<where>)`):
   1. The ledger line `Task <N>: stamped (comment <id>)`.
   2. The stamps file (below) has the task.
-  3. The ticket's comments contain the marker line. The client's `getTaskComments` reads one page of 25. The build adds paging: ClickUp's `GET /task/{id}/comment` takes `start` and `start_id`; the plan's first task checks this against the stub and against one read-only call on a real ticket. If paging is not possible, the check covers 25 comments and the stamps file and ledger line are the guard beyond that. The spec treats the paging as best effort and the other two checks as the guarantee.
+  3. The ticket's comments contain the marker line. The client's `getTaskComments` reads one page of 25. The build adds paging: ClickUp's `GET /task/{id}/comment` takes `start` and `start_id`; the plan checks this against the stub and against one read-only call on a real ticket with more than 25 comments (page 2 must hold no id of page 1 and older dates); the loop also stops when a page repeats an id already seen. If paging is not possible, the check covers 25 comments and the stamps file and ledger line are the guard beyond that. The spec treats the paging as best effort and the other two checks as the guarantee.
 - After a post: append the ledger line `Task <N>: stamped (comment <id>)` (when `--ledger` is given) and one line to the stamps file.
+- Partial data: when a session of the ticket has no transcript, the text gets the line `Partial: <n> session(s) without transcript` and the stamps line stores `partial: true`; `--yes` is refused only when no session could be read. Agent time is the sum of the task's closed windows (a task reopened later counts every window), and the Source line says so.
+- The marker is matched by the whole first line (`Hallmark task 1 of DGS-546` never matches task 10).
 - A failure never throws out of the command into the build: it prints one `warn:` line on stderr and exits 1. The SDD skill treats exit 1 as a warning (see Hook points).
 
 ### Stamps file
@@ -49,6 +51,7 @@ Why it exists: the SDD ledger is deleted when the final review is clean, before 
 ### `dg clickup ticket-total --task <Key> [--yes]`
 - Run once, at finish. Dry run by default.
 - Totals: all tasks of the ticket, from the registry and transcripts, priced per response (same code as `task-stamp`). The totals cover the **whole ticket**: the implementation step, every task window and the responses outside any task window of the ticket's sessions. Per-task rows come from the stamps file; a task with a `task_end` and no stamp is computed on the fly with `Reviews: not recorded` and marked `(not stamped)`.
+- Totals count only responses of the ticket's own sessions (what the snapshot keeps; `unattributed` responses are excluded). It does not run in the "discard the work" option of the finishing skill.
 - Writes a block into the ticket description. The block sits between two plain sentinel lines and is replaced on a re-run:
   ```
   --- Hallmark (dg clickup ticket-total) ---
@@ -61,7 +64,7 @@ Why it exists: the SDD ledger is deleted when the final review is clean, before 
   Updated <date> <time> UTC+7
   --- end Hallmark ---
   ```
-- Reads the current description (`getTask`, Markdown), replaces the block between the sentinels or appends it after a blank line, and writes with `updateTask` (`markdown_description`). Everything outside the block stays byte-for-byte. Check in the plan: ClickUp keeps the sentinel lines and the table through a round trip; if it does not, the sentinels change to a form it keeps.
+- Reads the current description with `include_markdown_description: true`, replaces the block between the sentinels or appends it after a blank line, and writes with `updateTask` (`markdown_description`). Everything outside the block stays byte-for-byte in what we send. If `markdown_description` is missing or empty while the plain `description` is not, the command refuses to write (`warn:`, exit 1). After the write it reads the description back; if the read-back does not hold both sentinels exactly once it prints `warn:` and exits 1, and it never writes twice in one run. A probe on DGS-546 (plan Task 7) fixes the block form (blank lines, a table separator row, sentinels that survive ClickUp's round trip) before the hooks go live.
 - Re-runnable: running it twice gives the same block except the `Updated` line. It never posts a comment.
 - A failure warns and exits 1; the finishing skill prints a warning and goes on (never blocks a merge).
 - Write guard: it refuses to write when the new block is empty of tasks and totals are zero (a broken registry must not blank a good block).
@@ -74,7 +77,7 @@ The same two commands, run after the fact. `task-stamp` needs only the registry 
   ```bash
   dg clickup task-stamp --task <Key> --plan-task <N> --ledger <workspace>/progress.md --yes
   ```
-  Same key rule as the checklist sync (ClickUp key only; any other key skip). Non-zero exit: print a warning, append `Task stamp: failed (<first stderr line>)` to the ledger, go on. The same call runs for `final` after `Task final: complete`.
+  Same key rule as the checklist sync (ClickUp key only; any other key skip). Non-zero exit: print a warning, append `Task stamp: failed (<first stderr line>)` to the ledger, go on. The same call runs for `final` after the `task-end --task final` / `step-end implementation` block (it needs `task_end final`) and before the Finish section deletes the workspace (the ledger must still exist).
 - `skills/finishing-a-development-branch/SKILL.md`: after the `step-end ... finishing` line in each of the integration options that write the snapshot (lines ~289, 349, 362, 400), run `dg clickup ticket-total --task <Key> --yes` once. Same failure rule.
 - Order inside a task: `task-tokens` line, `complete` line, `task-end`, **then** `task-stamp`. The stamp needs `task_end`.
 

@@ -35,11 +35,14 @@
   - `taskUsage(records, entries, taskAgents, "1")` returns per-model counts and `cost_usd` for only the responses inside task 1's window (a task 2 response is excluded).
   - Long-prompt case: one Haiku 5.5 response with prompt 50 K and a second with prompt 150 K in one task: cost = base-rate cost of the first + long-tier cost of the second, and differs from the cost of the summed counts (assert both numbers).
   - A model with no price gives `cost_usd: null`, and the task total `priced: false`.
+  - A reopened task (two `task_start`/`task_end` pairs): `agentSeconds` is the sum; tokens cover both windows.
+  - A response from a session outside the ticket is excluded.
   - A ledger `dispatch ... agent=<id>` moves that subagent's responses into the task when the window does not cover them.
   - `countTicket` output on the same fixture is unchanged (snapshot equality against the pre-refactor result captured in the test).
 - [ ] **Step 2:** Run `pnpm vitest run src/tokens/stamp.test.ts src/tokens/count.test.ts --maxWorkers=2`; expect failures.
 - [ ] **Step 3:** In `count.ts` move the loop that builds `records` into `export function collectRecords(opts): { records: UsageRecord[]; entries: RegistryEntry[]; inferred: string[] }`; `countTicket` calls it, then `buildSnapshot` as today.
-- [ ] **Step 4:** In `stamp.ts` write `taskUsage(...)` using `taskForRecord` and the ledger rule of `buildSnapshot` (export `ledgerTask` from `snapshot.ts`, no logic change), pricing per record, returning `{ models: Record<string, {counts, cost_usd|null}>, total: {counts, cost_usd|null, priced}, window: {start, end}|null }`. The window is the `task_start` and `task_end` of the task in the registry (latest pair).
+- [ ] **Step 4:** In `stamp.ts` write `taskUsage(...)` using `taskForRecord` and the ledger rule of `buildSnapshot` (export `ledgerTask` from `snapshot.ts`, no logic change), pricing per record, returning `{ models, total: {counts, cost_usd|null, priced}, windows: {start, end}[], agentSeconds }`. `agentSeconds` is the sum of the task's closed windows (each `task_start` with its `task_end`); the Source line says "sum of closed windows". Records of sessions that are not the ticket's (`unattributed` in `buildSnapshot`) are excluded, as in the snapshot.
+- [ ] **Step 4b:** `collectRecords` also returns `missingSessions: string[]` (sessions with no transcript). Tests: one missing transcript is listed; a reopened task (two windows) sums both windows; an unattributed response is excluded from the totals.
 - [ ] **Step 5:** Run the same command; expect pass.
 - [ ] **Step 6:** Commit: `feat(dgs-546): price a task's responses one by one`
 
@@ -50,13 +53,15 @@
 - Test: `packages/cli/src/tokens/review-data.test.ts`
 
 - [ ] **Step 1: Failing tests:**
-  - Ledger text with `Task 2: reviewed (2 findings)`, `Task 2: fix round 1/5 (...)`, `Task 2: reviewed (clean)`, `Task 2: parked — x — ruling: y`, `Task 2: complete (...)` gives rounds 2, findings 2, parked 1, fixed 1, fix rounds 1, source `ledger`.
+  - Role-mode ledger fixture: `Task 2: reviewed (2 findings)`, `Review task 2 r1: F1 -> fixed`, `Review task 2 r1: F2 -> parked (reason)`, `Task 2: reviewed (clean)` gives rounds 2, findings 2, fixed 1, parked 1, rejected 0, source `ledger`. A later `Review task 2 r2: F2 -> fixed` replaces the earlier ruling of F2 (latest ruling per finding). A `-> rejected (reason)` line counts as rejected, not fixed. A `-> fixing` line with no later ruling counts as open.
+  - Hand-mode fixture (no `Review ...` lines): `Task 2: reviewed (2 findings)`, `Task 2: fix round 1/5 (...)`, `Task 2: reviewed (clean)`, `Task 2: parked — x — ruling: y` gives rounds 2, findings 2, parked 1, fixed 1, fix rounds 1.
+  - Final-review fixture: `Task final: reviewed (3 findings)`, `Review ticket final r1: F1 -> fixed`, `... F2 -> fixed`, `... F3 -> parked (why)`, two `Scoped re-review (...)` lines gives `final` rounds 1, findings 3, fixed 2, parked 1, fix rounds 2.
+  - A malformed `Review task ...` line (parseVerdictEntries throws): the source falls back to hand-mode lines and does not throw.
   - A task with no ledger line but rows in a `findings.md` table (`task 3`, rounds 1 and 2, one `fixed (commit ..)`, one `parked (...)`, one `approved, no findings`) gives rounds 2, findings 2, fixed 1, parked 1, `fixRounds: null`, source `findings.md`.
-  - `final` reads ledger lines `Task final: ...` and findings rows typed `ticket`.
-  - Neither source has the task: all null, source `none`.
-  - Ledger wins when both have the task.
+  - `final` reads `ticket` rows of `findings.md`.
+  - Neither source has the task: all null, source `none`. Ledger wins when both have the task.
 - [ ] **Step 2:** Run `pnpm vitest run src/tokens/review-data.test.ts --maxWorkers=2`; expect failures.
-- [ ] **Step 3:** Implement `reviewData(task, { ledgerText?, findingsText? })` with line regexes matching the formats in `skills/subagent-driven-development/SKILL.md` (lines 396, 450, 460, 487) and a table row parser for the `findings.md` layout of `.digismith/board/DGS-613—phase-time/findings.md`.
+- [ ] **Step 3:** Implement `reviewData(task, { ledgerText?, findingsText? })`. Import `parseVerdictEntries` from `../reviewer/verdicts.ts` (import only; never edit `packages/cli/src/reviewer/`), wrapped in try/catch. Use line regexes for the `reviewed` lines, `fix round`, `parked` and `Scoped re-review` (formats in `skills/subagent-driven-development/SKILL.md` lines 396, 450, 460, 579, 611) and a table row parser for the layout of `.digismith/board/DGS-613—phase-time/findings.md`.
 - [ ] **Step 4:** Run the same command; expect pass.
 - [ ] **Step 5:** Commit: `feat(dgs-546): read review rounds and findings for a task`
 
@@ -71,6 +76,7 @@
   - `final` heading reads `Hallmark final review of DGS-679`.
   - A window that crosses midnight UTC+7 shows the end date.
   - Unpriced model: line ends `cost not priced`; total line says `partly priced`.
+  - Partial: the text has `Partial: <n> session(s) without transcript` after the total line.
   - Review fields null: `Reviews: not recorded | Findings: not recorded | Fix rounds: not recorded`.
 - [ ] **Step 2:** Run `pnpm vitest run src/tokens/stamp.render.test.ts --maxWorkers=2`; expect failures.
 - [ ] **Step 3:** Implement `renderStamp(...)`, `formatDuration(seconds)` ("1 min 44 s", "2 h 5 min", "12 s") and `utc7(iso)` (add 7 h, no library). The Source line carries `ANTHROPIC_PRICES_VERSION`.
@@ -97,8 +103,9 @@
 
 - [ ] **Step 1: Failing test** with the stub server: `getAllTaskComments(taskId, { maxPages })` calls `GET /task/{id}/comment`, then again with `start` and `start_id` of the last row while a page has 25 rows, stops at a short page or at `maxPages` (default 8), and returns all rows. `getTaskComments` is unchanged.
 - [ ] **Step 2:** Run `pnpm vitest run <that test file> --maxWorkers=2` in `packages/clickup-client`; expect failure.
-- [ ] **Step 3:** Implement `getAllTaskComments` using the `date` of the last row as `start` and its `id` as `start_id` (ClickUp's documented pair). The comment row type already has `[key: string]: unknown`; read `date` from it.
+- [ ] **Step 3:** Implement `getAllTaskComments` (it also stops when a page repeats an id already seen) using the `date` of the last row as `start` and its `id` as `start_id` (ClickUp's documented pair). The comment row type already has `[key: string]: unknown`; read `date` from it.
 - [ ] **Step 4:** Run the same command; expect pass. Then `pnpm --filter @digismith/clickup-client build`.
+- [ ] **Step 4b: Real read-only probe.** One `getAllTaskComments` call (through a throwaway script in the scratchpad, GET only, never a write) on a ticket with more than 25 comments (find one with `dg clickup get-task` comment counts or pick a long-lived ticket such as DGS-445). Confirm page 2 holds no id of page 1 and only older dates. If it does not, change the `start`/`start_id` form until it does, and record the result in the ledger.
 - [ ] **Step 5:** Commit: `feat(dgs-546): page a task's comments`
 
 ### Task 6: `dg clickup task-stamp`
@@ -119,8 +126,11 @@
   - `--plan-task final` posts the "final review" heading.
   - `--all`: stamps every task with a `task_end` plus `final` if present; skips stamped ones; prints one line per task.
   - Review data: ledger given, `--findings` given, neither: three outputs.
+  - One session of the ticket has no transcript: the text has `Partial: 1 session(s) without transcript` and the stamps line has `partial: true`; with no readable session at all `--yes` is refused (`warn:`, exit 1, no post).
+  - Marker match is the whole first line: a comment `Hallmark task 10 of DGS-546` does not block task 1.
+  - A subagent response outside the window but named in a `dispatch ... agent=<id>` ledger line is counted (the ledger is parsed with `parseTaskAgents` from `tokens/ledger.ts`).
 - [ ] **Step 2:** Run `pnpm vitest run src/clickup/task-stamp.test.ts --maxWorkers=2`; expect failures.
-- [ ] **Step 3:** Implement with `parseTaskStampArgv` (pure, no network), the three idempotence checks in the spec order, `collectRecords` + `taskUsage` + `reviewData` + `renderStamp`, and `createTaskStampCommand(clientFactory)`; export `taskStampCommand` and register it in `index.ts`. Dry run on a key resolves the ticket with one read-only call, as `add-comment` does.
+- [ ] **Step 3:** Implement with `parseTaskStampArgv` (pure, no network), the three idempotence checks in the spec order, `collectRecords` + `parseTaskAgents` (on the `--ledger` text, passed to `taskUsage`) + `taskUsage` + `reviewData` + `renderStamp`, and `createTaskStampCommand(clientFactory)`; export `taskStampCommand` and register it in `index.ts`. Dry run on a key resolves the ticket with one read-only call, as `add-comment` does.
 - [ ] **Step 4:** Run the same command; expect pass.
 - [ ] **Step 5:** Commit: `feat(dgs-546): add dg clickup task-stamp`
 
@@ -133,23 +143,24 @@
 
 - [ ] **Step 1: Failing tests:**
   - `hallmark-block`: `renderBlock(rows, totals)` gives the sentinel block of the spec; `applyBlock(description, block)` appends after a blank line when absent, replaces in place when present (text before and after is byte-for-byte), and a second apply with the same input changes only the `Updated` line.
-  - `ticket-total`: totals sum every response of the ticket (including responses outside any task window), per-task rows come from the stamps file, a task with `task_end` and no stamp shows `(not stamped)` and `not recorded`; dry run prints the new description and writes nothing; `--yes` calls `updateTask` once with `markdown_description` and reads the description back to confirm the block; no tasks and zero totals: refuses to write (guard); client failure: `warn:` and exit 1.
+  - `ticket-total`: totals sum every response of the ticket (including responses outside any task window), per-task rows come from the stamps file, a task with `task_end` and no stamp shows `(not stamped)` and `not recorded`; dry run prints the new description and writes nothing; `--yes` calls `updateTask` once with `markdown_description` and reads the description back; the read-back must hold both sentinels exactly once, else `warn:`, exit 1 and no second write in the same run; totals exclude `unattributed` responses (a replayed response from another session is not added); `getTaskByRef` is called with `include_markdown_description: true`; `markdown_description` missing or empty while `description` is not empty: refuses to write (`warn:`, exit 1), tested next to the no-tasks write guard; partial data adds the `Partial:` line; client failure: `warn:` and exit 1.
 - [ ] **Step 2:** Run `pnpm vitest run src/tokens/hallmark-block.test.ts src/clickup/ticket-total.test.ts --maxWorkers=2`; expect failures.
-- [ ] **Step 3:** Implement both files. Read the description with `getTaskByRef` (use the Markdown field the client returns; check `get-task.ts --markdown` for the field name) and write with `updateTask`.
+- [ ] **Step 3:** Implement both files. Read the description with `getTaskByRef(ref, { include_markdown_description: true })` (see `get-task.ts:28`) and write with `updateTask`.
+- [ ] **Step 3b: PROBE on DGS-546 (the only real write of this task).** After the tests pass, run `ticket-total --task DGS-546 --yes` once against a sample block with the exact form of `renderBlock`, then read the description back with `dg clickup get-task DGS-546 --markdown` and compare. Check: both sentinels once, table intact, text outside unchanged. If ClickUp changed the block (merged lines, lost table, rewritten `---`), change `renderBlock`/`applyBlock` (blank lines between lines, a `|---|` separator row, different sentinels) and their tests, then probe again. Save the final form in the ledger. Never `--yes` on any other ticket.
 - [ ] **Step 4:** Run the same command; expect pass.
 - [ ] **Step 5:** Commit: `feat(dgs-546): add dg clickup ticket-total`
 
 ### Task 8: Call the commands from the two skills and document them
 
 **Files:**
-- Modify: `skills/subagent-driven-development/SKILL.md` (after the `task-end` block, step 5, around lines 490-511; and after `Task final: complete`, around line 657)
-- Modify: `skills/finishing-a-development-branch/SKILL.md` (**PROTECTED**; after each `step-end ... --step finishing` / `snapshot --write` pair, lines ~289, 349, 362, 400)
+- Modify: `skills/subagent-driven-development/SKILL.md` (after the `task-end` block, step 5, around lines 490-511; and the `final` call after the `task-end --task final` / `step-end implementation` block at ~line 663, before the Finish section at ~line 678 deletes the workspace)
+- Modify: `skills/finishing-a-development-branch/SKILL.md` (**PROTECTED**; after the `step-end ... --step finishing` / `snapshot --write` pair of the merge option (~289), the push-and-PR option (~349) and the keep-as-is option (~362); NOT in the discard option (~400), whose work is thrown away)
 - Modify: `packages/cli/src/tokens/README.md` (document both commands, the stamps file and the backfill)
 
-- [ ] **Step 1:** In the SDD skill add, after the `task-end` block, the `dg clickup task-stamp --task <Key> --plan-task <N> --ledger <workspace>/progress.md --yes` block with the key rule of the checklist sync and the failure rule: print a warning, append `Task stamp: failed (<first stderr line>)` to the ledger, go on. Add the same call for `final` after `Task final: complete`.
-- [ ] **Step 2:** In the finishing skill add `dg clickup ticket-total --task <Key> --yes` after the `snapshot --write` line of each option that writes the snapshot, once per flow, with the same failure rule (warn, never block).
+- [ ] **Step 1:** In the SDD skill add, after the `task-end` block, the `dg clickup task-stamp --task <Key> --plan-task <N> --ledger <workspace>/progress.md --yes` block with the key rule of the checklist sync and the failure rule: print a warning, append `Task stamp: failed (<first stderr line>)` to the ledger, go on. Add the same call for `final` after the `task-end --task final` / `step-end implementation` block and before `## Finish`.
+- [ ] **Step 2:** In the finishing skill add `dg clickup ticket-total --task <Key> --yes` after the `snapshot --write` line of each option that writes the snapshot, once per flow, with the same failure rule (warn, never block). Do not add it to the discard option.
 - [ ] **Step 3:** Document in the README.
-- [ ] **Step 4: Check:** `grep -n "task-stamp" skills/subagent-driven-development/SKILL.md` shows the two blocks; `grep -n "ticket-total" skills/finishing-a-development-branch/SKILL.md` shows one per option; run the existing skill tests if any (`grep -rl "subagent-driven-development/SKILL" packages scripts --include=*.test.ts`) with `pnpm vitest run <those> --maxWorkers=2`; run `checklist/plan.test.ts` and `sync.test.ts` to confirm the plan format is unaffected.
+- [ ] **Step 4: Check:** `grep -n "task-stamp" skills/subagent-driven-development/SKILL.md` shows the two blocks, and an ordered check (`grep -n` line numbers) proves the `final` call sits after the `task-end --task final` line and before `## Finish`; `grep -n "ticket-total" skills/finishing-a-development-branch/SKILL.md` shows one per option except discard; run the existing skill tests if any (`grep -rl "subagent-driven-development/SKILL" packages scripts --include=*.test.ts`) with `pnpm vitest run <those> --maxWorkers=2`; run `checklist/plan.test.ts` and `sync.test.ts` to confirm the plan format is unaffected.
 - [ ] **Step 5:** Commit: `docs(dgs-546): call task-stamp and ticket-total from the skills`
 
 ### Task 9: Smoke on real data (dry run only)
