@@ -458,6 +458,11 @@ describe("herdr-ws second targets by flag and the = form (ticket review r1 F1)",
     }
   })
 
+  it("a text payload with a --flag=value part passes as ONE quoted argument, and is refused as separate words", () => {
+    expect(ok(run(one, ["pane", "run", "w2:p1", "git log --format=%h"]))).toBe(true)
+    expect(refused(run(one, ["pane", "run", "w2:p1", "git", "log", "--format=%h"]))).toBe(true)
+  })
+
   it("a second target inside the scope passes", () => {
     expect(ok(run(env, ["pane", "split", "w2:p1", "--pane", "w3:p1"]))).toBe(true)
     expect(ok(run(env, ["tab", "focus", "w2:t1", "--workspace", "w3"]))).toBe(true)

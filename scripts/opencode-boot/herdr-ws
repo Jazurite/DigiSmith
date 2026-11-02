@@ -3,7 +3,8 @@
 Scope: HERDR_SCOPE = comma list "session:workspace" (for example Castle:w7,default:w2,default:w3). Absent: default:$HERDR_WS (HERDR_WS must match ^w\\d+$ like every scope workspace).
 --session S as the first argument selects the session (S must be in the scope; no --session = default). Allowed groups: agent, pane, tab.
 Every target must sit in a workspace the scope names for that session. Lists are filtered. create needs --workspace in that set.
-start and prompt-type verbs check the target. The wrapper builds the herdr argv itself: it never forwards a --session or --socket of the caller."""
+start and prompt-type verbs check the target. The wrapper builds the herdr argv itself: it never forwards a --session or --socket of the caller.
+Any argument that looks like --flag=value is refused, also inside text: send a text payload (for example pane run) as ONE quoted argument."""
 import datetime, json, os, re, subprocess, sys
 HERDR = "/Users/workbox/.local/bin/herdr"
 H = [HERDR, "--session", "default"]  # H[0] is the herdr path; the session is set per call by run()
