@@ -23,8 +23,8 @@ export function rankSeats(readings: SeatReading[], now: number, opts: { heavy: b
     s.weeklyResetsAt !== null && s.fiveHourUsed !== null && s.weeklyResetsAt > now && s.weeklyResetsAt - now <= SOON_MS && s.fiveHourUsed < SOONEST_RESET_MAX_FIVE_HOUR_USED;
   const behind = (s: SeatReading): boolean => opts.heavy && s.carriesMaestro && s.fiveHourUsed !== null && s.fiveHourUsed > MAESTRO_FIVE_HOUR_LIMIT;
   const headroom = (u: number | null): number | null => (u === null ? null : 100 - u);
-  // A step with an unknown reading on either side is skipped (equal), so the worker count stands in.
-  const more = (a: number | null, b: number | null): number => (a === null || b === null ? 0 : b - a);
+  // Total order: more headroom first; an unknown reading sorts after every known one; two unknowns tie, so the next key (workers) decides.
+  const more = (a: number | null, b: number | null): number => (a === null ? (b === null ? 0 : 1) : b === null ? -1 : b - a);
 
   const sorted = [...live].sort((a, b) => {
     if (behind(a) !== behind(b)) return behind(a) ? 1 : -1;

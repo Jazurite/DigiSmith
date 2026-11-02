@@ -9,6 +9,14 @@ const count = (over: { builder?: Slot[]; role?: Slot[]; stale?: Slot[]; limits?:
   stale: over.stale ?? [],
 });
 
+describe("refusal (run/limit.ts) on a free lane", () => {
+  it("returns null when the lane has room", () => {
+    expect(refusal(count(), "builder")).toBeNull();
+    expect(refusal(count(), "role")).toBeNull();
+    expect(refusal(count({ builder: [slot("builder", "a", "DGS-1")] }), "builder")).toBeNull();   // 1 of 2
+  });
+});
+
 describe("laneState", () => {
   it("build lane free: no lock and the builder limit not full", () => {
     expect(laneState(count(), null, null)).toEqual({ build: null, refine: null, stale: [] });

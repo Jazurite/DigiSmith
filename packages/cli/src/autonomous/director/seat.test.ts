@@ -44,11 +44,27 @@ describe("rankSeats", () => {
     expect(at(70)).toEqual(["o", "s"]);
     expect(at(69)).toEqual(["s", "o"]);
   });
-  it("unknown readings (null): headroom steps are skipped for that seat and the worker count decides", () => {
+  it("unknown readings (null): headroom steps give no advantage; unknown seats sort after known ones and the worker count decides among them", () => {
     const unknown = (seat: string, workers: number) => r(seat, { fiveHourUsed: null, weeklyUsed: null, weeklyResetsAt: null, workers });
     expect(rank([unknown("u1", 2), unknown("u2", 0)])).toEqual(["u2", "u1"]);
-    // a null reading gives no headroom advantage: ordering by workers when the other has equal worker count falls to headroom only between known seats
-    expect(rank([unknown("u", 0), r("k", { workers: 1, weeklyUsed: 99 })])).toEqual(["u", "k"]);
+    expect(rank([unknown("u", 0), r("k", { workers: 1, weeklyUsed: 99 })])).toEqual(["k", "u"]);
+  });
+  it("the order is total: every input order of mixed known and unknown seats gives the same ranking", () => {
+    const seats = [
+      r("k1", { weeklyUsed: 30 }), r("k2", { weeklyUsed: 60, workers: 1 }),
+      r("u1", { weeklyUsed: null, fiveHourUsed: null, weeklyResetsAt: null, workers: 2 }), r("u2", { weeklyUsed: null, fiveHourUsed: 10, weeklyResetsAt: null, workers: 0 }),
+      r("p", { weeklyUsed: null, fiveHourUsed: 30, workers: 1 }),
+    ];
+    const perms = (xs: SeatReading[]): SeatReading[][] => (xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p])));
+    const results = new Set(perms(seats).map((p) => rank(p).join(",")));
+    expect(results.size).toBe(1);
+    expect([...results][0].startsWith("k1,k2")).toBe(true);
+  });
+  it("a heavy 'behind' seat that is also soon-resetting sorts after a normal seat", () => {
+    const behindSoon = r("m", { carriesMaestro: true, fiveHourUsed: 45, weeklyResetsAt: NOW + 5 * H, weeklyUsed: 10 });
+    const normal = r("n", { weeklyUsed: 90 });
+    expect(rank([behindSoon, normal], true)).toEqual(["n", "m"]);
+    expect(rank([behindSoon, normal], false)).toEqual(["m", "n"]);
   });
   it("no seat left returns an empty list and the reason 'all seats exhausted'", () => {
     const out = rankSeats([r("a", { exhaustedUntil: NOW + H })], NOW, { heavy: false });
