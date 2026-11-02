@@ -88,12 +88,12 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   } catch (e) {
     try { clearLock(d.dir); } catch { /* best effort */ }
     if (e instanceof DriverTaken) {
-      close("retryable", `driven-by:${e.driver}`);
-      appendEvent(d.dir, now, "skip", { key, reason: `driven-by:${e.driver}` });
+      try { close("retryable", `driven-by:${e.driver}`); } catch { /* best effort: the scan still skips */ }
+      try { appendEvent(d.dir, now, "skip", { key, reason: `driven-by:${e.driver}` }); } catch { /* best effort */ }
       return { driven: e.driver };
     }
     try { close("permanent", errText(e)); } catch { /* best effort */ }
-    appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
+    try { appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) }); } catch { /* best effort */ }
     return "claim-failed";
   }
   try {

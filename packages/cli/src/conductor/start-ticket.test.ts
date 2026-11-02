@@ -91,6 +91,16 @@ describe("startTicketConductor", () => {
     await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow();
     expect(readDriver("DGS-9", env)).toMatchObject({ driver: "digismith-conductor", mode: "factory" });
   });
+  it("a hand-back that fails keeps the original error and adds a loud message naming the ticket and the current driver", async () => {
+    seed({}, { kind: ["project", "factory"] });
+    claimDriver({ ticket: "DGS-9", driver: "digismith-conductor", mode: "factory" }, env);
+    failOn = "tab create";
+    beforeFail = () => fs.rmSync(path.join(depot, "drivers", "DGS-9.json"));   // the record vanishes: the hand-back throws
+    const err = await startTicketConductor(A, { exec, env, repo }).catch((e: Error) => e);
+    expect((err as Error).message).toMatch(/boom/);
+    expect((err as Error).message).toMatch(/DRIVER NOT RESTORED: could not hand DGS-9 back to digismith-conductor .* now names none/);
+    expect(((err as Error).cause as Error).message).toMatch(/boom/);
+  });
   it("a second start for the same ticket names the driver and calls no herdr", async () => {
     claimDriver({ ticket: "DGS-9", driver: "factory", mode: "factory" }, env);
     await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow(/DGS-9 already has a driver: factory/);

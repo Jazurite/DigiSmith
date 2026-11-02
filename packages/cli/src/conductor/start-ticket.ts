@@ -127,11 +127,19 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
     if (tabId !== undefined) {
       try { await d.exec(herdrWsPath(), ["--session", CASTLE, "tab", "close", tabId], { HERDR_WS: starter.workspace, HERDR_SCOPE: scopeFor(starter, env) }); } catch { /* best effort */ }
     }
+    let loud: string | null = null;
     try {
       if (handedOver) handoverDriver(a.ticket, name, starter.name, env);   // give it back to the factory conductor
       else releaseDriver(a.ticket, name, env);
-    } catch { /* keep the original error */ }
+    } catch (back) {
+      // never silent: the driver record may now name a conductor that does not exist
+      let current = "none";
+      try { current = readDriver(a.ticket, env)?.driver ?? "none"; } catch { current = "unreadable"; }
+      loud = `DRIVER NOT RESTORED: could not hand ${a.ticket} back to ${starter.name} (${(back as Error).message}); the driver record now names ${current}`;
+      console.error(loud);
+    }
     try { removeEntry(key, env); } catch { /* keep the original error */ }
+    if (loud !== null) throw new Error(`${(e as Error).message}\n${loud}`, { cause: e });
     throw e;
   }
 }

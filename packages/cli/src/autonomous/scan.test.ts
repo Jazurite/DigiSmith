@@ -15,6 +15,9 @@ import { appendAttention } from "./attention-write.ts";
 import type { ScanGuard } from "./scan-guard.ts";
 import { claimDriver, readDriver } from "../conductor/drivers.ts";
 import { driverRefusal } from "../run/limit-check.ts";
+import { driversDir } from "../conductor/drivers.ts";
+import { defaultDeps } from "./index.ts";
+import { dirname } from "node:path";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
 const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
@@ -765,5 +768,33 @@ describe("runScan: the claim writes the driver record (DGS-683 T22)", () => {
     tracker.readBackWrong = true;
     expect((await runScan(mk())).outcome).toBe("claim-failed");
     expect(readDriver("DGS-1", denv())).toBeNull();
+  });
+  it("a key outside the driver key format is claimed with no driver record", async () => {
+    tracker.add({ id: "t1", key: "T1" });
+    expect(await runScan(mk())).toMatchObject({ outcome: "claimed", claimed: "T1" });
+    expect(existsSync(join(root, "drivers"))).toBe(false);
+  });
+  it("a corrupt driver file counts as taken: skipped, no lock", async () => {
+    mkdirSync(join(root, "drivers"));
+    writeFileSync(join(root, "drivers", "DGS-1.json"), "{bad");
+    tracker.add({ id: "t1", key: "DGS-1" });
+    const r = await runScan(mk());
+    expect(r.skipped).toContainEqual({ key: "DGS-1", reason: "driven-by:unreadable driver file" });
+    expect(readLock(dir)).toBeNull();
+  });
+  it("a claim that cannot write its driver record fails cleanly: no lock, status untouched, claim-failed event", async () => {
+    writeFileSync(join(root, "drivers"), "a file where the folder should be");
+    tracker.add({ id: "t1", key: "DGS-1" });
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claim-failed");
+    expect(readLock(dir)).toBeNull();
+    expect(tracker.calls).not.toContain("setStatus t1 claimed");
+    expect(resultsOf(dir)["DGS-1:claimed:1:claim"]).toBe("permanent");
+    expect(kinds()).toContain("claim-failed");
+  });
+  it("production resolution: the scan's drivers folder is the one the driver readers use (dg conductor, driverRefusal)", () => {
+    const home: NodeJS.ProcessEnv = {};   // no DIGISMITH_DEPOT_DIR: the real default
+    expect(join(dirname(defaultDeps().conductorsJson), "drivers")).toBe(driversDir(home));
+    expect(driversDir(home)).toBe(join(homedir(), ".digismith-depot", "drivers"));
   });
 });
