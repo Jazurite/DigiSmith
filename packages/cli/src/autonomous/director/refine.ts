@@ -6,7 +6,7 @@ import { atomicWrite } from "../state.ts";
 import type { LoTask } from "../types.ts";
 import { approvalCovers, namesAuthorityPath, parseApproval } from "./authority.ts";
 import { escalate, hasReturned } from "./escalate.ts";
-import { hasDecision, recordDecision, type RecordDeps } from "./record.ts";
+import { readDecisions, recordDecision, type RecordDeps } from "./record.ts";
 
 export const REFINE_STATUS = "refinement";
 export const REFINE_LOCK_MAX_AGE_MINUTES = 360;
@@ -59,7 +59,7 @@ export const clearRefineLock = (dir: string): void => rmSync(join(dir, LOCK), { 
 
 export interface Verdict { clean: boolean; blocking: number; problem: string | null; findings: string[] }
 
-/** Reads the LAST "json findings" block of a Reviewer report. Clean = no Critical and no Important finding. */
+/** Reads the LAST "json findings" block of a Reviewer report. Clean = every finding is exactly Minor (any other severity blocks). */
 export function readVerdict(reportPath: string): Verdict {
   const bad = (problem: string): Verdict => ({ clean: false, blocking: 0, problem, findings: [] });
   let text: string;
@@ -71,10 +71,11 @@ export function readVerdict(reportPath: string): Verdict {
   if (!Array.isArray(list)) return bad("the findings block is not a list");
   const findings: string[] = [];
   for (const f of list as Record<string, unknown>[]) {
-    const sev = String(f?.severity ?? "").toLowerCase();
-    if (sev === "critical" || sev === "important") {
+    const sev = String(f?.severity ?? "").trim().toLowerCase();
+    // fail closed: anything that is not exactly "minor" blocks, including a missing or misspelled severity
+    if (sev !== "minor") {
       const where = f.path !== undefined ? ` (${String(f.path)}${f.line !== undefined ? `:${String(f.line)}` : ""})` : "";
-      findings.push(`${String(f.id ?? "?")} ${sev}: ${String(f.what ?? f.summary ?? "")}${where}`.trim());
+      findings.push(`${String(f.id ?? "?")} ${sev === "" ? "no severity" : sev}: ${String(f.what ?? f.summary ?? "")}${where}`.trim());
     }
   }
   return { clean: findings.length === 0, blocking: findings.length, problem: null, findings };
@@ -107,6 +108,14 @@ export function renderRefineOrder(i: { key: string; name: string; taskId: string
   return lines.join("\n");
 }
 
+/** Refine failures of this ticket in the current cycle: since its newest gate pass or escalation. */
+export function countRefineFailures(dir: string, ticket: string): number {
+  const mine = readDecisions(dir).filter((x) => x.ticket === ticket);
+  let from = 0;
+  mine.forEach((x, i) => { if (x.id === "apply-refinement-gate" || x.id === "escalate-concept") from = i + 1; });
+  return mine.slice(from).filter((x) => x.run === "refine-failed" && x.id === "release-stopped").length;
+}
+
 export interface RefineReleaseDeps extends RecordDeps { checkReadyCtx: ReadyCtx; boardDir: (ticket: string) => string | null; readDescription: (ticket: string) => Promise<string> }
 
 export function refineRound(dir: string): void {
@@ -136,7 +145,7 @@ export async function refineRelease(
 
   if (a.result === "failed") {
     const cause = a.cause ?? "unknown";
-    if (hasDecision(d.dir, a.ticket, "refine-failed", "release-stopped") === null) {
+    if (countRefineFailures(d.dir, a.ticket) === 0) {
       await recordDecision(d, { ticket: a.ticket, run: "refine-failed", id: "release-stopped", side: "within", what: `refine run of ${a.ticket} failed (${cause}); the lock is cleared and one retry follows`, why: "first failure of the refine worker", noComment: true });
       clearRefineLock(d.dir);
       return ok("failed once: lock cleared, the next scan retries");
@@ -170,11 +179,12 @@ export async function refineRelease(
     const uncovered = approvalCovers(approval, tokens);
     if (uncovered.length > 0) {
       const list = uncovered.join(", ");
-      await escalate(d, {
+      const esc = await escalate(d, {
         ticket: a.ticket, taskId: lock.taskId, id: "change-authority", viaRelease: false,
         question: `The plan changes the Director's own authority: ${list}. Jack decides. When Jack agrees, he adds the line \`Authority change approved by Jack: <date>: ${list}\` to the ticket description, and the ticket goes back to refinement.`,
       });
-      return refuse(`authority path not approved by Jack: ${list}. Escalated as change-authority; the lock is kept`);
+      const how = esc.outcome === "asked" ? "Escalated as change-authority" : esc.outcome === "already-open" ? "change-authority is already open on the ticket" : `no new question sent: ${esc.text}`;
+      return refuse(`authority path not approved by Jack: ${list}. ${how}; the lock is kept`);
     }
   }
 

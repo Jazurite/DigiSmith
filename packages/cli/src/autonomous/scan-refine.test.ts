@@ -226,6 +226,16 @@ describe("the refine lane: when it runs", () => {
     expect(readRefineLock(dir)).toBeNull();
     expect(events().find((e) => e.kind === "refine-release")).toMatchObject({ ticket: "DGS-7", reason: "stale" });
   });
+  it("F1: a lock kept after a refused gate is cleared when the ticket comes back from concept, and the lane claims again", async () => {
+    addRefine("t1");
+    acquireRefineLock(dir, { ticket: "DGS-1", taskId: "t1", claimedAt: now.toISOString(), claimedAtUtc7: "x", order: "o", scanId: "s", attempt: 1, round: 1 });
+    await escalate({ dir, now: () => now, tracker }, { ticket: "DGS-1", taskId: "t1", id: "change-authority", question: "Approve director/x.ts?", viaRelease: false });
+    tracker.tasks.get("t1")!.status = "refinement";   // Jack answered and moved it back before the next scan
+    await runScan(mk());
+    expect(readRefineLock(dir)).toMatchObject({ ticket: "DGS-1", scanId: "scan-1" });
+    expect(prompts).toHaveLength(1);
+    expect(events().filter((e) => e.kind === "refine-release").some((e) => e.reason === "stale")).toBe(true);
+  });
   it("a failed prompt clears the lock, removes its order and appends claim-failed", async () => {
     addRefine("t1");
     promptFails = true;

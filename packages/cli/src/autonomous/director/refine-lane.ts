@@ -8,7 +8,7 @@ import { TYPE_BUG, TYPE_TASK } from "../ready.ts";
 import type { ScanDeps } from "../scan.ts";
 import { appendEvent, readNotes, writeNotes } from "../state.ts";
 import type { LoTask } from "../types.ts";
-import { DONE_WHEN_QUESTION, acquireRefineLock, checkRefineReady, clearRefineLock, readRefineLock, REFINE_REASON, REFINE_STATUS, refineOrderPath, renderRefineOrder } from "./refine.ts";
+import { DONE_WHEN_QUESTION, acquireRefineLock, countRefineFailures, checkRefineReady, clearRefineLock, readRefineLock, REFINE_REASON, REFINE_STATUS, refineOrderPath, renderRefineOrder } from "./refine.ts";
 import { escalate, hasReturned, markReturned } from "./escalate.ts";
 import { recordDecision } from "./record.ts";
 
@@ -43,15 +43,16 @@ export async function runRefineLane(d: ScanDeps): Promise<{ key: string; reasons
 
   const all = await d.tracker.listByStatus(REFINE_STATUS);
 
-  // A lock whose ticket is no longer in refinement is stale.
+  // A ticket that came back from concept: its open escalation is answered.
+  const returned = new Set<string>();
+  for (const t of all) if (markReturned(d.dir, keyOf(t), now) > 0) { returned.add(keyOf(t)); appendEvent(d.dir, now, "refine-release", { ticket: keyOf(t), reason: "returned-from-concept" }); }
+  // A lock is stale when its ticket left refinement, or came back from concept (a refused gate keeps the lock while the ticket waits for Jack).
   let lock = readRefineLock(d.dir);
-  if (lock !== null && !("corrupt" in lock) && !all.some((t) => keyOf(t) === lock!.ticket)) {
+  if (lock !== null && !("corrupt" in lock) && (!all.some((t) => keyOf(t) === lock!.ticket) || returned.has(lock.ticket))) {
     clearRefineLock(d.dir);
     appendEvent(d.dir, now, "refine-release", { ticket: lock.ticket, reason: "stale" });
     lock = null;
   }
-  // A ticket that came back from concept: its open escalation is answered.
-  for (const t of all) if (markReturned(d.dir, keyOf(t), now) > 0) appendEvent(d.dir, now, "refine-release", { ticket: keyOf(t), reason: "returned-from-concept" });
 
   if (lock !== null) return [];
   if (refine.roleFull() !== null) return [];
@@ -95,7 +96,7 @@ async function claimRefine(d: ScanDeps, t: LoTask, now: Date): Promise<void> {
   const ordersDir = refine.ordersDir ?? d.ordersDir;
   const stamp = stampOf(now);
   const order = refineOrderPath(ordersDir, stamp, key);
-  const got = acquireRefineLock(d.dir, { ticket: key, taskId: t.id, claimedAt: now.toISOString(), claimedAtUtc7: fmtUtc7(now), order, scanId: d.scanId, attempt: 1, round: 1 });
+  const got = acquireRefineLock(d.dir, { ticket: key, taskId: t.id, claimedAt: now.toISOString(), claimedAtUtc7: fmtUtc7(now), order, scanId: d.scanId, attempt: countRefineFailures(d.dir, key) + 1, round: 1 });
   if (got === "busy") return;
   let wroteOrder = false;
   try {

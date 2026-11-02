@@ -6,7 +6,7 @@ import { readOpen } from "../attention.ts";
 import { FakeTracker } from "../fake-tracker.test-util.ts";
 import { AUTHORITY_PATHS } from "./authority.ts";
 import {
-  acquireRefineLock, checkRefineReady, clearRefineLock, hasDoneWhen, lockAgeMinutes, readRefineLock, readVerdict, REFINE_LOCK_MAX_AGE_MINUTES,
+  acquireRefineLock, checkRefineReady, countRefineFailures, clearRefineLock, hasDoneWhen, lockAgeMinutes, readRefineLock, readVerdict, REFINE_LOCK_MAX_AGE_MINUTES,
   refineOrderPath, refineRelease, refineRound, renderRefineOrder, type RefineLock, type RefineReleaseDeps,
 } from "./refine.ts";
 import { hasDecision, readDecisions } from "./record.ts";
@@ -90,6 +90,11 @@ describe("readVerdict", () => {
     expect(readVerdict(report(`${DIRTY}\n${CLEAN}`))).toMatchObject({ clean: true });
     expect(readVerdict(report(`${CLEAN}\n${DIRTY}`))).toMatchObject({ clean: false });
   });
+  it("F2: any severity that is not exactly Minor blocks (High, a typo, none)", () => {
+    for (const sev of ["High", "Importnat", "", "Major"]) expect(readVerdict(report(`\`\`\`json findings\n[{"severity":"${sev}","what":"x"}]\n\`\`\``))).toMatchObject({ clean: false, blocking: 1 });
+    expect(readVerdict(report("```json findings\n[{\"what\":\"no severity at all\"}]\n```"))).toMatchObject({ clean: false, blocking: 1 });
+    expect(readVerdict(report("```json findings\n[{\"severity\":\" MINOR \",\"what\":\"x\"}]\n```"))).toMatchObject({ clean: true });
+  });
   it("an unparseable block is not clean", () => {
     expect(readVerdict(report("```json findings\n{oops\n```"))).toMatchObject({ clean: false });
   });
@@ -164,6 +169,16 @@ describe("refineRelease ready", () => {
     expect(rec).toMatchObject({ ticket: "DGS-1", paths: ["director/refine.ts", ".digismith/config.yml"] });
     expect(typeof rec.line).toBe("string");
     expect(typeof rec.at).toBe("string");
+  });
+
+  it("F3: the refusal text says what escalate really did", async () => {
+    writeDocs("# Spec", "# Plan\nEdit director/refine.ts");
+    const first = await refineRelease(deps(), { ticket: "DGS-1", result: "ready", report: report(CLEAN) });
+    expect(first.text).toContain("Escalated as change-authority");
+    tracker.tasks.get("t1")!.status = "refinement";
+    const second = await refineRelease(deps(), { ticket: "DGS-1", result: "ready", report: report(CLEAN) });
+    expect(second.text).not.toContain("Escalated as change-authority");
+    expect(second.text).toContain("already");
   });
 
   it("fails closed: boardDir null, spec.md missing, plan.md missing", async () => {
@@ -270,6 +285,24 @@ describe("refineRelease escalated and failed", () => {
     expect(tracker.tasks.get("t1")?.status).toBe("concept");
     expect(tracker.comments[0].text).toContain("pane-died");
     expect(readRefineLock(dir)).toBeNull();
+  });
+  it("F4: an old failure from an earlier cycle does not make a new first failure escalate", async () => {
+    await refineRelease(deps(), { ticket: "DGS-1", result: "failed", cause: "old" });
+    acquireRefineLock(dir, lock());
+    tracker.tasks.get("t1")!.status = "refinement";
+    await refineRelease(deps(), { ticket: "DGS-1", result: "ready", report: report(CLEAN) });   // the cycle ends with a gate pass
+    tracker.tasks.get("t1")!.status = "refinement";
+    acquireRefineLock(dir, lock());
+    const r = await refineRelease(deps(), { ticket: "DGS-1", result: "failed", cause: "new" });
+    expect(r.text).toContain("failed once");
+    expect(tracker.tasks.get("t1")?.status).toBe("refinement");
+  });
+  it("F4: an escalation also ends the cycle; the lane records the attempt", async () => {
+    await refineRelease(deps(), { ticket: "DGS-1", result: "failed", cause: "a" });
+    expect(countRefineFailures(dir, "DGS-1")).toBe(1);
+    acquireRefineLock(dir, lock());
+    await refineRelease(deps(), { ticket: "DGS-1", result: "failed", cause: "b" });   // second: escalates
+    expect(countRefineFailures(dir, "DGS-1")).toBe(0);
   });
   it("(ready, escalated, failed) never touch the breaker file", async () => {
     await refineRelease(deps(), { ticket: "DGS-1", result: "failed", cause: "x" });
