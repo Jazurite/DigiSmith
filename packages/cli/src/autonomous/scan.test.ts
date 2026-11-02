@@ -723,6 +723,7 @@ describe("runScan: already-merged items close by rule", () => {
 });
 
 describe("runScan: the claim writes the driver record (DGS-683 T22)", () => {
+  const clearLockFile = () => rmSync(join(dir, "lock.json"), { force: true });
   const denv = () => ({ DIGISMITH_DEPOT_DIR: root });
   it("writes the lock and a factory-mode driver named by the claiming conductor's registry name, creating drivers/", async () => {
     tracker.add({ id: "t1", key: "DGS-1" });
@@ -768,6 +769,22 @@ describe("runScan: the claim writes the driver record (DGS-683 T22)", () => {
     tracker.readBackWrong = true;
     expect((await runScan(mk())).outcome).toBe("claim-failed");
     expect(readDriver("DGS-1", denv())).toBeNull();
+  });
+  it("claim, release failed (record left behind), claim again: the same conductor's record is accepted", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    await runScan(mk());
+    clearLockFile();
+    rmSync(ordersDir, { recursive: true, force: true });   // same minute: the order file name would clash
+    expect(readDriver("DGS-1", denv())?.driver).toBe("digismith-conductor");   // the release did not remove it
+    tracker.tasks.get("t1")!.status = "to do";
+    const r = await runScan(mk());
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1" });
+    expect(readDriver("DGS-1", denv())).toMatchObject({ driver: "digismith-conductor", mode: "factory" });
+  });
+  it("a leftover record of another conductor is still a skip", async () => {
+    claimDriver({ ticket: "DGS-1", driver: "digismith-conductor", mode: "attended" }, denv());   // same name but attended: not the factory's claim
+    tracker.add({ id: "t1", key: "DGS-1" });
+    expect((await runScan(mk())).skipped).toContainEqual({ key: "DGS-1", reason: "driven-by:digismith-conductor" });
   });
   it("a key outside the driver key format is claimed with no driver record", async () => {
     tracker.add({ id: "t1", key: "T1" });

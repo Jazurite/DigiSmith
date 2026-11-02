@@ -7,7 +7,7 @@ import { awayExpired, readAway } from "./away.ts";
 import { readBreaker } from "./breaker.ts";
 import { fmtUtc7, stampOf } from "./clock.ts";
 import { conductorCheck, factoryConductorName, promptConductor, type Exec } from "./conductor.ts";
-import { claimDriver, DriverTaken, releaseDriver } from "../conductor/drivers.ts";
+import { claimDriver, DriverTaken, readDriver, releaseDriver } from "../conductor/drivers.ts";
 import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
@@ -82,8 +82,15 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     // a key outside the driver key format (a non-DigiSmith id) has no driver record, as in driverRefusal
     if (/^[A-Z]+-\d+$/.test(key)) {
       const who = factoryConductorName(d.conductorsJson);
-      claimDriver({ ticket: key, driver: who, mode: "factory" }, denv);
-      driverName = who;
+      try {
+        claimDriver({ ticket: key, driver: who, mode: "factory" }, denv);
+        driverName = who;
+      } catch (e) {
+        // an earlier claim of this conductor whose release failed left its own record: that is the same claim again, not a driver
+        let cur: ReturnType<typeof readDriver> = null;
+        try { cur = e instanceof DriverTaken ? readDriver(key, denv) : null; } catch { /* an unreadable record stays the original DriverTaken */ }
+        if (!(cur !== null && cur.driver === who && cur.mode === "factory")) throw e;
+      }
     }
   } catch (e) {
     try { clearLock(d.dir); } catch { /* best effort */ }

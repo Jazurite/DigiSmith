@@ -1,5 +1,6 @@
 import { appendFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { readDriver, releaseDriver } from "../conductor/drivers.ts";
 import { appendOpen, appendResolved, readOpen } from "./attention.ts";
 import { recordRelease } from "./breaker.ts";
 import { classOfCause, normalizeCause } from "./causes.ts";
@@ -105,6 +106,16 @@ export async function runRelease(
     }
     clearLock(d.dir);
     lockCleared = true;
+    // the factory's driver record goes with its lock (best effort: a stale record is accepted again by the next claim)
+    if (!corrupt) {
+      try {
+        const denv = { ...process.env, DIGISMITH_DEPOT_DIR: dirname(d.dir) };
+        const rec = readDriver(a.ticket, denv);
+        if (rec !== null && rec.mode === "factory") releaseDriver(a.ticket, rec.driver, denv);
+      } catch (e) {
+        try { appendEvent(d.dir, now, "driver-release-failed", { ticket: a.ticket, error: e instanceof Error ? e.message : String(e) }); } catch { /* best effort */ }
+      }
+    }
     if (a.result === "merged" && !corrupt) {
       closeUnknown(d.dir, a.ticket, nowIso);
     }

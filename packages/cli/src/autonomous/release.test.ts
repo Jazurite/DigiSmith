@@ -8,6 +8,7 @@ import { plan, readJournal, resultsOf } from "./journal.ts";
 import { appendAttention } from "./attention-write.ts";
 import { readOpen } from "./attention.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
+import { claimDriver, readDriver } from "../conductor/drivers.ts";
 
 const CLAIMED = new Date("2026-10-20T17:00:00.000Z");
 const NOW = new Date("2026-10-20T17:30:00.000Z");
@@ -375,5 +376,35 @@ describe("runRelease: unknown items close by rule", () => {
     seedUnknown("builder-8", "DGS-1");
     await runRelease(mk(), { ticket: "?", result: "merged" });
     expect(readOpen(dir).map((i) => i.id).sort()).toEqual(["builder-8.unknown.0", "builder-9.unknown.0"]);
+  });
+});
+
+describe("runRelease and the driver record (DGS-683)", () => {
+  const denv = () => ({ DIGISMITH_DEPOT_DIR: root });
+  it("releases a factory-mode driver record after the lock", async () => {
+    acquireLock(dir, lock());
+    claimDriver({ ticket: "DGS-1", driver: "digismith-conductor", mode: "factory" }, denv());
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged", commit: "abc" });
+    expect(readDriver("DGS-1", denv())).toBeNull();
+  });
+  it("also releases a factory-mode record handed over to the ticket conductor", async () => {
+    acquireLock(dir, lock());
+    claimDriver({ ticket: "DGS-1", driver: "tc-dgs-1", mode: "factory" }, denv());
+    await runRelease(mk(), { ticket: "DGS-1", result: "failed", reason: "x" });
+    expect(readDriver("DGS-1", denv())).toBeNull();
+  });
+  it("leaves an attended record alone", async () => {
+    acquireLock(dir, lock());
+    claimDriver({ ticket: "DGS-1", driver: "tc-dgs-1", mode: "attended" }, denv());
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(readDriver("DGS-1", denv())?.driver).toBe("tc-dgs-1");
+  });
+  it("a record that cannot be read gives an event and never breaks the release", async () => {
+    acquireLock(dir, lock());
+    mkdirSync(join(root, "drivers"));
+    writeFileSync(join(root, "drivers", "DGS-1.json"), "{bad");
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(r.lockCleared).toBe(true);
+    expect(events().some((e) => e.kind === "driver-release-failed")).toBe(true);
   });
 });
