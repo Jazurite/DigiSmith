@@ -14,8 +14,8 @@ nightwatch:
   # At most this many runs of each kind are busy at once (DGS-665). The factory ticket counts as one builder.
   # 0 blocks the kind. A bad value falls back to the default and shows in dg autonomous status.
   limits:
-    builder: 2
-    reviewer: 2
+    builder: 1
+    reviewer: 1
     role: 1
   # A run with no event for this long (minutes) stops counting. Clear it for good with: dg run event <run-id> lost
   stale_after_minutes: 120
