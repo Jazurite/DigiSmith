@@ -17,6 +17,7 @@ import autonomousCommand from "./autonomous/index.ts";
 import runCommand from "./run/index.ts";
 import salvageCommand from "./salvage/index.ts";
 import oculusCommand from "./oculus/index.ts";
+import conductorCommand from "./conductor/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -45,6 +46,7 @@ export function buildCli(argv: string[]): Argv {
     .command(runCommand)
     .command(salvageCommand)
     .command(oculusCommand)
+    .command(conductorCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
