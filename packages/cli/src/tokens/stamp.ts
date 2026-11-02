@@ -16,7 +16,7 @@ export interface TaskUsage {
   agentSeconds: number;
 }
 
-function priceOf(r: UsageRecord): number | null {
+export function priceOf(r: UsageRecord): number | null {
   const pricing = resolveAnthropicPrice(r.model);
   if (!pricing) return null;
   // One record is one request, so the long-prompt tier applies per response.
