@@ -13,7 +13,7 @@ import { appendEvent, clearLock, readLock } from "./state.ts";
 import type { Tracker } from "./types.ts";
 
 export type ReleaseResult = "merged" | "failed" | "stopped" | "awaiting-jack" | "proof";
-export interface ReleaseDeps { tracker: Tracker; dir: string; now: () => Date; nexus: NexusDeps }
+export interface ReleaseDeps { tracker: Tracker; dir: string; now: () => Date; nexus: NexusDeps; conductorsJson?: string }
 
 /** merge-refused and classifier-block are refusals, "unknown" stays unknown, every other code is a plain failure. */
 export function kindOf(code: string): AttentionKind {
@@ -109,7 +109,7 @@ export async function runRelease(
     // the factory's driver record goes with its lock (best effort: a stale record is accepted again by the next claim)
     if (!corrupt) {
       try {
-        const denv = { ...process.env, DIGISMITH_DEPOT_DIR: dirname(d.dir) };
+        const denv = { ...process.env, DIGISMITH_DEPOT_DIR: dirname(d.conductorsJson ?? join(d.dir, "..", "conductors.json")) };
         const rec = readDriver(a.ticket, denv);
         if (rec !== null && rec.mode === "factory") releaseDriver(a.ticket, rec.driver, denv);
       } catch (e) {

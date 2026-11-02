@@ -387,6 +387,14 @@ describe("runRelease and the driver record (DGS-683)", () => {
     await runRelease(mk(), { ticket: "DGS-1", result: "merged", commit: "abc" });
     expect(readDriver("DGS-1", denv())).toBeNull();
   });
+  it("finds the driver record next to conductors.json even when the autonomous dir is outside the depot", async () => {
+    const other = join(root, "elsewhere", "autonomous");
+    mkdirSync(other, { recursive: true });
+    acquireLock(other, lock());
+    claimDriver({ ticket: "DGS-1", driver: "digismith-conductor", mode: "factory" }, denv());
+    await runRelease(mk({ dir: other, conductorsJson: join(root, "conductors.json") }), { ticket: "DGS-1", result: "merged", commit: "abc" });
+    expect(readDriver("DGS-1", denv())).toBeNull();
+  });
   it("also releases a factory-mode record handed over to the ticket conductor", async () => {
     acquireLock(dir, lock());
     claimDriver({ ticket: "DGS-1", driver: "tc-dgs-1", mode: "factory" }, denv());

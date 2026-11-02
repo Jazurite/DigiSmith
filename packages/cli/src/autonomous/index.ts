@@ -312,7 +312,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const r = await runRelease(
-                { tracker: d.tracker(), dir: d.dir, now: d.now, nexus: d.nexus },
+                { tracker: d.tracker(), dir: d.dir, now: d.now, nexus: d.nexus, conductorsJson: d.conductorsJson },
                 { ticket: argv.ticket as string, result: argv.result as ReleaseResult, reason: argv.reason as string | undefined, commit: argv.commit as string | undefined, cause: argv.cause as string | undefined },
               );
               if (r.warning) console.error(`release: ${r.warning}`);
