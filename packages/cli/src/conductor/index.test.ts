@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import yargs from "yargs";
-import { makeConductorCommand } from "./index.ts";
+import { makeConductorCommand, realLive } from "./index.ts";
 import { buildCli } from "../index.ts";
 import { claimDriver, readDriver } from "./drivers.ts";
 import type { ExecOut } from "./start-ticket.ts";
@@ -109,5 +109,25 @@ describe("registration", () => {
   it("the root CLI knows `conductor`", async () => {
     const help = await buildCli(["--help"]).exitProcess(false).getHelp();
     expect(help).toMatch(/conductor/);
+  });
+});
+
+describe("realLive", () => {
+  it("returns the agent names and asks herdr-ws for the given session", () => {
+    let asked: string[] = [];
+    const names = realLive("Castle", (_f, a) => { asked = a; return JSON.stringify({ result: { agents: [{ name: "tc-dgs-9" }, { name: 3 }, {}] } }); });
+    expect(names).toEqual(["tc-dgs-9"]);
+    expect(asked).toEqual(["--session", "Castle", "agent", "list"]);
+  });
+  it("throws when the answer has no result.agents array", () => {
+    expect(() => realLive("Castle", () => "{}")).toThrow(/no result.agents array/);
+    expect(() => realLive("Castle", () => JSON.stringify({ result: {} }))).toThrow(/no result.agents array/);
+  });
+  it("lets a failing herdr-ws call and bad JSON throw", () => {
+    expect(() => realLive("Castle", () => { throw new Error("exit 1"); })).toThrow(/exit 1/);
+    expect(() => realLive("Castle", () => "not json")).toThrow();
+  });
+  it("an empty list is a real answer: nothing runs", () => {
+    expect(realLive("Castle", () => JSON.stringify({ result: { agents: [] } }))).toEqual([]);
   });
 });

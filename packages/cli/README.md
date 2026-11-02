@@ -22,7 +22,7 @@ digismith depot bridge ensure    # start the Agentic Bridge proxy if not already
 digismith depot bridge stop      # stop it
 
 digismith conductor start-ticket --ticket <KEY> --under <name> [--project <P>]  # start a ticket conductor tab (tc-<key>) in Castle; refuses a ticket that already has a driver and a third open ticket conductor
-digismith conductor close --self                                   # inside a ticket conductor: release the ticket, leave the registry, close its own tab (needs DIGISMITH_NAME, HERDR_TAB_ID)
+digismith conductor close --self [--project <P>]                   # inside a ticket conductor: release the ticket, leave the registry, close its own tab (needs DIGISMITH_NAME, HERDR_TAB_ID)
 digismith conductor handover --ticket <KEY> --from <A> --to <B>    # change the driver of a ticket, only from the named driver
 digismith conductor sweep                                          # one line per ticket conductor: running or gone
 
