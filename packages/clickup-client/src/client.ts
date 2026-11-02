@@ -225,6 +225,36 @@ export class ClickUpClient {
     return res.comments ?? [];
   }
 
+  /**
+   * All comments, newest first, paged 25 at a time with ClickUp's `start` (date of the last row)
+   * and `start_id` (its id). Stops at a short page, at maxPages (default 8), or when a page
+   * repeats an id already seen. Returns each row once.
+   */
+  async getAllTaskComments(taskId: string, opts: { maxPages?: number } = {}): Promise<ClickUpComment[]> {
+    const maxPages = opts.maxPages ?? 8;
+    const all: ClickUpComment[] = [];
+    const seen = new Set<string>();
+    let params: Record<string, string | number> | undefined;
+    for (let page = 0; page < maxPages; page++) {
+      const res = await this.get<{ comments?: ClickUpComment[] }>(`/task/${taskId}/comment`, params ? { params } : undefined);
+      const rows = res.comments ?? [];
+      let repeated = false;
+      for (const row of rows) {
+        const id = String(row.id);
+        if (seen.has(id)) {
+          repeated = true;
+          continue;
+        }
+        seen.add(id);
+        all.push(row);
+      }
+      if (rows.length < 25 || repeated) break;
+      const last = rows[rows.length - 1];
+      params = { start: last.date as string | number, start_id: String(last.id) };
+    }
+    return all;
+  }
+
   /** POST /task/{id}/checklist. ClickUp answers { checklist }. */
   async createChecklist(taskId: string, name: string): Promise<ClickUpChecklist> {
     const res = await this.post<{ checklist: ClickUpChecklist }>(`/task/${taskId}/checklist`, { data: { name } });

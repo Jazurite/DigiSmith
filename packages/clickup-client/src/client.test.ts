@@ -765,6 +765,61 @@ describe("ClickUpClient relations", () => {
     expect(request).toHaveBeenNthCalledWith(2, { method: "GET", url: "/task/a/comment", params: undefined, data: undefined });
   });
 
+  describe("getAllTaskComments()", () => {
+    const rows = (from: number, n: number) =>
+      Array.from({ length: n }, (_, i) => ({ id: String(from - i), comment_text: "c", date: String(1000 + from - i) }));
+
+    it("pages with start and start_id of the last row until a short page", async () => {
+      const client = makeClient();
+      const p1 = rows(60, 25);
+      const p2 = rows(35, 25);
+      const p3 = rows(10, 4);
+      request.mockResolvedValueOnce({ data: { comments: p1 } });
+      request.mockResolvedValueOnce({ data: { comments: p2 } });
+      request.mockResolvedValueOnce({ data: { comments: p3 } });
+
+      const all = await client.getAllTaskComments("a");
+
+      expect(all).toEqual([...p1, ...p2, ...p3]);
+      expect(request).toHaveBeenCalledTimes(3);
+      expect(request).toHaveBeenNthCalledWith(1, { method: "GET", url: "/task/a/comment", params: undefined, data: undefined });
+      expect(request).toHaveBeenNthCalledWith(2, { method: "GET", url: "/task/a/comment", params: { start: "1036", start_id: "36" }, data: undefined });
+      expect(request).toHaveBeenNthCalledWith(3, { method: "GET", url: "/task/a/comment", params: { start: "1011", start_id: "11" }, data: undefined });
+    });
+
+    it("stops at maxPages (default 8)", async () => {
+      const client = makeClient();
+      for (let p = 0; p < 10; p++) request.mockResolvedValueOnce({ data: { comments: rows(1000 - p * 25, 25) } });
+      expect(await client.getAllTaskComments("a", { maxPages: 2 })).toHaveLength(50);
+      expect(request).toHaveBeenCalledTimes(2);
+
+      request.mockReset();
+      for (let p = 0; p < 10; p++) request.mockResolvedValueOnce({ data: { comments: rows(1000 - p * 25, 25) } });
+      expect(await client.getAllTaskComments("a")).toHaveLength(200);
+      expect(request).toHaveBeenCalledTimes(8);
+    });
+
+    it("stops when a page repeats an id and returns no duplicates", async () => {
+      const client = makeClient();
+      const p1 = rows(60, 25);
+      request.mockResolvedValueOnce({ data: { comments: p1 } });
+      request.mockResolvedValueOnce({ data: { comments: [...rows(35, 24), p1[0]] } });
+      request.mockResolvedValueOnce({ data: { comments: rows(10, 25) } });
+
+      const all = await client.getAllTaskComments("a");
+
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
+      expect(all).toHaveLength(49);
+    });
+
+    it("returns an empty list when there are no comments", async () => {
+      const client = makeClient();
+      request.mockResolvedValueOnce({ data: {} });
+      expect(await client.getAllTaskComments("a")).toEqual([]);
+    });
+  });
+
   it("checklist calls: create a checklist, add, edit (with parent) and delete an item", async () => {
     const client = makeClient();
     const cl = { id: "c1", task_id: "a", name: "Plan", orderindex: 0, resolved: 0, unresolved: 1, items: [] };
