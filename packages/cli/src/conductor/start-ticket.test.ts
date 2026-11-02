@@ -11,10 +11,12 @@ let calls: { file: string; args: string[]; env?: Record<string, string> }[];
 let failOn: string | null;
 
 const TAB_OUT = JSON.stringify({ result: { tab: { tab_id: "w7:t4" }, root_pane: { pane_id: "w7:p9" } } });
+let beforeFail: (() => void) | null = null;
 const exec: ExecOut = async (file, args, e) => {
   calls.push({ file, args, env: e });
   const verb = args.slice(2, 4).join(" ");
-  if (failOn !== null && verb.startsWith(failOn)) return { code: 1, stderr: "boom", stdout: "" };
+  if (verb === "tab close") return { code: 0, stderr: "", stdout: "" };
+  if (failOn !== null && verb.startsWith(failOn)) { beforeFail?.(); return { code: 1, stderr: "boom", stdout: "" }; }
   return { code: 0, stderr: "", stdout: verb === "tab create" ? TAB_OUT : "" };
 };
 
@@ -30,7 +32,7 @@ beforeEach(() => {
   depot = fs.mkdtempSync(path.join(os.tmpdir(), "st-depot-"));
   repo = fs.mkdtempSync(path.join(os.tmpdir(), "st-repo-"));
   env = { DIGISMITH_DEPOT_DIR: depot };
-  calls = []; failOn = null; seed();
+  calls = []; failOn = null; beforeFail = null; seed();
 });
 afterEach(() => { fs.rmSync(depot, { recursive: true, force: true }); fs.rmSync(repo, { recursive: true, force: true }); });
 
@@ -46,12 +48,18 @@ describe("startTicketConductor", () => {
     expect(brief).toContain("dg conductor close --self");
     expect(calls.map((c) => c.args.slice(0, 4))).toEqual([
       ["--session", "Castle", "tab", "create"],
+      ["--session", "Castle", "pane", "run"],
       ["--session", "Castle", "agent", "start"],
       ["--session", "Castle", "agent", "prompt"],
     ]);
     expect(calls[0].args).toEqual(expect.arrayContaining(["--workspace", "w7", "--label", "tc-dgs-9", "--cwd", repo]));
-    expect(calls[1].args).toEqual(expect.arrayContaining(["tc-dgs-9", "--pane", "w7:p9", "--"]));
-    expect(calls[2].args).toContain("Read .digismith/sessions/tc-dgs-9/brief.md and follow it.");
+    expect(calls[1].args[4]).toBe("w7:p9");
+    expect(calls[1].args[5]).toBe(`cd '${repo}' && export HERDR_SCOPE=Castle:w7,default:w2 DIGISMITH_NAME=tc-dgs-9 HERDR_WS=w2`);
+    expect(calls[2].args.slice(4)).toEqual([
+      "tc-dgs-9", "--kind", "claude", "--pane", "w7:p9", "--timeout", "90000", "--",
+      "--name", "tc-dgs-9", "--disallowedTools", "Bash(herdr *)", "--allowedTools", "Bash(herdr-ws *)", `Bash(${calls[0].file} *)`,
+    ]);
+    expect(calls[3].args).toContain("Read .digismith/sessions/tc-dgs-9/brief.md and follow it.");
     expect(calls[0].file).toMatch(/herdr-ws$/);
     expect(calls[0].env?.HERDR_WS).toBe("w7");
     expect(calls[0].env?.HERDR_SCOPE).toBe("Castle:w7,default:w2");
@@ -97,5 +105,34 @@ describe("startTicketConductor", () => {
     const bad: ExecOut = async (file, args, e) => { calls.push({ file, args, env: e }); return { code: 0, stderr: "", stdout: "{}" }; };
     await expect(startTicketConductor(A, { exec: bad, env, repo })).rejects.toThrow(/pane id/);
     expect(readDriver("DGS-9", env)).toBeNull();
+  });
+  it("a failed agent prompt closes the tab and rolls back", async () => {
+    failOn = "agent prompt";
+    await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow(/agent prompt/);
+    expect(calls[calls.length - 1].args).toEqual(["--session", "Castle", "tab", "close", "w7:t4"]);
+    expect(readDriver("DGS-9", env)).toBeNull();
+    expect(readRegistry(env)["DigiSmith/tc-dgs-9"]).toBeUndefined();
+  });
+  it("a failed tab create closes no tab (none exists)", async () => {
+    failOn = "tab create";
+    await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow();
+    expect(calls.some((c) => c.args[3] === "close")).toBe(false);
+  });
+  it("a throwing releaseDriver does not skip the entry removal or hide the original error", async () => {
+    failOn = "agent start";
+    beforeFail = () => fs.writeFileSync(path.join(depot, "drivers", "DGS-9.json"), "{}");
+    await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow(/agent start/);
+    expect(readRegistry(env)["DigiSmith/tc-dgs-9"]).toBeUndefined();
+    expect(calls[calls.length - 1].args.slice(2, 4)).toEqual(["tab", "close"]);
+  });
+  it("a stale closed registry entry for the same name is replaced by the open one", async () => {
+    seed({ "DigiSmith/tc-dgs-9": { kind: "ticket", ticket: "DGS-9", session: "Castle", workspace: "w7", floor: "w2", status: "closed" } });
+    await startTicketConductor(A, { exec, env, repo });
+    expect(readRegistry(env)["DigiSmith/tc-dgs-9"].status).toBe("open");
+  });
+  it("a stale open entry without a driver still counts toward the limit", async () => {
+    const t = (n: number) => ({ kind: "ticket", ticket: `DGS-${n}`, session: "Castle", workspace: "w7", floor: "w2", status: "open" });
+    seed({ "DigiSmith/tc-dgs-9": t(9), "DigiSmith/tc-dgs-1": t(1) });
+    await expect(startTicketConductor(A, { exec, env, repo })).rejects.toThrow(/limit/);
   });
 });

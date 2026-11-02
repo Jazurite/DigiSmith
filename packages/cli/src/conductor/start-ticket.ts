@@ -17,8 +17,14 @@ export interface StartArgs { ticket: string; under: string; project: string }
 
 export const CASTLE = "Castle";
 export const MAX_TICKET_CONDUCTORS = 2;
-/** The command `agent start` runs in the new pane. */
-export const TICKET_CONDUCTOR_COMMAND = ["claude"];
+/** The flags `agent start` gives claude: the same list as ensure_agent in scripts/herdr/herdr-bootstrap.sh (a test pins it). */
+export function conductorFlags(name: string, wsBin: string): string[] {
+  return ["--name", name, "--disallowedTools", "Bash(herdr *)", "--allowedTools", "Bash(herdr-ws *)", `Bash(${wsBin} *)`];
+}
+
+function shQuote(s: string): string {
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
 
 export const realExecOut: ExecOut = (file, args, env) =>
   new Promise((resolve) => {
@@ -78,6 +84,7 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
     throw e;
   }
 
+  let tabId: string | undefined;
   try {
     putEntry(key, { session: CASTLE, workspace: starter.workspace, floor: starter.floor, kind: "ticket", ticket: a.ticket, under: a.under, status: "open" }, env);
     const briefDir = path.join(repo, ".digismith", "sessions", name);
@@ -94,17 +101,26 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
     const tab = await run("tab create", ["tab", "create", "--workspace", starter.workspace, "--label", name, "--cwd", repo]);
     let pane: string | undefined;
     try {
-      pane = findKey(JSON.parse(tab.stdout ?? ""), "pane_id");
+      const out: unknown = JSON.parse(tab.stdout ?? "");
+      pane = findKey(out, "pane_id");
+      tabId = findKey(out, "tab_id");
     } catch {
       pane = undefined;
     }
     if (pane === undefined) throw new Error("herdr-ws tab create printed no pane id");
-    await run("agent start", ["agent", "start", name, "--pane", pane, "--", ...TICKET_CONDUCTOR_COMMAND]);
+    // same identity env as the bootstrap sets before agent start: scope, name, and the Floor workspace
+    const envText = `HERDR_SCOPE=${scopeFor(starter, env)} DIGISMITH_NAME=${name}` + (starter.floor !== undefined ? ` HERDR_WS=${starter.floor}` : "");
+    await run("pane run", ["pane", "run", pane, `cd ${shQuote(repo)} && export ${envText}`]);
+    await run("agent start", ["agent", "start", name, "--kind", "claude", "--pane", pane, "--timeout", "90000", "--", ...conductorFlags(name, herdr)]);
     await run("agent prompt", ["agent", "prompt", name, `Read .digismith/sessions/${name}/brief.md and follow it.`]);
     return { key, pane, name };
   } catch (e) {
-    releaseDriver(a.ticket, name, env);
-    removeEntry(key, env);
+    // every rollback step runs; a failing step never hides the original error
+    if (tabId !== undefined) {
+      try { await d.exec(herdrWsPath(), ["--session", CASTLE, "tab", "close", tabId], { HERDR_WS: starter.workspace, HERDR_SCOPE: scopeFor(starter, env) }); } catch { /* best effort */ }
+    }
+    try { releaseDriver(a.ticket, name, env); } catch { /* keep the original error */ }
+    try { removeEntry(key, env); } catch { /* keep the original error */ }
     throw e;
   }
 }
