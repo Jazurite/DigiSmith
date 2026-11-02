@@ -64,23 +64,23 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
     expect(r.stderr).toMatch(/HERDR_SCOPE or HERDR_WS not set/)
   })
 
-  it("HERDR_WS alone refuses --session Suite", () => {
-    expect(refused(run({ HERDR_WS: "w2" }, ["--session", "Suite", "agent", "list"]))).toBe(true)
+  it("HERDR_WS alone refuses --session Castle", () => {
+    expect(refused(run({ HERDR_WS: "w2" }, ["--session", "Castle", "agent", "list"]))).toBe(true)
   })
 
-  it("scope with several default pairs: default list shows only default workspaces, Suite list only w7", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
+  it("scope with several default pairs: default list shows only default workspaces, Castle list only w7", () => {
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2,default:w3" }
     expect(names(run(env, ["agent", "list"])).sort()).toEqual(["dgs-1", "dgs-2", "dgs-683-b", "scout-a"])
-    expect(names(run(env, ["--session", "Suite", "agent", "list"])).sort()).toEqual(["digismith-conductor", "tc-dgs-8", "tc-dgs-9"])
+    expect(names(run(env, ["--session", "Castle", "agent", "list"])).sort()).toEqual(["digismith-conductor", "tc-dgs-8", "tc-dgs-9"])
   })
 
   it("a session outside the scope is refused", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2" }
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2" }
     expect(refused(run(env, ["--session", "other", "agent", "list"]))).toBe(true)
   })
 
   it("a scope without default refuses a call with no --session", () => {
-    expect(refused(run({ HERDR_SCOPE: "Suite:w7" }, ["agent", "list"]))).toBe(true)
+    expect(refused(run({ HERDR_SCOPE: "Castle:w7" }, ["agent", "list"]))).toBe(true)
   })
 
   it("a second --session or any --socket later in argv is refused", () => {
@@ -88,7 +88,7 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
     expect(refused(run(env, ["tab", "create", "--session", "x", "--workspace", "w2"]))).toBe(true)
     expect(refused(run(env, ["tab", "create", "--workspace", "w2", "--session=x"]))).toBe(true)
     expect(refused(run(env, ["tab", "create", "--workspace", "w2", "--socket", "/tmp/s"]))).toBe(true)
-    expect(refused(run(env, ["--session", "default", "--session", "Suite", "agent", "list"]))).toBe(true)
+    expect(refused(run(env, ["--session", "default", "--session", "Castle", "agent", "list"]))).toBe(true)
   })
 
   it("a target outside the scope is refused (pane read w4:p1 with w2,w3)", () => {
@@ -96,26 +96,26 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
   })
 
   it("every default pair is reachable; a default workspace outside the scope is not", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2,default:w3" }
     expect(ok(run(env, ["pane", "read", "w2:p1"]))).toBe(true)
     expect(ok(run(env, ["pane", "read", "w3:p1"]))).toBe(true)
     expect(refused(run(env, ["pane", "read", "w4:p1"]))).toBe(true)
-    expect(refused(run(env, ["pane", "read", "w7:p1"]))).toBe(true) // w7 is a Suite workspace, not a default one
+    expect(refused(run(env, ["pane", "read", "w7:p1"]))).toBe(true) // w7 is a Castle workspace, not a default one
   })
 
-  it("the same workspace id in Suite is not accepted through a default pair", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2" }
-    expect(ok(run(env, ["--session", "Suite", "pane", "read", "w7:p1"]))).toBe(true)
-    expect(refused(run(env, ["--session", "Suite", "pane", "read", "w2:p1"]))).toBe(true)
+  it("the same workspace id in Castle is not accepted through a default pair", () => {
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2" }
+    expect(ok(run(env, ["--session", "Castle", "pane", "read", "w7:p1"]))).toBe(true)
+    expect(refused(run(env, ["--session", "Castle", "pane", "read", "w2:p1"]))).toBe(true)
     expect(refused(run(env, ["pane", "read", "w7:p1"]))).toBe(true)
   })
 
   it("agent name targets are resolved in the chosen session", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2,default:w3" }
     expect(ok(run(env, ["agent", "get", "dgs-2"]))).toBe(true)
     expect(refused(run(env, ["agent", "get", "tc-dgs-9"]))).toBe(true) // w7 in session default
-    expect(ok(run(env, ["--session", "Suite", "agent", "get", "tc-dgs-9"]))).toBe(true)
-    expect(refused(run(env, ["--session", "Suite", "agent", "get", "dgs-2"]))).toBe(true) // w3 not a Suite workspace
+    expect(ok(run(env, ["--session", "Castle", "agent", "get", "tc-dgs-9"]))).toBe(true)
+    expect(refused(run(env, ["--session", "Castle", "agent", "get", "dgs-2"]))).toBe(true) // w3 not a Castle workspace
   })
 
   it("create needs a --workspace inside the scope for that session", () => {
@@ -141,7 +141,7 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
   })
 
   it("pane and tab list cover every workspace of the session", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2,default:w3" }
     const r = run(env, ["tab", "list"])
     expect(ok(r)).toBe(true)
     expect(r.log).toMatch(/--session default tab list --workspace w2/)
@@ -153,126 +153,126 @@ describe("herdr-ws scope parsing and --session (T10)", () => {
   })
 
   it("a bad scope text is refused", () => {
-    for (const bad of ["Suite:7", "Suite", "7x:w2", "Suite:w7,", ":w2", "Suite:w7:w8"]) {
+    for (const bad of ["Castle:7", "Castle", "7x:w2", "Castle:w7,", ":w2", "Castle:w7:w8"]) {
       expect(refused(run({ HERDR_SCOPE: bad }, ["agent", "list"])), bad).toBe(true)
     }
   })
 
   it("the session and workspace groups are refused", () => {
-    const env = { HERDR_SCOPE: "Suite:w7,default:w2" }
+    const env = { HERDR_SCOPE: "Castle:w7,default:w2" }
     expect(refused(run(env, ["session", "list"]))).toBe(true)
     expect(refused(run(env, ["workspace", "create"]))).toBe(true)
-    expect(refused(run(env, ["--session", "Suite", "server", "stop"]))).toBe(true)
+    expect(refused(run(env, ["--session", "Castle", "server", "stop"]))).toBe(true)
   })
 
   it("every forwarded call starts with --session <S>, and a caller socket env is dropped", () => {
     const r = run(
-      { HERDR_SCOPE: "Suite:w7,default:w2", HERDR_SOCKET_PATH: "/tmp/evil.sock" },
-      ["--session", "Suite", "agent", "list"],
+      { HERDR_SCOPE: "Castle:w7,default:w2", HERDR_SOCKET_PATH: "/tmp/evil.sock" },
+      ["--session", "Castle", "agent", "list"],
     )
     expect(ok(r)).toBe(true)
     expect(r.env.trim().split("\n").every((x) => x === "unset")).toBe(true)
     expect(r.env.trim()).not.toBe("")
-    for (const line of r.log.trim().split("\n")) expect(line).toMatch(/^--session (Suite|default) /)
+    for (const line of r.log.trim().split("\n")) expect(line).toMatch(/^--session (Castle|default) /)
     const r2 = run({ HERDR_SCOPE: "default:w2,default:w3" }, ["agent", "get", "dgs-2"])
     for (const line of r2.log.trim().split("\n")) expect(line).toMatch(/^--session default /)
   })
 })
 
-describe("herdr-ws Suite close rule (T11)", () => {
-  const env = { HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }
-  const suite = (...a: string[]) => run(env, ["--session", "Suite", ...a])
+describe("herdr-ws Castle close rule (T11)", () => {
+  const env = { HERDR_SCOPE: "Castle:w7,default:w2,default:w3" }
+  const castle = (...a: string[]) => run(env, ["--session", "Castle", ...a])
 
-  it("tab close in Suite: a tc- or nw- label passes, any other label is refused", () => {
-    expect(ok(suite("tab", "close", "w7:t2"))).toBe(true) // tc-dgs-9
-    expect(ok(suite("tab", "close", "w7:t3"))).toBe(true) // nw-5
-    const r = suite("tab", "close", "w7:t1") // digismith-conductor
+  it("tab close in Castle: a tc- or nw- label passes, any other label is refused", () => {
+    expect(ok(castle("tab", "close", "w7:t2"))).toBe(true) // tc-dgs-9
+    expect(ok(castle("tab", "close", "w7:t3"))).toBe(true) // nw-5
+    const r = castle("tab", "close", "w7:t1") // digismith-conductor
     expect(refused(r)).toBe(true)
     expect(r.log).not.toMatch(/tab close/)
   })
 
-  it("agent stop in Suite: only tc- or nw- agent names", () => {
-    expect(refused(suite("agent", "stop", "digismith-conductor"))).toBe(true)
-    expect(ok(suite("agent", "stop", "tc-dgs-9"))).toBe(true)
+  it("agent stop in Castle: only tc- or nw- agent names", () => {
+    expect(refused(castle("agent", "stop", "digismith-conductor"))).toBe(true)
+    expect(ok(castle("agent", "stop", "tc-dgs-9"))).toBe(true)
   })
 
-  it("pane close in Suite: only the pane of a tc- or nw- agent", () => {
-    expect(ok(suite("pane", "close", "w7:p2"))).toBe(true) // tc-dgs-9
-    expect(refused(suite("pane", "close", "w7:p1"))).toBe(true) // digismith-conductor
-    expect(refused(suite("pane", "close", "w7:p9"))).toBe(true) // unknown pane fails closed
+  it("pane close in Castle: only the pane of a tc- or nw- agent", () => {
+    expect(ok(castle("pane", "close", "w7:p2"))).toBe(true) // tc-dgs-9
+    expect(refused(castle("pane", "close", "w7:p1"))).toBe(true) // digismith-conductor
+    expect(refused(castle("pane", "close", "w7:p9"))).toBe(true) // unknown pane fails closed
   })
 
-  it("a Suite close outside the Suite workspaces of the scope is still refused", () => {
-    expect(refused(suite("tab", "close", "w8:t2"))).toBe(true)
-    expect(refused(suite("tab", "close", "w2:t2"))).toBe(true)
+  it("a Castle close outside the Castle workspaces of the scope is still refused", () => {
+    expect(refused(castle("tab", "close", "w8:t2"))).toBe(true)
+    expect(refused(castle("tab", "close", "w2:t2"))).toBe(true)
   })
 
-  it("the Suite label rule does not apply to default: old :t1 rule for every scope workspace", () => {
+  it("the Castle label rule does not apply to default: old :t1 rule for every scope workspace", () => {
     expect(refused(run(env, ["tab", "close", "w2:t1"]))).toBe(true)
     expect(refused(run(env, ["tab", "close", "w3:t1"]))).toBe(true)
     expect(ok(run(env, ["tab", "close", "w2:t5"]))).toBe(true)
     expect(ok(run(env, ["agent", "stop", "dgs-1"]))).toBe(true)
   })
 
-  it("Suite's :t1 tab is protected by its label, not its position", () => {
-    expect(refused(suite("tab", "close", "w7:t4"))).toBe(true) // not tab 1, label digismith-conductor
-    expect(ok(suite("tab", "close", "w7:t3"))).toBe(true)
+  it("Castle's :t1 tab is protected by its label, not its position", () => {
+    expect(refused(castle("tab", "close", "w7:t4"))).toBe(true) // not tab 1, label digismith-conductor
+    expect(ok(castle("tab", "close", "w7:t3"))).toBe(true)
   })
 
   it("rename bypass: a tc- conductor cannot take over a non-ticket label, so the two-call attack fails", () => {
-    expect(refused(suite("tab", "rename", "w7:t1", "tc-x"))).toBe(true) // current label digismith-conductor
-    expect(refused(suite("tab", "close", "w7:t1"))).toBe(true)
-    expect(refused(suite("agent", "rename", "digismith-conductor", "tc-x"))).toBe(true)
-    expect(refused(suite("pane", "rename", "w7:p1", "tc-x"))).toBe(true)
+    expect(refused(castle("tab", "rename", "w7:t1", "tc-x"))).toBe(true) // current label digismith-conductor
+    expect(refused(castle("tab", "close", "w7:t1"))).toBe(true)
+    expect(refused(castle("agent", "rename", "digismith-conductor", "tc-x"))).toBe(true)
+    expect(refused(castle("pane", "rename", "w7:p1", "tc-x"))).toBe(true)
   })
 
   it("rename keeps the prefix: tc- to tc- passes, tc- to anything else or --clear is refused", () => {
-    expect(ok(suite("tab", "rename", "w7:t2", "tc-dgs-10"))).toBe(true)
-    expect(ok(suite("tab", "rename", "w7:t3", "nw-6", "extra"))).toBe(true)
-    expect(ok(suite("agent", "rename", "tc-dgs-9", "tc-dgs-10"))).toBe(true)
-    expect(ok(suite("pane", "rename", "w7:p2", "tc-label"))).toBe(true)
-    expect(refused(suite("tab", "rename", "w7:t2", "digismith-conductor"))).toBe(true)
-    expect(refused(suite("agent", "rename", "tc-dgs-9", "--clear"))).toBe(true)
-    expect(refused(suite("tab", "rename", "w7:t2"))).toBe(true)
+    expect(ok(castle("tab", "rename", "w7:t2", "tc-dgs-10"))).toBe(true)
+    expect(ok(castle("tab", "rename", "w7:t3", "nw-6", "extra"))).toBe(true)
+    expect(ok(castle("agent", "rename", "tc-dgs-9", "tc-dgs-10"))).toBe(true)
+    expect(ok(castle("pane", "rename", "w7:p2", "tc-label"))).toBe(true)
+    expect(refused(castle("tab", "rename", "w7:t2", "digismith-conductor"))).toBe(true)
+    expect(refused(castle("agent", "rename", "tc-dgs-9", "--clear"))).toBe(true)
+    expect(refused(castle("tab", "rename", "w7:t2"))).toBe(true)
   })
 
-  it("rename in default is not restricted by the Suite rule", () => {
+  it("rename in default is not restricted by the Castle rule", () => {
     expect(ok(run(env, ["tab", "rename", "w2:t5", "anything"]))).toBe(true)
   })
 
   it("fails closed: tab get that prints non-JSON refuses the close and the rename", () => {
-    expect(refused(suite("tab", "close", "w7:t9"))).toBe(true)
-    expect(refused(suite("tab", "rename", "w7:t9", "tc-x"))).toBe(true)
+    expect(refused(castle("tab", "close", "w7:t9"))).toBe(true)
+    expect(refused(castle("tab", "rename", "w7:t9", "tc-x"))).toBe(true)
   })
 
   it("agent stop with a pane-id target follows the owning agent", () => {
-    expect(ok(suite("agent", "stop", "w7:p6"))).toBe(true) // tc-dgs-8
-    expect(refused(suite("agent", "stop", "w7:p1"))).toBe(true) // digismith-conductor
+    expect(ok(castle("agent", "stop", "w7:p6"))).toBe(true) // tc-dgs-8
+    expect(refused(castle("agent", "stop", "w7:p1"))).toBe(true) // digismith-conductor
   })
 
   it("pane move bypass: a conductor pane cannot be moved into a tc- tab, so the close never gets a tc- label", () => {
-    const r = suite("pane", "move", "w7:p1", "--tab", "w7:t2")
+    const r = castle("pane", "move", "w7:p1", "--tab", "w7:t2")
     expect(refused(r)).toBe(true)
     expect(r.log).not.toMatch(/pane move/)
-    expect(refused(suite("pane", "move", "w7:p1", "--target-pane", "w7:p2"))).toBe(true)
+    expect(refused(castle("pane", "move", "w7:p1", "--target-pane", "w7:p2"))).toBe(true)
   })
 
   it("pane move between ticket panes passes; a non-ticket named pane or a bad destination is refused", () => {
-    expect(ok(suite("pane", "move", "w7:p2", "--tab", "w7:t3"))).toBe(true)
-    expect(ok(suite("pane", "move", "w7:p2", "--target-pane", "w7:p6", "--split", "right"))).toBe(true)
-    expect(refused(suite("pane", "move", "w7:p2", "--target-pane", "w7:p1"))).toBe(true)
-    expect(refused(suite("pane", "move", "w7:p2", "--new-workspace"))).toBe(true)
-    expect(refused(suite("pane", "move", "w7:p2", "--workspace", "w2"))).toBe(true)
-    expect(refused(suite("pane", "move", "w7:p2", "--tab", "w9:t1"))).toBe(true)
-    expect(refused(suite("pane", "move", "w7:p2", "--tab", "w2:t1"))).toBe(true)
+    expect(ok(castle("pane", "move", "w7:p2", "--tab", "w7:t3"))).toBe(true)
+    expect(ok(castle("pane", "move", "w7:p2", "--target-pane", "w7:p6", "--split", "right"))).toBe(true)
+    expect(refused(castle("pane", "move", "w7:p2", "--target-pane", "w7:p1"))).toBe(true)
+    expect(refused(castle("pane", "move", "w7:p2", "--new-workspace"))).toBe(true)
+    expect(refused(castle("pane", "move", "w7:p2", "--workspace", "w2"))).toBe(true)
+    expect(refused(castle("pane", "move", "w7:p2", "--tab", "w9:t1"))).toBe(true)
+    expect(refused(castle("pane", "move", "w7:p2", "--tab", "w2:t1"))).toBe(true)
   })
 
-  it("pane swap in Suite: every pane must be named and belong to a ticket agent", () => {
-    expect(ok(suite("pane", "swap", "--source-pane", "w7:p2", "--target-pane", "w7:p6"))).toBe(true)
-    expect(refused(suite("pane", "swap", "--source-pane", "w7:p2", "--target-pane", "w7:p1"))).toBe(true)
-    expect(refused(suite("pane", "swap", "--pane", "w7:p2", "--direction", "left"))).toBe(true) // neighbour is implicit
-    expect(refused(suite("pane", "swap", "--current", "--direction", "left"))).toBe(true)
-    expect(refused(suite("pane", "swap", "--source-pane", "w7:p2"))).toBe(true)
+  it("pane swap in Castle: every pane must be named and belong to a ticket agent", () => {
+    expect(ok(castle("pane", "swap", "--source-pane", "w7:p2", "--target-pane", "w7:p6"))).toBe(true)
+    expect(refused(castle("pane", "swap", "--source-pane", "w7:p2", "--target-pane", "w7:p1"))).toBe(true)
+    expect(refused(castle("pane", "swap", "--pane", "w7:p2", "--direction", "left"))).toBe(true) // neighbour is implicit
+    expect(refused(castle("pane", "swap", "--current", "--direction", "left"))).toBe(true)
+    expect(refused(castle("pane", "swap", "--source-pane", "w7:p2"))).toBe(true)
   })
 
   it("default: pane move stays inside the scope for every named pane and destination", () => {
@@ -287,7 +287,7 @@ describe("herdr-ws Suite close rule (T11)", () => {
 describe("herdr-ws cross-project audit log (T12)", () => {
   let depot: string
   beforeEach(() => { depot = path.join(dir, "depot") })
-  const base = () => ({ HERDR_WS: "w2", HERDR_SCOPE: "Suite:w7,default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot, DIGISMITH_NAME: "digismith-conductor" })
+  const base = () => ({ HERDR_WS: "w2", HERDR_SCOPE: "Castle:w7,default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot, DIGISMITH_NAME: "digismith-conductor" })
   const logFile = (n: string) => path.join(depot, "drivers", n)
   const lines = (n: string) => fs.readFileSync(logFile(n), "utf8").trim().split("\n").map((l) => JSON.parse(l))
 
@@ -326,15 +326,15 @@ describe("herdr-ws cross-project audit log (T12)", () => {
     expect(l.map((x) => [x.verb, x.workspace])).toEqual([["tab create", "w3"], ["agent start", "w3"]])
   })
 
-  it("own workspace, read verbs, Suite acts and an unset HERDR_WS write nothing", () => {
+  it("own workspace, read verbs, Castle acts and an unset HERDR_WS write nothing", () => {
     run(base(), ["agent", "prompt", "dgs-1", "hi"])
     run(base(), ["agent", "list"])
     run(base(), ["agent", "get", "dgs-2"])
     run(base(), ["pane", "read", "w3:p1"])
     run(base(), ["tab", "list"])
     run({ ...base(), HERDR_WS: "" }, ["agent", "prompt", "dgs-2", "hi"])
-    run(base(), ["--session", "Suite", "agent", "get", "tc-dgs-9"])
-    run(base(), ["--session", "Suite", "tab", "rename", "w7:t2", "tc-y"])
+    run(base(), ["--session", "Castle", "agent", "get", "tc-dgs-9"])
+    run(base(), ["--session", "Castle", "tab", "rename", "w7:t2", "tc-y"])
     expect(fs.existsSync(path.join(depot, "drivers"))).toBe(false)
   })
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """herdr-ws: herdr limited to a scope of (session, workspace) pairs (DGS-198 guardrail, DGS-683 scope).
-Scope: HERDR_SCOPE = comma list "session:workspace" (for example Suite:w7,default:w2,default:w3). Absent: default:$HERDR_WS (HERDR_WS must match ^w\\d+$ like every scope workspace).
+Scope: HERDR_SCOPE = comma list "session:workspace" (for example Castle:w7,default:w2,default:w3). Absent: default:$HERDR_WS (HERDR_WS must match ^w\\d+$ like every scope workspace).
 --session S as the first argument selects the session (S must be in the scope; no --session = default). Allowed groups: agent, pane, tab.
 Every target must sit in a workspace the scope names for that session. Lists are filtered. create needs --workspace in that set.
 start and prompt-type verbs check the target. The wrapper builds the herdr argv itself: it never forwards a --session or --socket of the caller."""
@@ -61,7 +61,7 @@ def agent_of_pane(p):
     except Exception: pass
     return ""
 def current_label(g, t):
-    # the name the Suite rules judge: a tab's label (tab get), an agent's name, or the agent that owns a pane; "" when unknown (fail closed)
+    # the name the Castle rules judge: a tab's label (tab get), an agent's name, or the agent that owns a pane; "" when unknown (fail closed)
     if g == "tab":
         try: return find(json.loads(run(["tab", "get", t]).stdout), "label") or ""
         except Exception: return ""
@@ -70,7 +70,7 @@ def current_label(g, t):
 def flag_values(args, names):
     return [args[i + 1] for i, x in enumerate(args) if x in names and i + 1 < len(args)]
 def relocate_check(args):
-    # pane move / pane swap relocate a pane between tabs or workspaces: every pane and destination named must be in the scope; in Suite every pane named must also belong to a tc-/nw- agent
+    # pane move / pane swap relocate a pane between tabs or workspaces: every pane and destination named must be in the scope; in Castle every pane named must also belong to a tc-/nw- agent
     # (else a conductor's pane could be moved into a tc- tab, and closing that tab would pass the label check). Implicit panes (--current, a swap neighbour by --direction) are refused: they cannot be checked.
     if "--new-workspace" in args or "--current" in args: deny("%s is not accepted for pane move or swap here" % ("--new-workspace" if "--new-workspace" in args else "--current"))
     panes = flag_values(args, ("--pane", "--source-pane", "--target-pane"))
@@ -82,9 +82,9 @@ def relocate_check(args):
     for x in panes + dests:
         w = x if WS_RE.match(x) else ws_of(x)
         if w not in WSS: deny("%s is not in the scope of session %s" % (x, SESSION))
-    if SESSION == "Suite":
+    if SESSION == "Castle":
         for x in panes:
-            if not ticket_name(agent_of_pane(x)): deny("in Suite only panes of tc- or nw- conductors can be moved or swapped")
+            if not ticket_name(agent_of_pane(x)): deny("in Castle only panes of tc- or nw- conductors can be moved or swapped")
     return panes[0]
 def audit(tgt, tws):
     # DGS-683 spec 6.3/7.1 item 5: a non-read act in the Floor on a workspace other than the caller's own appends one JSON line to <depot>/drivers/<KEY>.log.
@@ -150,16 +150,16 @@ else:
         TWS = ws_of(tgt)
         if TWS not in WSS: deny("target %s is not in the scope of session %s" % (tgt, SESSION))
     cmd = a
-if SESSION == "Suite":
-    # DGS-683: in Suite the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed.
+if SESSION == "Castle":
+    # DGS-683: in Castle the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed.
     # A label can be changed by rename, so rename is judged too: the CURRENT name and the NEW name must both be tc-/nw-.
     # herdr has no "agent stop" verb today; it stays here because the spec names it (7.1 item 4).
     if (grp == "tab" and verb == "close") or (grp == "agent" and verb == "stop") or (grp == "pane" and verb == "close"):
-        if not ticket_name(current_label(grp, rest[0])): deny("in Suite only tc- or nw- conductors can be closed")
+        if not ticket_name(current_label(grp, rest[0])): deny("in Castle only tc- or nw- conductors can be closed")
     elif verb == "rename":
-        if rest[0].startswith("-") or len(rest) < 2 or rest[1].startswith("-"): deny("in Suite rename needs a target and a new name")
-        if not ticket_name(current_label(grp, rest[0])): deny("in Suite only tc- or nw- conductors can be renamed")
-        if not ticket_name(rest[1]): deny("in Suite a new name must keep the tc- or nw- prefix")
+        if rest[0].startswith("-") or len(rest) < 2 or rest[1].startswith("-"): deny("in Castle rename needs a target and a new name")
+        if not ticket_name(current_label(grp, rest[0])): deny("in Castle only tc- or nw- conductors can be renamed")
+        if not ticket_name(rest[1]): deny("in Castle a new name must keep the tc- or nw- prefix")
 elif verb in ("close",) and grp == "tab" and rest and rest[0] in {w + ":t1" for w in WSS}: deny("tab 1 (maestro) cannot be closed here")
 audit(TGT, TWS)
 r = run(cmd)
