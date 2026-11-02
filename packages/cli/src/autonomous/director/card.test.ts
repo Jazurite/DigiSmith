@@ -61,6 +61,18 @@ describe("skills/director/SKILL.md", () => {
     expect(card).toMatch(/refine-brief\.md/);
     expect(card).toMatch(/do it yourself in your own session/i);
   });
+  it("F2: the Director keeps a Monitor watch on the refine worker's pane for 'STOP: plan-ready' and then asks the project conductor for the plan Reviewer; the wake-up rule has the exception", () => {
+    expect(card).toMatch(/Monitor/);
+    expect(card).toContain("STOP: plan-ready");
+    expect(card).toMatch(/keep a Monitor watch on (its|the worker's) pane for .?STOP: plan-ready/i);
+    expect(card).toMatch(/then ask the project conductor[^\n]*plan Reviewer/i);
+    expect(card).toMatch(/nothing else, except the refine watch/i);
+  });
+  it("F4: the card says how the Director stops a stuck refine run (dg run event <run-id> lost) and records it", () => {
+    expect(card).toMatch(/older than 6 hours/);
+    expect(card).toContain("dg run event <run-id> lost");
+    expect(card).toContain("dg director decide --id release-stopped");
+  });
   it("has the loop, the refine flow, the unblock table, escalation and the decision record", () => {
     for (const h of ["## The loop", "## The refine flow", "## Unblocking", "## Escalation", "## The decision record"]) expect(card).toContain(h);
   });
@@ -89,6 +101,10 @@ describe("skills/director/refine-brief.md", () => {
     expect(refineBrief).toMatch(/never write the .?Authority change approved by Jack/i);
     expect(refineBrief).toMatch(/name an authority path only when the plan changes it/i);
     expect(refineBrief).toContain("the protected paths (section 13, DEFAULT_PROTECTED)");
+  });
+  it("F2: the brief says the conductor relays 'STOP: plan-ready <path>' to the Director when the Director started the worker", () => {
+    expect(refineBrief).toMatch(/relay[^\n]*STOP: plan-ready/i);
+    expect(refineBrief).toMatch(/Director started you/i);
   });
   it("has the shape of a refine worker brief: docs only, no worktree, no branch, board folder, STOP: plan-ready, placeholders", () => {
     for (const s of ["docs only", "no worktree", "no branch", "STOP: plan-ready", "<KEY>", "<board folder>", "<seat>", "done"]) expect(refineBrief).toContain(s);

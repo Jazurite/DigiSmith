@@ -320,7 +320,7 @@ describe("the refine order", () => {
   it("names the file and the five steps", () => {
     expect(refineOrderPath("/o", "2026-11-03-1000", "DGS-1")).toBe("/o/order-ar-2026-11-03-1000-DGS-1.md");
     const t = renderRefineOrder({ key: "DGS-1", name: "Thing", taskId: "t1", claimedAtUtc7: "2026-11-03 10:00:00", stamp: "2026-11-03-1000", answer: null });
-    for (const s of ["refine-brief.md", "dg director seat", "plan Reviewer", "dg director refine-round", "dg clickup upload-attachment", "dg director refine-release", "no sudo", "Never start a Reviewer"]) expect(t.toLowerCase()).toContain(s.toLowerCase());
+    for (const s of ["refine-brief.md", "dg director seat", "plan Reviewer", "dg director refine-round", "dg clickup upload-attachment", "dg director refine-release", "no sudo", "Never start a Reviewer", "Monitor", "STOP: plan-ready"]) expect(t.toLowerCase()).toContain(s.toLowerCase());
     expect(t).not.toContain("Answer from Jack");
     expect(renderRefineOrder({ key: "DGS-1", name: "T", taskId: "t1", claimedAtUtc7: "x", stamp: "s", answer: "Use the name Forge" })).toContain("Use the name Forge");
   });

@@ -62,6 +62,23 @@ describe("planLoop", () => {
     const b = item({ id: "a.1", run: "r1", kind: "failed", cause: "classifier-block" });
     expect(planLoop(world({ items: [a, b] })).moves).toHaveLength(1);
   });
+  it("F1: a gate-wait with a done line is dropped from moves (shown list-only) and does not wake; before it is done it wakes", () => {
+    const refused = item({ id: "DGS-1.refused.0", run: "DGS-1", ticket: "DGS-1", kind: "refused", cause: "merge-refused: protected path", since: ago(40) });
+    const noRole = { roleOf: () => null };
+    const first = planLoop(world({ items: [refused], ...noRole }));
+    expect(first.moves.map((m) => m.kind)).toEqual(["gate-wait"]);
+    expect(first.wake).toBe(true);
+    const id = first.moves[0].id;
+    const done = { ts: ago(5), tsUtc7: "", ticket: "DGS-1", run: id, id: "record-decision", side: "within" as const, what: "w", why: "y", by: "director" as const, move: id, outcome: "done" as const };
+    const again = planLoop(world({ items: [refused], history: { decisions: [done], journal: [] }, ...noRole }));
+    expect(again.moves).toEqual([]);
+    expect(again.wake).toBe(false);
+    expect(again.hash).toBe("");
+    expect(again.shown).toMatchObject([{ kind: "list-only" }]);
+    // a failed line does not count as done
+    const failed = { ...done, outcome: "failed" as const };
+    expect(planLoop(world({ items: [refused], history: { decisions: [done, failed], journal: [] }, ...noRole })).moves.map((m) => m.kind)).toEqual(["gate-wait"]);
+  });
   it("pending comments alone do not wake the Director", () => {
     expect(planLoop(world({ pendingComments: 3 })).wake).toBe(false);
   });

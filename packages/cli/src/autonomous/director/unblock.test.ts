@@ -161,10 +161,26 @@ describe("blocked, failed, refused, others", () => {
   });
 });
 
+describe("F1: the merge gate's refused item has run = the ticket key", () => {
+  const gateItem = (since: string, over: Partial<OpenItem> = {}): OpenItem => item({ run: "DGS-1", ticket: "DGS-1", kind: "refused", cause: "merge-refused: protected path", since, ...over });
+  const noRole = ctx({ roleOf: () => null });
+  it("with the real run shape (run is the key, roleOf returns null) gate-wait comes out after 30 minutes and is list-only before", () => {
+    expect(movesFor(gateItem(ago(31)), hist(), noRole)).toMatchObject({ kind: "gate-wait", ticket: "DGS-1", ageMin: 31 });
+    expect(movesFor(gateItem(ago(10)), hist(), noRole)).toMatchObject({ kind: "list-only" });
+  });
+  it("only the gate's own shape skips the role check: another refused item with an unknown role stays list-only; another ticket is list-only", () => {
+    expect(movesFor(gateItem(ago(40), { run: "r1" }), hist(), noRole)).toMatchObject({ kind: "list-only" });
+    expect(movesFor(gateItem(ago(40), { ticket: "DGS-7", run: "DGS-7" }), hist(), noRole)).toMatchObject({ kind: "list-only" });
+    expect(movesFor(gateItem(ago(40), { cause: "classifier-block" }), hist(), noRole)).toMatchObject({ kind: "list-only" });
+  });
+});
+
 describe("the stuck refine lock", () => {
   const lock = (min: number): RefineLock => ({ ticket: "DGS-2", taskId: "t2", claimedAt: ago(min), claimedAtUtc7: "", order: "o", scanId: "s", attempt: 1, round: 1 });
   it("older than 360 minutes: refine-release escalated; younger or none: null", () => {
     expect(stuckLockMove(lock(361), NOW)).toMatchObject({ kind: "refine-release", lane: "refine", ticket: "DGS-2", result: "escalated" });
+    // F4: the reason is a real question for Jack
+    expect((stuckLockMove(lock(361), NOW) as { reason: string }).reason).toBe("The refine run of DGS-2 ran more than 6 hours without a clean plan. Say how to go on.");
     expect(stuckLockMove(lock(359), NOW)).toBeNull();
     expect(stuckLockMove(null, NOW)).toBeNull();
   });

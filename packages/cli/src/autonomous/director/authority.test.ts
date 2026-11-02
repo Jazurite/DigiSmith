@@ -176,6 +176,19 @@ describe("approvals written the way Jack writes them (F1, F2)", () => {
     expect(isCovered("skills/director", ["skills/director/SKILL.md"])).toBe(false);
     expect(isCovered("run/limit", ["packages/cli/src/run/limit/"])).toBe(true);
   });
+  it("F3: a listed folder that only ends with the token's first segment does not cover a file of the other tree", () => {
+    const code = "packages/cli/src/autonomous/director/";
+    expect(isCovered("director/refine.ts", ["skills/director/"])).toBe(false);
+    expect(isCovered("director/authority.ts", ["skills/director/"])).toBe(false);
+    expect(isCovered("director/refine.ts", [code])).toBe(true);
+    expect(isCovered("director/brief.md", ["skills/director/"])).toBe(true);
+    expect(isCovered("director/brief.md", [code])).toBe(false);
+    expect(isCovered("director/SKILL.md", ["skills/director/"])).toBe(true);
+    // equal or full-path prefix is unconditional
+    expect(isCovered("skills/director/brief.md", ["skills/director/"])).toBe(true);
+    expect(isCovered(`${code}refine.ts`, [code])).toBe(true);
+    expect(approvalCovers({ paths: ["skills/director/"] }, ["director/refine.ts"])).toEqual(["director/refine.ts"]);
+  });
   it("every spelling is covered by an approval of its own full path or an equal short form, and by nothing unrelated", () => {
     for (const p of AUTHORITY_PATHS) {
       for (const tok of namesAuthorityPath(`edit ${p} now`)) expect(isCovered(tok, [p])).toBe(true);

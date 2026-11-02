@@ -126,7 +126,7 @@ function refineLane(item: OpenItem, h: History, now: Date, ticket: string): Move
     for (const d of h.decisions) if (d.ticket === ticket && d.id === "restart-run") effective.set(d.run ?? "", d);
     const restarts = [...effective.values()].filter((d) => d.outcome !== "failed").length;
     if (restarts === 0) return withId({ kind: "start-again", ticket, run });
-    return withId({ kind: "refine-release", lane: "refine", ticket, result: restarts === 1 ? "failed" : "escalated", reason: `the refine worker was lost ${restarts + 1} times (${item.cause})` }, run);
+    return withId({ kind: "refine-release", lane: "refine", ticket, result: restarts === 1 ? "failed" : "escalated", reason: restarts === 1 ? `the refine worker of ${ticket} was lost twice (${item.cause})` : `The refine worker of ${ticket} was lost ${restarts + 1} times (${item.cause}). Say how to go on.` }, run);
   };
   switch (item.kind) {
     case "lost": return lostLike();
@@ -138,7 +138,7 @@ function refineLane(item: OpenItem, h: History, now: Date, ticket: string): Move
     case "failed": {
       const cls = classOf(item);
       if (cls === "unknown") return listOnly(item, "cause class unknown");
-      if (cls === "durable") return withId({ kind: "refine-release", lane: "refine", ticket, result: "escalated", reason: `the refine worker failed: ${item.cause}` }, run);
+      if (cls === "durable") return withId({ kind: "refine-release", lane: "refine", ticket, result: "escalated", reason: `The refine worker of ${ticket} failed with a cause only a person can fix: ${item.cause}. Say how to go on.` }, run);
       return lostLike();
     }
     case "blocked": return listOnly(item, "a prompt waits for Jack (answer-prompt): the Director never answers it");
@@ -155,6 +155,8 @@ export function movesFor(item: OpenItem, h: History, ctx: UnblockCtx): Move {
     return role === "other" || role === "refine" ? refineLane(item, h, ctx.now, item.ticket) : listOnly(item, `run role ${role ?? "unknown"} is not the refine worker: a conductor owns it`);
   }
   if (item.ticket === ctx.lockTicket) {
+    // The merge gate opens its "refused" item with run = the ticket key (not a run id), so it has no role: it is the factory ticket's own item.
+    if (item.kind === "refused" && item.run === item.ticket && item.cause.startsWith("merge-refused")) return buildLane(item, h, ctx.now, item.ticket);
     return role === "builder" ? buildLane(item, h, ctx.now, item.ticket) : listOnly(item, `run role ${role ?? "unknown"} is not the Builder: a conductor owns it`);
   }
   return listOnly(item, "not the factory ticket or the refine ticket: a conductor owns it");
@@ -163,5 +165,5 @@ export function movesFor(item: OpenItem, h: History, ctx: UnblockCtx): Move {
 /** A refine lock older than REFINE_LOCK_MAX_AGE_MINUTES is a world input of its own. */
 export function stuckLockMove(lock: RefineLock | null, now: Date): Move | null {
   if (lock === null || lockAgeMinutes(lock, now) <= REFINE_LOCK_MAX_AGE_MINUTES) return null;
-  return withId({ kind: "refine-release", lane: "refine", ticket: lock.ticket, result: "escalated", reason: `refine lock older than ${REFINE_LOCK_MAX_AGE_MINUTES} minutes` });
+  return withId({ kind: "refine-release", lane: "refine", ticket: lock.ticket, result: "escalated", reason: `The refine run of ${lock.ticket} ran more than ${REFINE_LOCK_MAX_AGE_MINUTES / 60} hours without a clean plan. Say how to go on.` });
 }

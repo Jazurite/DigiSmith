@@ -88,6 +88,14 @@ export function parseApproval(description: string): { date: string; paths: strin
   return date === null ? null : { date, paths };
 }
 
+const DOC_FILE = /\.(md|json|txt)$/i;
+/** True when a file named `rest` (below the matched folder name) can live in the listed folder: skills/ holds docs, every other folder holds code. */
+function fitsTree(listedFolder: string, rest: string): boolean {
+  if (rest === "") return true;   // a folder token: a folder approval covers it
+  const name = rest.replace(/\/$/, "");   // the slash-less retry adds a trailing slash
+  return listedFolder.startsWith("skills/") ? DOC_FILE.test(name) : !DOC_FILE.test(name);
+}
+
 /** Spec 4.4: equal, a /-boundary suffix of a listed path, or under a listed folder. A folder token needs a folder approval. */
 export function isCovered(token: string, listed: readonly string[]): boolean {
   let t = norm(token);
@@ -107,7 +115,10 @@ export function isCovered(token: string, listed: readonly string[]): boolean {
       if (x.startsWith(l)) return true;
       for (let i = x.indexOf("/"); i >= 0; i = x.indexOf("/", i + 1)) {
         const prefix = x.slice(0, i + 1);
-        if (l === prefix || l.endsWith(`/${prefix}`)) return true;
+        if (l === prefix) return true;
+        // A listed folder that only ENDS with the token's leading folder name is a different tree unless the file fits it:
+        // docs (.md, .json, .txt) live under skills/, code does not (skills/director/ does not cover director/refine.ts).
+        if (l.endsWith(`/${prefix}`) && fitsTree(l, x.slice(i + 1))) return true;
       }
     }
     return false;

@@ -30,8 +30,14 @@ export function planLoop(w: PlanWorld): Plan {
   for (const it of oldestFirst) all.push(movesFor(it, w.history, ctx));
   const seen = new Set<string>();
   const unique = all.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)));
-  const moves = unique.filter((m) => m.kind !== "none" && m.kind !== "list-only");
-  const shown = unique.filter((m) => m.kind !== "none");
+  // A move whose newest decision line is "done" is finished: it stays visible (list-only) but never wakes the Director again.
+  const last = new Map<string, string | undefined>();
+  for (const d of w.history.decisions) if (d.move !== undefined) last.set(d.move, d.outcome);
+  const finished = (m: Move): boolean => last.get(m.id) === "done";
+  const asListOnly = (m: Move): Move => ({ id: m.id, kind: "list-only", item: m.id, why: `${m.kind} already done: waiting` });
+  const live = unique.map((m) => (m.kind !== "list-only" && m.kind !== "none" && finished(m) ? asListOnly(m) : m));
+  const moves = live.filter((m) => m.kind !== "none" && m.kind !== "list-only");
+  const shown = live.filter((m) => m.kind !== "none");
   const hash = moves.length === 0 ? "" : createHash("sha1").update(moves.map((m) => m.id).join(",")).digest("hex").slice(0, 16);
   return { moves, shown, wake: moves.length > 0, hash };
 }

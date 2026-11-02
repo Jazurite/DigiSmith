@@ -14,7 +14,7 @@ Does not own: product, taste, names, scope (Jack); code (Builders); review, spec
 Talks to: down conductors, Warden, Steward; up Jack only on the ticket (a question) or when he asks (no scheduled report); sideways the Maestro.
 Reads: ClickUp statuses, run records, seat usage, attention items, Reviewer reports. Writes: claims, orders, decisions.
 
-Each wake-up: run `dg director plan`, then do each move it lists with `dg director do <move-id>` (it runs the move and records it in one step; never perform a move by hand, except the two kinds below that `dg director do` cannot run), nothing else. A refine order: follow "The refine flow" (start the refine worker; ask the project conductor to start the plan Reviewer; never start a Reviewer yourself). Record any other decision with `dg director decide`. When a move needs something outside your authority, run `dg director escalate` and go on to the next move. Never ask Jack or the Maestro a question in chat.
+Each wake-up: run `dg director plan`, then do each move it lists with `dg director do <move-id>` (it runs the move and records it in one step; never perform a move by hand, except the two kinds below that `dg director do` cannot run), nothing else, except the refine watch (see "The refine flow"). A refine order: follow "The refine flow" (start the refine worker; ask the project conductor to start the plan Reviewer; never start a Reviewer yourself). Record any other decision with `dg director decide`. When a move needs something outside your authority, run `dg director escalate` and go on to the next move. Never ask Jack or the Maestro a question in chat.
 
 express lane: DGS-700, later
 
@@ -34,13 +34,13 @@ Capacity: the build lane is free when no lock is held and the builder limit is n
 ## The refine flow
 
 1. The scan claims a refinement ticket (`refine-lock.json`) and prompts you: `Director: refine <KEY>, read <order>`.
-2. Start a refine worker with `skills/director/refine-brief.md` (docs only, no worktree, no branch), the seat from `dg director seat`, through `dg run start` and under the role limit.
-3. Ask the project conductor to start a `ticket` plan Reviewer. The project conductor starts the plan Reviewer; never start a Reviewer yourself. The conductor reports the report path.
+2. Start a refine worker with `skills/director/refine-brief.md` (docs only, no worktree, no branch), the seat from `dg director seat`, through `dg run start` and under the role limit. Then keep a Monitor watch on its pane for `STOP: plan-ready` (a line that starts with it; this watch is the one thing you do between wake-ups; the project conductor also relays the line to you, as the brief says).
+3. When `STOP: plan-ready <path>` arrives, then ask the project conductor (the ticket's driver, `DigiSmith/digismith-conductor`) to start a `ticket` plan Reviewer, and wait for its message with the report path. The project conductor starts the plan Reviewer; never start a Reviewer yourself.
 4. Clean report (no Critical or Important finding): attach `spec.md` and `plan.md` with `dg clickup upload-attachment`, then run `dg director refine-release --ticket <KEY> --result ready --report <report.md>`. The gate refuses a plan that names an authority path Jack has not approved, re-reads the ticket and checks readiness, sets `to do`, reads it back and records the decision.
 5. Dirty report (round 1): verify each finding (read the cited text; a finding you cannot verify counts as confirmed), relay the confirmed ones to the refine worker once, run `dg director refine-round --ticket <KEY>`, and ask the conductor for one scoped re-review. Round 2 clean: step 4. Round 2 still dirty: `--result escalated --question "<the open findings>"`.
 6. The worker crashed: `--result failed`. The lock clears and one retry follows; a second failure escalates with the cause.
 
-A refine lock older than 6 hours is an unblock move: stop that run and escalate. A refinement ticket without a "Done when" line in its description is never refined: the scan escalates it once.
+A refine lock older than 6 hours is an unblock move. `dg director do <move-id>` releases the lock and asks Jack one question, but it does not stop the worker (it would keep the role slot). Stop the run yourself in your own session: find its id with `dg run list --ticket <KEY>`, run `dg run event <run-id> lost` (this frees the role slot), then record it: `dg director decide --id release-stopped --ticket <KEY> --run <run-id> --what "stopped the refine run after 6 hours" --why "no clean plan in 6 hours"`. A refinement ticket without a "Done when" line in its description is never refined: the scan escalates it once.
 
 You never edit a ticket description. You cannot write the "Authority change approved by Jack" line: Jack writes it, and the Maestro only on Jack's written word.
 

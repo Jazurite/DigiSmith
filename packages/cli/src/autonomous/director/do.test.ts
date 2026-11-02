@@ -248,6 +248,26 @@ describe("doMove", () => {
     expect(existsSync(join(dir, "x.running"))).toBe(false);
   });
 
+  it("F1: after the gate-wait is done the plan no longer lists it as a move (it cannot wake again)", async () => {
+    const refused = item({ kind: "refused", cause: "merge-refused: protected path", since: ago(40), id: "DGS-1.refused.0", run: "DGS-1" });
+    const noRole = { roleOf: () => null };
+    const w = world([refused], noRole);
+    expect((await doMove(deps(), w, idOf(w, "gate-wait"))).code).toBe(0);
+    const later = world([refused], noRole);
+    expect(planLoop(later).moves).toEqual([]);
+    expect(planLoop(later).wake).toBe(false);
+  });
+
+  it("F4: a stuck refine lock asks Jack a real question and the refine release gets it", async () => {
+    const seen: { question?: string }[] = [];
+    const e = effects();
+    e.refineRelease = async (a) => { seen.push({ question: a.question }); return { code: 0, text: "released" }; };
+    const lock = { ticket: "DGS-2", taskId: "t2", claimedAt: ago(400), claimedAtUtc7: "", order: "o", scanId: "s", attempt: 1, round: 1 } as const;
+    const w = world([], { lockTicket: null, refineLock: lock });
+    expect((await doMove(deps({ effects: e }), w, idOf(w, "refine-release"))).code).toBe(0);
+    expect(seen[0].question).toBe("The refine run of DGS-2 ran more than 6 hours without a clean plan. Say how to go on.");
+  });
+
   it("gate-wait only records", async () => {
     const w = world([item({ kind: "refused", cause: "merge-refused: protected path", since: ago(40), id: "r1.refused.0" })]);
     const r = await doMove(deps(), w, idOf(w, "gate-wait"));
