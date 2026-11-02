@@ -32,6 +32,8 @@ export interface FluxTarget {
   wake?: string;
   /** Names of this conductor's workers; any of them listed in herdr, in any status, blocks the flux. */
   workers?: string[];
+  /** The herdr session the conductor runs in; "default" when absent (DGS-683). */
+  session?: string;
 }
 
 export interface HerdrAgent {

@@ -41,6 +41,20 @@ describe("fluxRunner guard (the real herdr is touched only through herdr-ws, wit
     await expect(fluxRunner(inner, { allowPrompt: true })(HERDR_WS_BIN, args)).rejects.toThrow(/refused/);
     expect(calls).toEqual([]);
   });
+  it("allows exactly one leading --session pair and checks the verbs after it", async () => {
+    const { calls, inner } = rec();
+    const run = fluxRunner(inner, { allowPrompt: true });
+    await run(HERDR_WS_BIN, ["--session", "Suite", "agent", "list"]);
+    await run(HERDR_WS_BIN, ["--session", "Suite", "agent", "prompt", "tec", "/clear"]);
+    expect(calls).toHaveLength(2);
+    for (const args of [
+      ["--session", "Suite", "agent", "stop", "x"],
+      ["--session", "Suite", "--session", "default", "agent", "list"],
+      ["--session", "bad name", "agent", "list"],
+      ["--session", "Suite"],
+    ]) await expect(run(HERDR_WS_BIN, args)).rejects.toThrow(/refused/);
+    expect(calls).toHaveLength(2);
+  });
   it("refuses any other command", async () => {
     const { inner } = rec();
     await expect(fluxRunner(inner, { allowPrompt: true })("herdr", ["agent", "list"])).rejects.toThrow(/refused/);
@@ -50,6 +64,23 @@ describe("fluxRunner guard (the real herdr is touched only through herdr-ws, wit
     const { calls, inner } = rec();
     await expect(fluxRunner(inner, { allowPrompt: false })(HERDR_WS_BIN, ["agent", "prompt", "tec", "/clear"])).rejects.toThrow(/refused/);
     expect(calls).toEqual([]);
+  });
+});
+
+describe("createFluxHerdr session prefix", () => {
+  it("prefixes every call with --session for a named session and not for default", async () => {
+    for (const [session, prefix] of [["Suite", ["--session", "Suite"]], ["default", []], [undefined, []]] as const) {
+      const calls: string[][] = [];
+      const inner: Runner = async (_c, args) => (calls.push(args), ok(JSON.stringify({ result: { agents: [], agent: { name: "a" } } })));
+      const h = createFluxHerdr(inner, session);
+      await h.list();
+      await h.get("a");
+      await h.readInput("w2:pK");
+      await h.sendPrompt("a", "hi");
+      expect(calls.map((c) => c.slice(0, prefix.length + 2))).toEqual([
+        [...prefix, "agent", "list"], [...prefix, "agent", "get"], [...prefix, "pane", "read"], [...prefix, "agent", "prompt"],
+      ]);
+    }
   });
 });
 
@@ -105,7 +136,7 @@ describe("flux targets", () => {
     const t = resolveTarget("token-economics-conductor", {}, env, repo);
     expect(t).toEqual({
       agent: "token-economics-conductor", project: "DigiSmith", brief: "/repo/.digismith/sessions/b3-maestro/brief.md",
-      note: "/repo/.digismith/sessions/b3-maestro/note.md", wake: "read Current first", workers: undefined,
+      note: "/repo/.digismith/sessions/b3-maestro/note.md", wake: "read Current first", workers: undefined, session: "default",
     });
     expect(loadTargets(env, repo).map((x) => x.agent)).toEqual(["token-economics-conductor"]);
   });
@@ -118,8 +149,20 @@ describe("flux targets", () => {
     fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/zed-conductor": { note: "/n/zed.md" } }));
     expect(resolveTarget("zed-conductor", {}, env, repo)).toMatchObject({ note: "/n/zed.md", brief: "/repo/.digismith/sessions/zed-conductor/brief.md", project: "DigiSmith" });
   });
-  it("a target with no source at all is undefined; unsafe names are refused", () => {
+  it("a target with no source at all is undefined", () => {
     expect(resolveTarget("nobody", {}, env, repo)).toBeUndefined();
+  });
+  it("resolveTarget carries the session of the registry entry, default for an old one", () => {
+    fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/d3-conductor": { session: "Suite", workspace: "w7", note: "/n/d3.md" }, "DigiSmith/old": { note: "/n/old.md" } }));
+    const env = { DIGISMITH_DEPOT_DIR: tmp };
+    expect(resolveTarget("d3-conductor", {}, env, "/repo")?.session).toBe("Suite");
+    expect(resolveTarget("old", {}, env, "/repo")?.session).toBe("default");
+  });
+  it("resolveTarget falls to default when conductors.json is broken", () => {
+    fs.writeFileSync(path.join(tmp, "conductors.json"), "{");
+    expect(resolveTarget("x", { brief: "/b", note: "/n" }, { DIGISMITH_DEPOT_DIR: tmp }, "/repo")?.session).toBe("default");
+  });
+  it("unsafe names are refused", () => {
     expect(() => resolveTarget("../evil", {}, env, repo)).toThrow(/refused/);
   });
   it("a broken targets file throws a clear error", () => {
@@ -205,6 +248,29 @@ describe("fluxMain (the CLI)", () => {
     const r = await run(["one"], { env: { HERDR_WS: "" } });
     expect(r.code).toBe(1);
     expect(r.e).toContain("HERDR_WS");
+  });
+  it("HERDR_SCOPE alone is enough; with neither set the error names both", async () => {
+    const r = await run(["one"], { env: { HERDR_WS: "", HERDR_SCOPE: "Suite:w7,default:w2" } });
+    expect(r.code).toBe(0);
+    const none = await run(["one"], { env: { HERDR_WS: "", HERDR_SCOPE: "" } });
+    expect(none.code).toBe(1);
+    expect(none.e).toContain("HERDR_WS");
+    expect(none.e).toContain("HERDR_SCOPE");
+  });
+  it("--all builds one herdr per session of the targets", async () => {
+    fs.writeFileSync(path.join(tmp, "conductors.json"), JSON.stringify({ "DigiSmith/two": { session: "Suite", workspace: "w7" } }));
+    const asked: { dryRun: boolean; session?: string }[] = [];
+    const seen: string[] = [];
+    const out = { o: "" };
+    const code = await fluxMain(["--all", "--dry-run"], {
+      stdout: (s) => void (out.o += s), stderr: () => {}, now: () => new Date(), env: { DIGISMITH_DEPOT_DIR: tmp, HERDR_SCOPE: "Suite:w7,default:w2" },
+      repoRoot: "/repo", transcriptDir: "/t", makeHerdr: (o) => (asked.push(o), { id: o.session } as unknown as FluxHerdr),
+      flux: async (t, _o, d) => (seen.push(`${t.agent}@${(d.herdr as unknown as { id: string }).id}`), result(t.agent)),
+    });
+    expect(code).toBe(0);
+    expect(asked.map((a) => a.session).sort()).toEqual(["Suite", "default"]);
+    expect(seen.sort()).toEqual(["one@default", "two@Suite"]);
+    expect(out.o.split("\n")[0]).toBe("Targets (2): one, two");
   });
   it("an unknown agent with no target source is an error", async () => {
     const r = await run(["nobody"]);

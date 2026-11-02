@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { depotDir } from "../depot-dir.ts";
 import { resolveNotePath } from "./state.ts";
+import { resolveConductor } from "./registry.ts";
 import type { FluxTarget } from "./flux.ts";
 
 export const TARGETS_FILE = "flux-targets.json";
@@ -60,5 +61,11 @@ export function resolveTarget(
   if (!e && !note && !flags.brief) return undefined;
   note ??= resolveNotePath({ project, conductor: agent }, env);
   const brief = flags.brief ?? e?.brief ?? path.join(".digismith", "sessions", agent, "brief.md");
-  return { agent, project, brief: abs(brief, repoRoot), note: abs(note, repoRoot), wake: flags.wake ?? e?.wake, workers: e?.workers };
+  let session = "default";
+  try {
+    session = resolveConductor(`${project}/${agent}`, env)?.session ?? "default";
+  } catch {
+    // an unusable conductors.json: the old default session
+  }
+  return { agent, project, brief: abs(brief, repoRoot), note: abs(note, repoRoot), wake: flags.wake ?? e?.wake, workers: e?.workers, session };
 }

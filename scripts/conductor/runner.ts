@@ -29,7 +29,7 @@ const TARGET = /^[A-Za-z0-9][A-Za-z0-9._@:-]*$/;
 const REPO = /^(\$HOME|~)?(\/[A-Za-z0-9._-]+)+$/;
 const NAME = /^[A-Za-z0-9._-]+$/;
 const SINCE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})$/;
-const LABEL = /^[A-Za-z0-9._-]+$/;
+export const LABEL = /^[A-Za-z0-9._-]+$/;
 
 export interface SshStateOpts {
   target: string;

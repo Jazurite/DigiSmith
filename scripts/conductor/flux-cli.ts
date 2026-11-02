@@ -33,7 +33,7 @@ export interface FluxCliIo {
   repoRoot: string;
   transcriptDir: string;
   /** Builds the herdr; the dry-run flag decides whether prompt can exist at all. */
-  makeHerdr?: (o: { dryRun: boolean }) => FluxHerdr;
+  makeHerdr?: (o: { dryRun: boolean; session?: string }) => FluxHerdr;
   flux?: typeof fluxConductor;
   sleep?: (ms: number) => Promise<void>;
 }
@@ -68,8 +68,8 @@ export async function fluxMain(argv: string[], io: FluxCliIo): Promise<number> {
     return 1;
   }
   const dryRun = !!o["dry-run"];
-  if (!io.env.HERDR_WS) {
-    io.stderr("flux needs HERDR_WS (for example HERDR_WS=w2): herdr is touched only through herdr-ws\n");
+  if (!io.env.HERDR_WS && !io.env.HERDR_SCOPE) {
+    io.stderr("flux needs HERDR_SCOPE (for example HERDR_SCOPE=Suite:w7,default:w2) or HERDR_WS (for example HERDR_WS=w2): herdr is touched only through herdr-ws\n");
     return 1;
   }
   try {
@@ -83,22 +83,28 @@ export async function fluxMain(argv: string[], io: FluxCliIo): Promise<number> {
       }
       targets = [t];
     }
-    const deps: FluxDeps = {
-      herdr: io.makeHerdr ? io.makeHerdr({ dryRun }) : createFluxHerdr(fluxRunner(execRunner, { allowPrompt: !dryRun })),
+    const depsFor = (session: string): FluxDeps => ({
+      herdr: io.makeHerdr ? io.makeHerdr({ dryRun, session }) : createFluxHerdr(fluxRunner(execRunner, { allowPrompt: !dryRun }), session),
       now: io.now,
       sleep: io.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
       env: io.env,
       transcriptDir: io.transcriptDir,
       repoRoot: io.repoRoot,
-    };
+    });
     const opts = { dryRun, log: !dryRun || !!o.log };
     const run = io.flux ?? fluxConductor;
     let results: FluxResult[];
     if (o.all) {
       const names = allTargets(targets).map((t) => t.agent);
       io.stdout(o.json ? `${JSON.stringify({ event: "targets", targets: names })}\n` : `Targets (${names.length}): ${names.join(", ")}\n`);
-      results = (await fluxAll(targets, opts, deps, run)).results;
-    } else results = [await run(targets[0], { ...opts, named: true }, deps)];
+      // one herdr per session; the targets keep their order inside a session
+      results = [];
+      const sessions = [...new Set(allTargets(targets).map((t) => t.session ?? "default"))];
+      for (const session of sessions) {
+        const group = targets.filter((t) => (t.session ?? "default") === session);
+        results.push(...(await fluxAll(group, opts, depsFor(session), run)).results);
+      }
+    } else results = [await run(targets[0], { ...opts, named: true }, depsFor(targets[0].session ?? "default"))];
     for (const r of results) io.stdout(o.json ? `${JSON.stringify(r)}\n` : line(r));
     return results.some((r) => r.result === "failed") ? 2 : 0;
   } catch (e) {

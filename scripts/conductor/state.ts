@@ -269,7 +269,7 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     } else {
       const parse = (out: string) => /^status:\s*(.+)$/m.exec(out)?.[1].trim() ?? "unknown";
       let up = parse(st.stdout);
-      if (own) {
+      if (own && entry) {
         const fl = await deps.runner("herdr", ["--session", "default", "status", "server"]);
         if (fl.code !== 0) warnings.push(`herdr Floor status failed: ${fl.stderr.trim() || `exit ${fl.code}`}`);
         up = `${entry.session} ${up}; Floor ${fl.code === 0 ? parse(fl.stdout) : "unknown"}`;

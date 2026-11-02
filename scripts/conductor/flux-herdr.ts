@@ -1,7 +1,7 @@
 // The real herdr for the flux: ONLY through the herdr-ws wrapper (HERDR_WS=w2), and only four verbs.
 // Closing, killing, starting, focusing and key sending do not exist here; a runner guard refuses them before anything runs.
 import type { FluxHerdr, HerdrAgent } from "./flux.ts";
-import { execRunner, type Runner } from "./runner.ts";
+import { execRunner, LABEL, type Runner } from "./runner.ts";
 
 export const HERDR_WS_BIN = "/Users/workbox/.digismith-depot/bin/herdr-ws";
 
@@ -25,9 +25,17 @@ function checkPrompt(a: string[]): void {
 
 /** Observer-grade guard with one extra verb: a prompt, and only when allowed (a dry run is built without it). */
 export function fluxRunner(inner: Runner, o: { allowPrompt: boolean }): Runner {
-  return async (cmd, args, opts) => {
+  return async (cmd, full, opts) => {
     if (cmd !== HERDR_WS_BIN) refuse(`command ${cmd}`);
-    const [g, v] = args;
+    let args = full;
+    // one optional leading --session <label>; the verbs after it are checked as before
+    let a = args;
+    if (a[0] === "--session") {
+      if (!a[1] || !LABEL.test(a[1])) refuse("herdr-ws --session value");
+      a = a.slice(2);
+    }
+    const [g, v] = a;
+    args = a;
     if (g === "agent" && v === "list" && args.length === 2) {
       // allowed
     } else if (g === "agent" && v === "get" && args.length === 3 && NAME.test(args[2])) {
@@ -41,7 +49,7 @@ export function fluxRunner(inner: Runner, o: { allowPrompt: boolean }): Runner {
       if (!o.allowPrompt) refuse("agent prompt (this runner is read-only)");
       checkPrompt(args);
     } else refuse(`herdr-ws ${args.slice(0, 2).join(" ")}`);
-    return inner(cmd, args, opts);
+    return inner(cmd, full, opts);
   };
 }
 
@@ -52,7 +60,10 @@ const toAgent = (a: Record<string, unknown>): HerdrAgent => ({
   session: String((a.agent_session as { value?: string } | undefined)?.value ?? ""),
 });
 
-export function createFluxHerdr(run: Runner = fluxRunner(execRunner, { allowPrompt: true })): FluxHerdr {
+export function createFluxHerdr(run: Runner = fluxRunner(execRunner, { allowPrompt: true }), session = "default"): FluxHerdr {
+  const pre = session === "default" ? [] : ["--session", session];
+  const base = run;
+  run = (cmd, args, opts) => base(cmd, [...pre, ...args], opts);
   return {
     async list() {
       const r = await run(HERDR_WS_BIN, ["agent", "list"]);
