@@ -496,6 +496,15 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 
 Same key rule as the step-start block in Setup.
 
+Then stamp the task (Hallmark, DGS-546). The stamp needs the `task_end` just written:
+
+```bash
+dg clickup task-stamp --task <Key> --plan-task <N> --ledger <workspace>/progress.md --yes
+```
+
+Same key rule as the checklist sync: a ClickUp key (`DGS-<n>`) stamps, any other key or none skips. A non-zero exit never blocks
+the build: print a warning, append `Task stamp: failed (<first stderr line>)` to the ledger and go on.
+
 Then sync the checklist (Plan Checklist (DGS-634)): the `complete` line ticks Fix, and the task item with it.
 
 Then mark the todo complete and move on. Never move to the next task while
@@ -665,6 +674,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 Same key rule as the step-start block in Setup.
+
+Then stamp the final window, while the ledger still exists (the Finish step deletes it):
+
+```bash
+dg clickup task-stamp --task <Key> --plan-task final --ledger <workspace>/progress.md --yes
+```
+
+Same key rule and failure rule as the task stamp above: warn, append `Task stamp: failed (<first stderr line>)`, go on.
 
 ## Finish
 

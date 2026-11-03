@@ -73,3 +73,17 @@ Cost: per response, at list price, from the table `ANTHROPIC_PRICES_VERSION`. A 
 Job: `oculus-tokens` in the Nexus API scheduler runs the command every 5 minutes. It starts no model. It loads at the next API restart.
 
 The usage probe stays manual. The conductor saves `out-<seat>.json` (runbook "Reading usage"). A scheduled probe is a follow-up ticket the Maestro files.
+
+## Hallmark (DGS-546)
+
+Two commands put token cost into ClickUp. Both write only with `--yes`. Without it they run dry and print what they would write.
+
+`dg clickup task-stamp --task <Key> --plan-task <N|final> --ledger <file> [--findings <file>] [--yes]` posts one comment for one task of the SDD plan. `--all` stamps every task of the ledger (backfill). The subagent-driven-development skill calls it after each `task-end`, and once with `final` before the ledger is deleted. On failure it exits 1 and prints one `warn:` line.
+
+`dg clickup ticket-total --task <Key> [--yes]` writes the Hallmark block (the ticket total) into the ticket description. The finishing skill calls it in the merge, push-and-PR and keep-as-is options, not in discard.
+
+Cost is priced per response, from the window of the task, at the list price of the model of each response.
+
+Stamps file: `~/.digismith-depot/token-registry/<Key>.stamps.jsonl`. Each stamp is also written there. The ledger is deleted before finishing, so the total reads the stamps file, not the ledger.
+
+Idempotence: a stamp that is already in the ledger (a line), in the stamps file or in ClickUp (the marker on the first line of the comment) is not posted again. A second run changes nothing.

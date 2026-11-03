@@ -290,6 +290,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
+Then stamp the ticket total (Hallmark, DGS-546). Same key rule as the start block:
+
+```bash
+dg clickup ticket-total --task <Key> --yes
+```
+
+A non-zero exit never blocks finishing: print a warning and go on.
+
 Once cleanup (Step 6) is done, continue to Step 7 to hand off.
 
 ### Option 2: Push and Create PR
@@ -350,6 +358,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
+Then stamp the ticket total (Hallmark, DGS-546). Same key rule as the start block:
+
+```bash
+dg clickup ticket-total --task <Key> --yes
+```
+
+A non-zero exit never blocks finishing: print a warning and go on.
+
 Once the Teams-notification offer is resolved (either answer), continue to Step 7 to hand off.
 
 ### Option 3: Keep As-Is
@@ -362,6 +378,14 @@ Mark the end of finishing. Use the key from the start block:
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
+
+Then stamp the ticket total (Hallmark, DGS-546). Same key rule as the start block:
+
+```bash
+dg clickup ticket-total --task <Key> --yes
+```
+
+A non-zero exit never blocks finishing: print a warning and go on.
 
 ### If your human partner asks to discard the work
 
