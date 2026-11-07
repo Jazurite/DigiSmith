@@ -7,7 +7,7 @@ a = "Basic " + base64.b64encode(("opencode:" + os.environ["OPENCODE_SERVER_PASSW
 def api(p, b=None):
     r = urllib.request.Request("http://127.0.0.1:%s%s" % (port, p), data=None if b is None else json.dumps(b).encode(), headers={"Authorization": a, "content-type": "application/json"})
     return json.load(urllib.request.urlopen(r, timeout=300))
-R = "/Users/workbox/Workspace/Jazurite/DigiSmith"
+R = "/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith"
 ASKS = [
  ("A1 status", "PILOT A1. Read the maestro note (%s/.digismith/sessions/DigiSmith/note.md) and give a status in a short table: done, in progress, blocked, needs Jack. Start nothing. Max 15 lines." % R),
  ("A2 agents", "PILOT A2. List the live agents in your herdr workspace with their status, one line each. Start nothing."),

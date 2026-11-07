@@ -320,7 +320,7 @@ git commit -m "docs(dgs-566): pass the ticket key in the SDD role-mode pack comm
 
 ## After the merge (first use)
 
-Merges do not rebuild the global `dg`. After the merge and push, in the MAIN checkout (`/Users/workbox/Workspace/Jazurite/DigiSmith`):
+Merges do not rebuild the global `dg`. After the merge and push, in the MAIN checkout (`/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith`):
 
 1. `pnpm --filter @digismith/cli build`
 2. First use: the global `dg reviewer pack --help` lists `--ticket`. The ticket is verified in use when that line shows. (Plugin update and the version bump are the merge order's post-finish hooks 01-03, not repeated here.)

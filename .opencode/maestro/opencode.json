@@ -200,7 +200,7 @@
         "question": "deny",
         "external_directory": {
           "*": "deny",
-          "/Users/workbox/Workspace/Jazurite/DigiSmith/*": "allow",
+          "/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/*": "allow",
           "/Users/workbox/.digismith-depot/bin/*": "allow"
         }
       }
@@ -383,7 +383,7 @@
         "question": "deny",
         "external_directory": {
           "*": "deny",
-          "/Users/workbox/Workspace/Jazurite/DigiSmith/*": "allow",
+          "/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/*": "allow",
           "/Users/workbox/.digismith-depot/bin/*": "allow"
         }
       }

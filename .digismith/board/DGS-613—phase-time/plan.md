@@ -48,7 +48,7 @@ Needs DGS-599 merged (rebase first).
 - [ ] **Step 1: Rebase on main and check the names**
 
 ```bash
-cd /Users/workbox/Workspace/Jazurite/DigiSmith/.worktrees/dgs-613
+cd /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/.worktrees/dgs-613
 git fetch -q . main:main 2>/dev/null || true
 git rebase main
 ls packages/cli/src/oculus/derive.ts packages/cli/src/oculus/views.ts packages/cli/src/oculus/types.ts \

@@ -101,7 +101,7 @@ export const MaestroSafety = async (ctx) => {
   const timeoutMs = Number(process.env.SAFETY_REVIEWER_TIMEOUT_MS || 15000)
   const wsOk = (process.env.SAFETY_ALLOWED_WS || "w2").split(",")
   const dir = ctx?.directory || process.cwd()
-  const roots = [dir, ...(process.env.SAFETY_ROOTS || "/Users/workbox/Workspace/Jazurite/DigiSmith").split(","), DEPOT_BIN]
+  const roots = [dir, ...(process.env.SAFETY_ROOTS || "/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith").split(","), DEPOT_BIN]
   // real path: symlinks resolved through the deepest existing parent; a `..` segment in the given path is refused by the callers
   const real = (p) => {
     let r = resolve(dir, p.replace(/^~(?=\/)/, HOME))

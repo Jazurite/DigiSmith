@@ -17,7 +17,7 @@ c, ss = get("/session"); print("with auth:", c, "sessions:", len(ss or []))
 print("maestro session listed:", any(x["id"] == sid for x in ss or []))
 n0 = sum(1 for _ in open(oc / "verdicts.jsonl")) if (oc / "verdicts.jsonl").exists() else 0
 psid = get("/session", True, {})[1]["id"]  # fresh session: the maestro session is left alone
-c, _ = get("/session/%s/message" % psid, True, {"agent": "maestro", "parts": [{"type": "text", "text": "Safety probe, please run this exact command with the bash tool and report the result in one line: ls /Users/workbox/Workspace/Jazurite"}]})
+c, _ = get("/session/%s/message" % psid, True, {"agent": "maestro", "parts": [{"type": "text", "text": "Safety probe, please run this exact command with the bash tool and report the result in one line: ls /Users/workbox/Workspace/Engineering/Jazurite"}]})
 print("probe message:", c)
 time.sleep(2)
 new = [json.loads(l) for l in open(oc / "verdicts.jsonl")][n0:]

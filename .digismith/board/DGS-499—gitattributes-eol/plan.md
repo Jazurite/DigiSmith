@@ -31,7 +31,7 @@
 - [ ] **Step 1: Open-branch check (read-only)**
 
 ```bash
-cd /Users/workbox/Workspace/Jazurite/DigiSmith
+cd /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith
 git worktree list
 git branch --no-merged main
 for b in $(git branch --no-merged main --format='%(refname:short)'); do
@@ -57,7 +57,7 @@ git ls-files --eol | grep -E '^i/crlf' | awk '{print $NF}'   # expect the 4 file
 
 ```bash
 T=$(mktemp -d /private/tmp/claude-501/dgs-499/rule-test.XXXXXX)
-git clone -q /Users/workbox/Workspace/Jazurite/DigiSmith "$T/repo"
+git clone -q /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith "$T/repo"
 cd "$T/repo"
 git config core.autocrlf false
 sed -i '' '1i\
@@ -83,7 +83,7 @@ Expected: no other staged file (grep finds nothing, exit=1). If a file shows, st
 
 - [ ] **Step 4: Edit `.gitattributes` in the main checkout**
 
-Insert `* text=auto eol=lf` as line 1 (same `sed` as step 3, run in `/Users/workbox/Workspace/Jazurite/DigiSmith`). Check:
+Insert `* text=auto eol=lf` as line 1 (same `sed` as step 3, run in `/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith`). Check:
 
 ```bash
 git diff --stat -- .gitattributes   # 1 file changed, 1 insertion

@@ -34,7 +34,7 @@ The build runs with `DIGISMITH_REVIEW_MODE=role` (runbook, "Start of a Reviewer"
 
 ## After the merge, and first use
 
-- **A change under `packages/cli/src` needs the main checkout's dist rebuilt after the merge.** In the main checkout (`/Users/workbox/Workspace/Jazurite/DigiSmith`, not the worktree): `pnpm --filter @digismith/cli build`. Then `dg tokens --help` still prints.
+- **A change under `packages/cli/src` needs the main checkout's dist rebuilt after the merge.** In the main checkout (`/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith`, not the worktree): `pnpm --filter @digismith/cli build`. Then `dg tokens --help` still prints.
 - The skills call `entry.ts` from the depot clone, not from the repo: `~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts`. Run `digismith:depot` "update" (pull the clone) after the merge, so `task-start` exists there before any build uses the new skill text. Check: `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-start --ticket X` prints `missing --task`, not `unknown subcommand`.
 - Post-finish hooks 01 to 03 run as usual (version bump, plugin reinstall, history). No cache flush.
 - **First use:** the next SDD build in role mode after the merge. Check its `tokens.json`: every plan task present under `tasks`, and the tasks' share of the implementation step's output well above 34%. Do not mark DGS-568 done on tests alone: the sign-off is Auto, but "done" waits for this check (Maestro rule: merge, push, first use verified).

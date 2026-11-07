@@ -173,7 +173,7 @@ describe("sweep", () => {
   const stateFile = () => path.join(depot(), "drift-sweep.json");
   const csvFile = () => path.join(depot(), "drift.csv");
   const sweepOnce = (count = countSweepRepo, at = "2026-10-26T07:05:00Z") =>
-    runSweep({ root: tmp, stateFile: stateFile(), csvFile: csvFile(), now: () => new Date(at), count });
+    runSweep({ roots: [tmp], stateFile: stateFile(), csvFile: csvFile(), now: () => new Date(at), count });
   const csvRows = () => fs.readFileSync(csvFile(), "utf8").trim().split("\n").slice(1);
   // the sweep root is tmp, so keep the depot out of it
   beforeEach(() => { tmp = path.join(tmp, "ws"); fs.mkdirSync(tmp); fs.mkdirSync(path.join(path.dirname(tmp), "depot"), { recursive: true }); });
@@ -263,6 +263,17 @@ describe("sweep", () => {
       expect(code).toBe(0);
       expect(lines).toEqual(["a: 1 eol, 0 mode", "b: 0 eol, 1 mode", "dead: broken git link (../nowhere)"]);
       expect(fs.existsSync(path.join(path.dirname(tmp), "depot/observability/drift-sweep.json"))).toBe(true);
+    });
+    it("sweeps every --root and names repos from their common parent", () => {
+      world();
+      const other = fs.mkdtempSync(path.join(path.dirname(tmp), "office-"));
+      fs.mkdirSync(path.join(other, "emma/.git"), { recursive: true });
+      const { code, lines } = go(["--sweep", "--root", tmp, "--root", other]);
+      expect(code).toBe(0);
+      const st = JSON.parse(fs.readFileSync(path.join(path.dirname(tmp), "depot/observability/drift-sweep.json"), "utf8"));
+      expect(st.repos.map((r: { repo: string }) => r.repo)).toEqual(expect.arrayContaining([path.join(path.basename(tmp), "a"), path.join(path.basename(other), "emma")]));
+      expect(lines).toContain(`${path.join(path.basename(tmp), "a")}: 1 eol, 0 mode`);
+      fs.rmSync(other, { recursive: true, force: true });
     });
     it("exit 1 when the root is missing", () => {
       expect(go(["--sweep", "--root", path.join(tmp, "nope")]).code).toBe(1);

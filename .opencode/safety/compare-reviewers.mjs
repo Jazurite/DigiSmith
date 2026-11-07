@@ -1,6 +1,6 @@
 // Reviewer model comparison on fixed inputs. Usage: OPENCODE_SAFETY=1 SAFETY_LOG=<file> node compare-reviewers.mjs <model> ...
 // Prints verdict, expected set, tokens. Costs a few thousandths of a dollar per model.
-const R = "/Users/workbox/Workspace/Jazurite/DigiSmith/.worktrees/dgs-223", H = "/Users/workbox/.digismith-depot/bin/herdr-ws"
+const R = "/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/.worktrees/dgs-223", H = "/Users/workbox/.digismith-depot/bin/herdr-ws"
 const F = R + "/.digismith/sessions/opencode-maestro/"
 const w = (user, f, content, ok) => [user, "write", { filePath: F + f, content }, ok]
 const h = (user, c, ok) => [user, "bash", { command: `HERDR_WS=w2 ${H} ${c}` }, ok]

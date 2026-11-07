@@ -1,7 +1,7 @@
 // Free test (no model): calls the plugin hook directly. Usage: OPENCODE_SAFETY=1 SAFETY_LOG=<file> SAFETY_REVIEWER_URL=http://127.0.0.1:1 node test-rules.mjs
 // Reviewer is pointed at a closed port, so every "review" case must end as a block (fail closed).
 import { MaestroSafety } from "./maestro-safety.js"
-const R = "/Users/workbox/Workspace/Jazurite/DigiSmith/.worktrees/dgs-223"
+const R = "/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/.worktrees/dgs-223"
 const H = "/Users/workbox/.digismith-depot/bin/herdr-ws"
 const hooks = await MaestroSafety({ directory: R, client: { session: { messages: async () => ({ data: [] }) } } })
 const cases = [

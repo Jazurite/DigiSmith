@@ -3,11 +3,11 @@
 ## Before Jack opens the new session (the Maestro or conductor runs this once)
 Creates the real record in the depot (never in the repo; refuses to overwrite):
 
-    node --experimental-strip-types /Users/workbox/Workspace/Jazurite/DigiSmith/scripts/identity-cli.ts write \
+    node --experimental-strip-types /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/scripts/identity-cli.ts write \
       --id digismith-maestro --name "DigiSmith Maestro" --owner jack --project DigiSmith \
-      --folder /Users/workbox/Workspace/Jazurite/DigiSmith --conductors digismith-conductor
+      --folder /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith --conductors digismith-conductor
 
-Check: `... identity-cli.ts show digismith-maestro` and `... identity-cli.ts resolve --cwd /Users/workbox/Workspace/Jazurite/DigiSmith` (prints `digismith-maestro`).
+Check: `... identity-cli.ts show digismith-maestro` and `... identity-cli.ts resolve --cwd /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith` (prints `digismith-maestro`).
 Defaults: machine = this host name, state = `<folder>/.digismith/sessions/DigiSmith/note.md` (the Maestro's note; pass `--state` / `--machine` to change).
 Plugin reload: hook 02 (plugin update); a new Claude Code session picks the hook up.
 

@@ -5,7 +5,7 @@
   <key>Label</key><string>com.jazurite.herdr-castle</string>
   <key>UserName</key><string>workbox</string>
   <key>ProgramArguments</key><array><string>/Users/workbox/.local/bin/herdr-boot-castle.sh</string></array>
-  <key>WorkingDirectory</key><string>/Users/workbox/Workspace/Jazurite/DigiSmith</string>
+  <key>WorkingDirectory</key><string>/Users/workbox/Workspace/Engineering/Jazurite/DigiSmith</string>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
   <key>ThrottleInterval</key><integer>30</integer>

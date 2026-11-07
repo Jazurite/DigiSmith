@@ -1,4 +1,4 @@
-# SDD ledger — plan: /Users/workbox/Workspace/Jazurite/DigiSmith/.worktrees/dgs-683/.digismith/board/DGS-683—suite/plan.md
+# SDD ledger — plan: /Users/workbox/Workspace/Engineering/Jazurite/DigiSmith/.worktrees/dgs-683/.digismith/board/DGS-683—suite/plan.md
 Review mode: role
 Checklist sync: skipped (conductor ticks the Tickets checklist)
 Task 1: dispatch implementer agent=abf3e46ae3276e483 (base 123cfe1)

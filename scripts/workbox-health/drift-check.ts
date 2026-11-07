@@ -109,7 +109,7 @@ export function appendCsv(results: Result[], root: string, env: NodeJS.ProcessEn
 
 // DGS-557: the scheduled sweep. Same counting as a manual run; it adds a state file and change-only CSV lines.
 export type SweepRepo = { repo: string; eol: number | null; mode: number | null; broken: boolean; note: string; gitdir?: string };
-export type SweepState = { ranAt: string; ranAtUtc7: string; root?: string; repos: SweepRepo[] };
+export type SweepState = { ranAt: string; ranAtUtc7: string; root?: string; roots?: string[]; repos: SweepRepo[] };
 export type SweepNote = "sweep" | "sweep:recovered" | "broken-link" | "timeout" | "check-failed";
 
 export const REPO_LIMIT_MS = 30_000;
@@ -140,15 +140,26 @@ export function changedRepos(prev: SweepState | null, next: SweepState): { repo:
   return out;
 }
 
-export function runSweep(opts: { root: string; stateFile: string; csvFile: string; now: () => Date; count: (repo: string, limitMs: number) => SweepRepo }): SweepState {
-  if (!fs.statSync(opts.root).isDirectory()) throw new Error(`root is not a folder: ${opts.root}`);
+// Repo names are relative to one base: the root itself, or the folder that holds all roots (~/Workspace + ~/OfficeSpace -> ~).
+export function labelBase(roots: string[]): string {
+  if (roots.length === 1) return roots[0];
+  let base = path.dirname(roots[0]);
+  while (!roots.every((r) => r.startsWith(base + path.sep)) && path.dirname(base) !== base) base = path.dirname(base);
+  return base;
+}
+
+export const DEFAULT_ROOTS = () => [path.join(os.homedir(), "Workspace"), path.join(os.homedir(), "OfficeSpace")];
+
+export function runSweep(opts: { roots: string[]; stateFile: string; csvFile: string; now: () => Date; count: (repo: string, limitMs: number) => SweepRepo }): SweepState {
+  for (const root of opts.roots) if (!fs.statSync(root).isDirectory()) throw new Error(`root is not a folder: ${root}`);
+  const base = labelBase(opts.roots);
   const now = opts.now();
-  const repos = findCheckouts(opts.root).map((repo) => {
+  const repos = opts.roots.flatMap(findCheckouts).map((repo) => {
     let r: SweepRepo;
     try { r = opts.count(repo, REPO_LIMIT_MS); } catch (e) { r = { repo, eol: null, mode: null, broken: false, note: "check-failed" }; }
-    return { ...r, repo: rel(repo, opts.root) };
+    return { ...r, repo: rel(repo, base) };
   });
-  const state: SweepState = { ranAt: now.toISOString(), ranAtUtc7: utc7(now), root: opts.root, repos };
+  const state: SweepState = { ranAt: now.toISOString(), ranAtUtc7: utc7(now), root: base, roots: opts.roots, repos };
   let prev: SweepState | null = null;
   try { prev = JSON.parse(fs.readFileSync(opts.stateFile, "utf8")) as SweepState; } catch { /* first sweep, or an unreadable state: everything drifting is new */ }
 
@@ -183,9 +194,9 @@ export function sweepAlarmLines(state: SweepState | null, currentRepo: string, n
 
 const sweepStateFile = (env: NodeJS.ProcessEnv) => path.join(depotDir(env), "observability", "drift-sweep.json");
 
-function sweep(root: string, env: NodeJS.ProcessEnv, out: (s: string) => void): number {
+function sweep(roots: string[], env: NodeJS.ProcessEnv, out: (s: string) => void): number {
   try {
-    const state = runSweep({ root, stateFile: sweepStateFile(env), csvFile: path.join(depotDir(env), "observability", "drift.csv"), now: () => new Date(), count: countSweepRepo });
+    const state = runSweep({ roots, stateFile: sweepStateFile(env), csvFile: path.join(depotDir(env), "observability", "drift.csv"), now: () => new Date(), count: countSweepRepo });
     for (const r of state.repos) {
       if (r.broken) out(`${r.repo}: broken git link (${r.gitdir ?? ""})`);
       else if (r.note) out(`${r.repo}: check failed (${r.note})`);
@@ -219,13 +230,17 @@ export function run(argv: string[], env: NodeJS.ProcessEnv = process.env, out: (
     return 0;
   }
   const val = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined; };
-  const root = path.resolve(val("--root") ?? path.join(os.homedir(), "Workspace"));
-  if (argv.includes("--sweep")) return sweep(root, env, out);
+  // --root may repeat; without it, sweep the default roots that exist on this machine
+  const given = argv.flatMap((a, i) => (a === "--root" && argv[i + 1] ? [path.resolve(argv[i + 1])] : []));
+  const present = DEFAULT_ROOTS().filter((d) => fs.existsSync(d));
+  const roots = given.length ? given : present.length ? present : DEFAULT_ROOTS().slice(0, 1);
+  const root = labelBase(roots);
+  if (argv.includes("--sweep")) return sweep(roots, env, out);
   const repoArg = val("--repo");
   let repos: string[];
   if (repoArg) {
     try { repos = [git(path.resolve(repoArg), false, ["rev-parse", "--show-toplevel"]).trim()]; } catch { return 0; }
-  } else repos = findCheckouts(root);
+  } else repos = roots.flatMap(findCheckouts);
   const results = repos.map((r) => checkRepo(r));
   if (argv.includes("--json")) out(JSON.stringify(results, null, 2));
   else for (const r of results) { const l = formatLine(r, root); if (l) out(l); }
