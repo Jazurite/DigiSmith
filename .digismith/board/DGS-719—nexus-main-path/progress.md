@@ -1,0 +1,13 @@
+# DGS-719 progress
+- T1 module + tests: done (commit feat(nexus-api))
+- T2 three API files + tests: done (nightwatch-reader does not exist)
+- T3 missing-CLI line (server log + jobs warning): done
+- T4 observers-real, index help, herdr-bootstrap, consult + tests: done
+- Review: ticket-final-r1 pack written, waiting
+- T5 whole-package runs: pending (load < 4)
+- r1 (opus): WITH FIXES 0C/2I/3M. Fixed: boot() passes mainCheckout; env var in herdr-bootstrap + consult (runner whitelist widened for that one expression); afterEach cleanups. Minor 1 (castle plist) -> merge note, unchanged.
+- T5 whole suites at 87b9467e (22:12 UTC+7, load 3.7-4.05, forks 2):
+  - scripts/nexus-api: 35 files, 477 tests, all pass
+  - packages/cli/src/autonomous: 39 files, 978 tests, 1 fail = guardrails "sets scan_every_minutes to 15" (SAME failure on origin/main b9ccd97f, git archive copy in scratchpad)
+  - scripts/conductor: 18 files, 349 pass
+  - scripts/herdr: 3 files, 25 pass

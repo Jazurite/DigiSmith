@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>DGS-719 report</title><style>body{font:16px/1.5 system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem}code{background:#eee;padding:0 .2em}</style></head><body>
+<h1>DGS-719 One main-checkout path for the Nexus API — Implementation Report</h1>
+<p>Ticket: DGS-719 (Urgent, Mode Manual). Branch DGS-719__nexus-main-path from origin/main b9ccd97f (not moved). Head 87b9467e.</p>
+<h2>What changed</h2>
+<ul>
+<li><b>One module</b> <code>scripts/nexus-api/src/main-checkout.ts</code>: <code>MAIN_CHECKOUT</code> (env <code>DIGISMITH_MAIN_CHECKOUT</code>, else <code>~/Workspace/Engineering/Jazurite/DigiSmith</code>), <code>MAIN_CLI</code>, <code>checkMainCheckout()</code>, <code>missingCliMessage()</code>.</li>
+<li><b>API:</b> <code>scheduler/registry.ts</code> and <code>oculus-reader.ts</code> import it. (<code>nightwatch-reader.ts</code> from the plan does not exist in the repo.)</li>
+<li><b>Missing CLI:</b> <code>server.ts</code> logs ONE error line at start (<code>main_checkout_missing</code>, detail <code>main checkout CLI missing: &lt;path&gt; (set DIGISMITH_MAIN_CHECKOUT)</code>); <code>GET /api/v1/jobs</code> carries the same text as <code>warning</code>. The API still starts.</li>
+<li><b>Other references:</b> <code>autonomous/observers-real.ts</code> (own constant, same env var) and its help text in <code>autonomous/index.ts</code>; <code>herdr-bootstrap.sh</code> <code>DG_DIR</code> and <code>consult.ts</code> <code>DEFAULT_REMOTE_REPO</code> honour <code>DIGISMITH_MAIN_CHECKOUT</code> with the Engineering default; <code>runner.ts</code> ssh repo whitelist allows exactly that one expression. Tests pin all of it.</li>
+</ul>
+<h2>Tests (87b9467e, forks pool 2)</h2>
+<ul>
+<li>scripts/nexus-api 477/477; packages/cli/src/autonomous 977/978; scripts/conductor 349/349; scripts/herdr 25/25.</li>
+<li>The one failure, <code>guardrails.test.ts</code> &quot;sets scan_every_minutes to 15&quot;, fails the same on origin/main b9ccd97f (git archive copy). Out of scope.</li>
+</ul>
+<h2>Not changed (for the Maestro)</h2>
+<ul>
+<li><code>scripts/herdr/com.jazurite.herdr-castle.plist:8</code> WorkingDirectory still holds the old path.</li>
+<li><code>ssh workbox</code> runs a non-interactive shell (zsh reads only ~/.zshenv): <code>DIGISMITH_MAIN_CHECKOUT</code> set only in ~/.zshrc is not seen by the remote catch-up. Safe: it uses the default.</li>
+</ul>
+<h2>After the merge (conductor, after the Maestro&#x27;s approval)</h2>
+<p>See plan.md &quot;After the merge&quot;. Protected paths touched: scripts/nexus-api/src/scheduler/ (registry.ts, routes.ts, types.ts + tests), packages/cli/src/autonomous/ (index.ts, observers-real.ts + test).</p>
+</body></html>
