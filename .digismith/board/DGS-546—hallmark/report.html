@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hallmark: task stamps and ticket total — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Hallmark: task stamps and ticket total — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-11-10</span>
+    <span>Ticket: <strong>DGS-546</strong></span>
+    <span>Commit range: <code>b9ccd97..76fe8ae8</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Each SDD task posts one plain-text comment with its tokens, list-price cost, agent time and review numbers on its ClickUp ticket, and the finishing skill writes the ticket total into the description once. A shared module collects the ticket's responses, assigns each to a task, prices each response alone and renders the text. Two <code>dg clickup</code> commands (<code>task-stamp</code>, <code>ticket-total</code>) use it, and the two skills call them. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (9 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 10 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="plan.md">implementation plan</a>. The review record is in <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Collect the ticket's responses and price each one</h4><p>Every response of the ticket is read once and priced alone, so the Haiku long-prompt tier is right.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Read the review numbers</h4><p>Review rounds, findings and fix rounds come from the ledger, then findings.md, then "not recorded".</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Render the comment text and the time</h4><p>The plain-text stamp comment and the UTC+7 time and duration text.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The stamps file</h4><p>A depot file keeps each posted stamp, because the ledger is deleted before finishing.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Page the ticket's comments</h4><p>getAllTaskComments pages ClickUp comments for the idempotence check.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4><code>dg clickup task-stamp</code></h4><p>One comment per plan task, dry run by default, three idempotence checks, --all backfill.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4><code>dg clickup ticket-total</code></h4><p>The Hallmark block in the ticket description, replaced on a re-run and guarded on write.</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>Call the commands from the two skills and document them</h4><p>The SDD skill calls task-stamp, the finishing skill calls ticket-total (not in discard), README documents both.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Smoke on real data (dry run only)</h4><p>Dry run on DGS-679 matches the spike proof; full CLI suite run once.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Collect the ticket's responses and price each one</td><td>Every response of the ticket is read once and priced alone, so the Haiku long-prompt tier is right.</td><td>Approved after 1 fix round</td><td>4 minors, all fixed</td></tr>
+    <tr><td>Task 2: Read the review numbers</td><td>Review rounds, findings and fix rounds come from the ledger, then findings.md, then "not recorded".</td><td>Approved after 1 fix round</td><td>2 minors, all fixed</td></tr>
+    <tr><td>Task 3: Render the comment text and the time</td><td>The plain-text stamp comment and the UTC+7 time and duration text.</td><td>Approved after 1 fix round</td><td>2 minors, all fixed</td></tr>
+    <tr><td>Task 4: The stamps file</td><td>A depot file keeps each posted stamp, because the ledger is deleted before finishing.</td><td>Approved after 1 fix round</td><td>2 minors, all fixed</td></tr>
+    <tr><td>Task 5: Page the ticket's comments</td><td>getAllTaskComments pages ClickUp comments for the idempotence check.</td><td>Approved after 1 fix round</td><td>2 minors, all fixed; live paging not observable (no ticket over 25 comments)</td></tr>
+    <tr><td>Task 6: <code>dg clickup task-stamp</code></td><td>One comment per plan task, dry run by default, three idempotence checks, --all backfill.</td><td>Approved after 1 fix round</td><td>3 minors, all fixed</td></tr>
+    <tr><td>Task 7: <code>dg clickup ticket-total</code></td><td>The Hallmark block in the ticket description, replaced on a re-run and guarded on write.</td><td>Approved after 1 fix round</td><td>3 minors, all fixed; plain-word sentinels after the real probe</td></tr>
+    <tr><td>Task 8: Call the commands from the two skills and document them</td><td>The SDD skill calls task-stamp, the finishing skill calls ticket-total (not in discard), README documents both.</td><td>Approved after 1 fix round</td><td>1 minor, fixed (no re-review)</td></tr>
+    <tr><td>Task 9: Smoke on real data (dry run only)</td><td>Dry run on DGS-679 matches the spike proof; full CLI suite run once.</td><td>No code change, no review</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes, 2 Important and 2 Minor findings, all resolved; the scoped re-review (r2) is clean.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Missing review data (null) is stored as 0 in the stamps file, so ticket-total shows 0 where the task comment says not recorded.</td><td>Fixed (commit 8f33e48): rowsFor maps source none and findings.md fix rounds back to not recorded.</td></tr>
+    <tr><td>Important</td><td>Hand mode sums the findings of every review round instead of taking the highest K.</td><td>Fixed (commit 7e4c5e3): Math.max; two-round test added.</td></tr>
+    <tr><td>Minor</td><td>README says --all stamps every task of the ledger; it uses the registry task_end entries.</td><td>Fixed (commit 76fe8ae).</td></tr>
+    <tr><td>Minor</td><td>The ledger stamped check does not accept a leading "- " bullet.</td><td>Fixed (commit 76fe8ae).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">2349561b</span> docs(dgs-546): add the hallmark spike findings</li>
+    <li><span class="sha">e0dd2085</span> docs(dgs-546): add the hallmark spec</li>
+    <li><span class="sha">7fc001de</span> docs(dgs-546): add the hallmark plan</li>
+    <li><span class="sha">77168299</span> docs(dgs-546): revise the plan and spec after plan review r1</li>
+    <li><span class="sha">ea999756</span> docs(dgs-546): leave the discard option out of the ticket-total hook</li>
+    <li><span class="sha">0c6cd01c</span> docs(dgs-546): fold the plan re-review minors into plan and spec</li>
+    <li><span class="sha">c159970a</span> feat(dgs-546): price a task's responses one by one</li>
+    <li><span class="sha">cb339469</span> fix(dgs-546): tighten the task usage session and window rules</li>
+    <li><span class="sha">0fd57b97</span> feat(dgs-546): read review rounds and findings for a task</li>
+    <li><span class="sha">18c1a781</span> fix(dgs-546): count only ruled findings and ignore a lone re-review line</li>
+    <li><span class="sha">993d46cf</span> feat(dgs-546): render the task stamp text</li>
+    <li><span class="sha">9b11d2a4</span> fix(dgs-546): use the earliest window start and a singular response count</li>
+    <li><span class="sha">cb037a85</span> feat(dgs-546): keep stamps in a depot file</li>
+    <li><span class="sha">c37eca8d</span> fix(dgs-546): make the stamps file read and append agree and validate lines</li>
+    <li><span class="sha">21040afb</span> feat(dgs-546): page a task's comments</li>
+    <li><span class="sha">26d1fa7c</span> fix(dgs-546): make comment paging robust to a boundary row and a missing date</li>
+    <li><span class="sha">8dbc2510</span> feat(dgs-546): add dg clickup task-stamp</li>
+    <li><span class="sha">256e09d7</span> fix(dgs-546): harden task-stamp ledger write, task id and test setup</li>
+    <li><span class="sha">037ee694</span> feat(dgs-546): add dg clickup ticket-total</li>
+    <li><span class="sha">b9a8fe3a</span> fix(dgs-546): use plain sentinel lines that survive ClickUp</li>
+    <li><span class="sha">484620bd</span> fix(dgs-546): tighten the hallmark block text, partial flag and sentinel match</li>
+    <li><span class="sha">478d39bb</span> docs(dgs-546): call task-stamp and ticket-total from the skills</li>
+    <li><span class="sha">6fdd344f</span> docs(dgs-546): say what the stamps file holds</li>
+    <li><span class="sha">8f33e48c</span> fix(dgs-546): keep not-recorded review data as null in stamps</li>
+    <li><span class="sha">7e4c5e3c</span> fix(dgs-546): take the highest findings count in hand mode</li>
+    <li><span class="sha">76fe8ae8</span> fix(dgs-546): README --all wording and bullet-prefixed stamped line</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-546—hallmark/report.html</footer>
+
+</body>
+</html>
