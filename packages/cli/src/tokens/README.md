@@ -84,6 +84,6 @@ Two commands put token cost into ClickUp. Both write only with `--yes`. Without 
 
 Cost is priced per response, from the window of the task, at the list price of the model of each response.
 
-Stamps file: `~/.digismith-depot/token-registry/<Key>.stamps.jsonl`. Each stamp is also written there. The ledger is deleted before finishing, so the total reads the stamps file, not the ledger.
+Stamps file: `~/.digismith-depot/token-registry/<Key>.stamps.jsonl`. Each stamp is also appended to this file as one JSON line. The ledger is deleted before finishing, so the total reads the stamps file, not the ledger.
 
 Idempotence: a stamp that is already in the ledger (a line), in the stamps file or in ClickUp (the marker on the first line of the comment) is not posted again. A second run changes nothing.
