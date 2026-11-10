@@ -78,7 +78,7 @@ The usage probe stays manual. The conductor saves `out-<seat>.json` (runbook "Re
 
 Two commands put token cost into ClickUp. Both write only with `--yes`. Without it they run dry and print what they would write.
 
-`dg clickup task-stamp --task <Key> --plan-task <N|final> --ledger <file> [--findings <file>] [--yes]` posts one comment for one task of the SDD plan. `--all` stamps every task of the ledger (backfill). The subagent-driven-development skill calls it after each `task-end`, and once with `final` before the ledger is deleted. On failure it exits 1 and prints one `warn:` line.
+`dg clickup task-stamp --task <Key> --plan-task <N|final> --ledger <file> [--findings <file>] [--yes]` posts one comment for one task of the SDD plan. `--all` stamps every task with a `task_end` in the registry, plus `final` (backfill). The subagent-driven-development skill calls it after each `task-end`, and once with `final` before the ledger is deleted. On failure it exits 1 and prints one `warn:` line.
 
 `dg clickup ticket-total --task <Key> [--yes]` writes the Hallmark block (the ticket total) into the ticket description. The finishing skill calls it in the merge, push-and-PR and keep-as-is options, not in discard.
 

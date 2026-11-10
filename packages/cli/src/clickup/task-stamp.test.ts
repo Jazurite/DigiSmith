@@ -189,6 +189,15 @@ describe("task-stamp", () => {
     expect(readStamps(KEY)[0].task).toBe("final");
   });
 
+  it("a bullet-prefixed stamped ledger line counts as stamped", async () => {
+    seed();
+    writeFileSync(ledger, "- Task 1: stamped (comment 5)\n");
+    const f = fake();
+    await run(f, { yes: true });
+    expect(out(console.log as never)).toContain("already stamped (ledger)");
+    expect(f.post).not.toHaveBeenCalled();
+  });
+
   it("--all stamps every ended task plus final, skips stamped ones, one line per task", async () => {
     seed({
       extra: (reg) => {

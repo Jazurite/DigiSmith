@@ -91,7 +91,7 @@ async function stampOne(ctx: Ctx, n: string, quiet: boolean): Promise<string> {
   const usage = taskUsage(data.records, data.entries, parseTaskAgents(ledgerText), n, data.ticketSessions);
   const ended = data.entries.some((e) => e.kind === "task_end" && e.task === n);
   if (!ended || usage.windows.length === 0) return "task not ended";
-  if (new RegExp(`^Task ${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}: stamped \\(comment \\S+\\)\\s*$`, "m").test(ledgerText)) return "already stamped (ledger)";
+  if (new RegExp(`^(?:- )?Task ${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}: stamped \\(comment \\S+\\)\\s*$`, "m").test(ledgerText)) return "already stamped (ledger)";
   if (stampOf(key, n)) return "already stamped (stamps file)";
   const id = await resolve(ctx);
   const first = marker(key, n);
