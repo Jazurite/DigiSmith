@@ -65,7 +65,7 @@ export interface ConsultResult {
   warnings: string[];
 }
 
-export const DEFAULT_REMOTE_REPO = "$HOME/Workspace/Jazurite/DigiSmith";
+export const DEFAULT_REMOTE_REPO = "$HOME/Workspace/Engineering/Jazurite/DigiSmith";
 
 export async function consult(
   opts: ConsultOpts,

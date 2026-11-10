@@ -48,14 +48,14 @@ describe("renderText", () => {
 });
 
 describe("consult", () => {
-  const remote = { remote: "workbox", remoteRepo: "$HOME/Workspace/Jazurite/DigiSmith", project: "DigiSmith", conductor: "digismith-conductor" };
+  const remote = { remote: "workbox", remoteRepo: "$HOME/Workspace/Engineering/Jazurite/DigiSmith", project: "DigiSmith", conductor: "digismith-conductor" };
   it("runs the fixed ssh command and returns the remote state", async () => {
     const runner = vi.fn(async () => ({ code: 0, stdout: JSON.stringify(STATE), stderr: "" })) as unknown as Runner;
     const s = await consult(remote, { runner, local: async () => { throw new Error("no local"); } });
     expect(s.state).toEqual(STATE);
     expect(runner).toHaveBeenCalledWith("ssh", [
       "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "workbox",
-      "node", "--experimental-strip-types", "$HOME/Workspace/Jazurite/DigiSmith/scripts/conductor/cli.ts",
+      "node", "--experimental-strip-types", "$HOME/Workspace/Engineering/Jazurite/DigiSmith/scripts/conductor/cli.ts",
       "state", "--json", "--project", "DigiSmith", "--conductor", "digismith-conductor",
     ], expect.objectContaining({ timeoutMs: expect.any(Number) }));
   });

@@ -56,19 +56,19 @@ describe("readOnlyRunner", () => {
 
   it("allows exactly the fixed ssh state form", async () => {
     const inner = vi.fn(ok);
-    const args = sshStateArgs({ target: "jack@workbox", repo: "$HOME/Workspace/Jazurite/DigiSmith", project: "DigiSmith", conductor: "digismith-conductor" });
+    const args = sshStateArgs({ target: "jack@workbox", repo: "$HOME/Workspace/Engineering/Jazurite/DigiSmith", project: "DigiSmith", conductor: "digismith-conductor" });
     await readOnlyRunner(inner)("ssh", args);
     expect(inner).toHaveBeenCalledOnce();
   });
 });
 
 describe("sshStateArgs", () => {
-  const base = { repo: "$HOME/Workspace/Jazurite/DigiSmith", project: "DigiSmith", conductor: "digismith-conductor" };
+  const base = { repo: "$HOME/Workspace/Engineering/Jazurite/DigiSmith", project: "DigiSmith", conductor: "digismith-conductor" };
   it("builds the exact argv", () => {
     expect(sshStateArgs({ ...base, target: "workbox" })).toEqual([
       "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "workbox",
       "node", "--experimental-strip-types",
-      "$HOME/Workspace/Jazurite/DigiSmith/scripts/conductor/cli.ts",
+      "$HOME/Workspace/Engineering/Jazurite/DigiSmith/scripts/conductor/cli.ts",
       "state", "--json", "--project", "DigiSmith", "--conductor", "digismith-conductor",
     ]);
   });
