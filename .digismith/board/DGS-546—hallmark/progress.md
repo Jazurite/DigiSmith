@@ -148,3 +148,5 @@ Final: scoped pack ticket-final-r2 (fix-base 6fdd344f head 76fe8ae8)
 Final review (ticket-final-r2): clean
 Scoped re-review ticket final r2: clean (F1..F4 fixed)
 Task final: complete (commits 6fdd344..76fe8ae, review clean)
+Merge prep: report.md, report.html, findings.md table, progress.md committed; PENDING (symlink block): task-end final, step-end implementation, final stamp, token snapshot
+Task final: stamped (comment 1301150000218699)
