@@ -72,6 +72,13 @@ describe("sshStateArgs", () => {
       "state", "--json", "--project", "DigiSmith", "--conductor", "digismith-conductor",
     ]);
   });
+  it("allows the DIGISMITH_MAIN_CHECKOUT default expression, nothing else in ${}", () => {
+    const repo = "${DIGISMITH_MAIN_CHECKOUT:-$HOME/Workspace/Engineering/Jazurite/DigiSmith}";
+    expect(sshStateArgs({ ...base, repo, target: "w" })[7]).toBe(`${repo}/scripts/conductor/cli.ts`);
+    for (const bad of ["${OTHER:-$HOME/x}", "${DIGISMITH_MAIN_CHECKOUT:-$(id)}", "${DIGISMITH_MAIN_CHECKOUT:-/a b}", "${DIGISMITH_MAIN_CHECKOUT}"]) {
+      expect(() => sshStateArgs({ ...base, repo: bad, target: "w" })).toThrow(/refused/);
+    }
+  });
   it("adds --since when given", () => {
     expect(sshStateArgs({ ...base, target: "w", since: "2026-10-13T00:00:00+07:00" }).slice(-2)).toEqual([
       "--since", "2026-10-13T00:00:00+07:00",

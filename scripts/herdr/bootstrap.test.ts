@@ -36,6 +36,14 @@ afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
 describe("herdr-bootstrap.sh", () => {
   it("is valid bash", () => expect(spawnSync("bash", ["-n", SCRIPT]).status).toBe(0));
 
+  it("DG_DIR defaults to DIGISMITH_MAIN_CHECKOUT", () => {
+    const main = path.join(tmp, "main-checkout");
+    fs.mkdirSync(main);
+    const r = run({ DG_DIR: "", DIGISMITH_MAIN_CHECKOUT: main });
+    expect(r.status).toBe(0);
+    expect(read("calls.log") + read("Castle.ws") + read("default.ws")).toContain(main);
+  });
+
   it("sets up both sessions and starts the Castle conductors with the flags", () => {
     const r = run();
     expect(r.status).toBe(0);

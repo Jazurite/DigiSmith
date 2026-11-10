@@ -97,7 +97,7 @@ describe('startNexus', () => {
   async function boot(dir: string) {
     const lines: string[] = []
     // a temp depot, so no test can reach the real depot through the live snapshot
-    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg, jobs: testJobs, depot: mkdtempSync(join(tmpdir(), 'nexus-depot-')) })
+    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg, jobs: testJobs, depot: mkdtempSync(join(tmpdir(), 'nexus-depot-')), mainCheckout: () => ({ ok: true, path: '/x', cli: '/x/c.js' }) })
     server = nexus.server
     await new Promise<void>(r => server!.listen(0, HOST, r))
     const { port } = server.address() as AddressInfo

@@ -8,7 +8,7 @@
 #   FLOOR_CONDUCTORS=1 (default until the migration ends): registry entries with no session still get the old Floor conductor (tab 1 of the project workspace)
 #   RELAUNCH_SLEEP (default 4): seconds between /exit and the relaunch
 #   PGREP (default pgrep): how to tell a conductor with its flags from a plain restored resume
-#   DG_DIR, EMMA_DIR, EMMA_MAESTRO_DIR, SOV_DIR: project folders (override only to test with dummies)
+#   DG_DIR (default DIGISMITH_MAIN_CHECKOUT, else ~/Workspace/Engineering/Jazurite/DigiSmith), EMMA_DIR, EMMA_MAESTRO_DIR, SOV_DIR: project folders (override only to test with dummies)
 # Castle: one workspace per project (Factory, DigiSmith, Emma, Soveron); one tab per conductor, tab label = agent name.
 # A conductor entry (kind project|factory|standing, session Castle, not closed) is started with HERDR_SCOPE (its own Castle workspace plus every Floor workspace of the registry).
 # A ticket conductor entry that is open is only relaunched (same session id), never created: start one with dg conductor start-ticket.
@@ -23,7 +23,7 @@ DRY_RUN="${DRY_RUN:-0}"
 FLOOR_CONDUCTORS="${FLOOR_CONDUCTORS:-1}"
 PGREP="${PGREP:-pgrep}"
 RELAUNCH_SLEEP="${RELAUNCH_SLEEP:-4}"   # seconds to wait after /exit before the relaunch (tests set 0)
-DG_DIR="${DG_DIR:-$HOME/Workspace/Engineering/Jazurite/DigiSmith}"
+DG_DIR="${DG_DIR:-${DIGISMITH_MAIN_CHECKOUT:-$HOME/Workspace/Engineering/Jazurite/DigiSmith}}"
 EMMA_DIR="${EMMA_DIR:-$HOME/Workspace/Emma}"                          # the workspace folder
 EMMA_MAESTRO_DIR="${EMMA_MAESTRO_DIR:-$HOME/Workspace/Emma/shopify-hub}" # where the Emma conductor runs: its note and Claude memory live here
 SOV_DIR="${SOV_DIR:-$HOME/Obsidian/Knowpolis/1. Soveron}"

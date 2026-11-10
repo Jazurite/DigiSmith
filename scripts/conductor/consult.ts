@@ -65,7 +65,8 @@ export interface ConsultResult {
   warnings: string[];
 }
 
-export const DEFAULT_REMOTE_REPO = "$HOME/Workspace/Engineering/Jazurite/DigiSmith";
+// A remote-shell expression: the Workbox's own DIGISMITH_MAIN_CHECKOUT wins, else the default path.
+export const DEFAULT_REMOTE_REPO = "${DIGISMITH_MAIN_CHECKOUT:-$HOME/Workspace/Engineering/Jazurite/DigiSmith}";
 
 export async function consult(
   opts: ConsultOpts,

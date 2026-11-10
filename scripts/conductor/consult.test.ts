@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { consult, parseRemoteState, renderText } from "./consult.ts";
+import { consult, DEFAULT_REMOTE_REPO, parseRemoteState, renderText } from "./consult.ts";
 import type { State } from "./state.ts";
 import type { Runner } from "./runner.ts";
 
@@ -58,6 +58,9 @@ describe("consult", () => {
       "node", "--experimental-strip-types", "$HOME/Workspace/Engineering/Jazurite/DigiSmith/scripts/conductor/cli.ts",
       "state", "--json", "--project", "DigiSmith", "--conductor", "digismith-conductor",
     ], expect.objectContaining({ timeoutMs: expect.any(Number) }));
+  });
+  it("the default remote repo honours DIGISMITH_MAIN_CHECKOUT on the Workbox", () => {
+    expect(DEFAULT_REMOTE_REPO).toBe("${DIGISMITH_MAIN_CHECKOUT:-$HOME/Workspace/Engineering/Jazurite/DigiSmith}");
   });
   it("without --remote it collects locally and never calls ssh", async () => {
     const runner = vi.fn() as unknown as Runner;

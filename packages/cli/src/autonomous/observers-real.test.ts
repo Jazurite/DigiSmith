@@ -407,18 +407,17 @@ describe("prompt delivery by cause", () => {
 });
 
 describe("MAIN_CHECKOUT", () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
   it("defaults to the Engineering path under HOME", async () => {
     vi.resetModules();
     vi.stubEnv("DIGISMITH_MAIN_CHECKOUT", undefined as unknown as string);
     const { MAIN_CHECKOUT } = await import("./observers-real.ts");
     expect(MAIN_CHECKOUT).toBe(join(homedir(), "Workspace", "Engineering", "Jazurite", "DigiSmith"));
-    vi.unstubAllEnvs();
   });
   it("takes DIGISMITH_MAIN_CHECKOUT at import time", async () => {
     vi.resetModules();
     vi.stubEnv("DIGISMITH_MAIN_CHECKOUT", "/somewhere/else");
     const { MAIN_CHECKOUT } = await import("./observers-real.ts");
     expect(MAIN_CHECKOUT).toBe("/somewhere/else");
-    vi.unstubAllEnvs();
   });
 });

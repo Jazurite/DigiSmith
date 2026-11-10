@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -10,7 +10,9 @@ async function load(env?: string) {
   return import('./main-checkout.ts')
 }
 
-afterEach(() => { vi.unstubAllEnvs() })
+const made: string[] = []
+const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'mc-')); made.push(d); return d }
+afterEach(() => { vi.unstubAllEnvs(); for (const d of made.splice(0)) rmSync(d, { recursive: true, force: true }) })
 
 describe('main checkout constant', () => {
   it('defaults to the Engineering path under HOME', async () => {
@@ -26,13 +28,13 @@ describe('main checkout constant', () => {
   })
 
   it('checkMainCheckout reports a missing CLI', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'mc-'))
+    const dir = tmp()
     const m = await load(dir)
     expect(m.checkMainCheckout()).toEqual({ ok: false, path: dir, cli: join(dir, 'packages', 'cli', 'dist', 'index.js') })
   })
 
   it('checkMainCheckout reports an existing CLI', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'mc-'))
+    const dir = tmp()
     mkdirSync(join(dir, 'packages', 'cli', 'dist'), { recursive: true })
     writeFileSync(join(dir, 'packages', 'cli', 'dist', 'index.js'), '')
     const m = await load(dir)
