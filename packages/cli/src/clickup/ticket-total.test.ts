@@ -95,6 +95,26 @@ describe("ticket-total", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it("keeps not-recorded review data as not recorded, not 0", async () => {
+    seed();
+    const none = stamp("1", 0.4635, 104, 0, 0);
+    none.reviews = { rounds: 0, findings: 0, fixed: 0, parked: 0, rejected: 0, open: 0, fix_rounds: 0, source: "none" };
+    appendStamp(KEY, none);
+    await run(fake({ description: "", markdown_description: "" }));
+    const log = out(console.log as never);
+    expect(log).toContain("| 1 | 1 min 44 s | $0.4635 | not recorded | not recorded |");
+    expect(log).toContain("(1 task(s) not recorded)");
+  });
+
+  it("shows fix rounds as not recorded for a findings.md stamp", async () => {
+    seed();
+    const f = stamp("1", 0.4635, 104, 2, 0);
+    f.reviews.source = "findings.md";
+    appendStamp(KEY, f);
+    await run(fake({ description: "", markdown_description: "" }));
+    expect(out(console.log as never)).toContain("| 1 | 1 min 44 s | $0.4635 | 2 | not recorded |");
+  });
+
   it("totals sum every response of the ticket's sessions, including outside any task window", async () => {
     seed(); appendStamp(KEY, stamp("1", 0.4635, 104, 0, 0));
     await run(fake({ description: "", markdown_description: "" }));
