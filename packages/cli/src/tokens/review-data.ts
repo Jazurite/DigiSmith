@@ -30,7 +30,7 @@ function fromLedger(task: string, text: string): ReviewData | null {
     if (!l.startsWith(prefix)) continue;
     const rest = l.slice(prefix.length);
     const m = /^reviewed \((clean|(\d+) findings?)\)/.exec(rest);
-    if (m) { rounds++; handFindings += m[2] ? Number(m[2]) : 0; seen = true; }
+    if (m) { rounds++; handFindings = Math.max(handFindings, m[2] ? Number(m[2]) : 0); seen = true; }
     else if (/^fix round \d+\/\d+/.test(rest)) { fixRoundLines++; }
     else if (rest.startsWith("parked")) { handParked++; }
   }

@@ -25,6 +25,10 @@ describe("reviewData", () => {
     const ledger = ["Task 2: reviewed (2 findings)", "Task 2: fix round 1/5 (1 addressed, 1 open — x; commits a..b)", "Task 2: reviewed (clean)", "Task 2: parked — x — ruling: y"].join("\n");
     expect(reviewData("2", { ledgerText: ledger })).toMatchObject({ rounds: 2, findings: 2, parked: 1, fixed: 1, fixRounds: 1, source: "ledger" });
   });
+  it("hand mode takes the highest findings count over several rounds", () => {
+    const ledger = ["Task 2: reviewed (2 findings)", "Task 2: fix round 1/5 (1 addressed, 1 open)", "Task 2: reviewed (1 findings)", "Task 2: fix round 2/5 (1 addressed, 0 open)", "Task 2: reviewed (clean)"].join("\n");
+    expect(reviewData("2", { ledgerText: ledger })).toMatchObject({ rounds: 3, findings: 2, fixed: 2, parked: 0, open: 0, fixRounds: 2 });
+  });
   it("reads the final review", () => {
     const ledger = ["Task final: reviewed (3 findings)", "Review ticket final r1: F1 -> fixed", "Review ticket final r1: F2 -> fixed", "Review ticket final r1: F3 -> parked (why)", "Scoped re-review (fix base a..b, m): clean", "Scoped re-review (fix base b..c, m): clean"].join("\n");
     expect(reviewData("final", { ledgerText: ledger })).toMatchObject({ rounds: 1, findings: 3, fixed: 2, parked: 1, fixRounds: 2 });
