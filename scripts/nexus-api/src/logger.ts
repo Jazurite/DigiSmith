@@ -6,6 +6,8 @@ export interface Logger {
   request(f: RequestFields): void
   info(message: 'listening', fields: { host: string; port: number }): void
   error(message: 'scheduler_error', fields: { where: string; code: string }): void
+  // The one fixed sentence of main-checkout.ts; the caller builds it from the env path, never from an error.
+  mainCheckoutMissing(detail: string): void
 }
 
 const MAX_PATH = 200
@@ -29,6 +31,9 @@ export function createLogger(sink: LogSink = line => process.stdout.write(line +
       const where = WHERE.has(fields.where) ? fields.where : 'unknown'
       const code = ERROR_CODE.test(fields.code) ? fields.code : 'unknown'
       sink(JSON.stringify({ time: new Date(now()).toISOString(), level: 'error', msg: message, where, code }))
+    },
+    mainCheckoutMissing(detail) {
+      sink(JSON.stringify({ time: new Date(now()).toISOString(), level: 'error', msg: 'main_checkout_missing', detail: String(detail).slice(0, MAX_PATH + 100) }))
     },
   }
 }

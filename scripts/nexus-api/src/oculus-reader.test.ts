@@ -3,6 +3,7 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { MAIN_CLI } from './main-checkout.ts'
 import { createReader, DEFAULT_ENTRY, ReaderError } from './oculus-reader.ts'
 
 // A fake "CLI": a node script that records its argv in a counter file and prints JSON.
@@ -78,7 +79,7 @@ describe('createReader', () => {
     await expect(read('overview')).resolves.toBeTruthy()
   })
   it('the default entry is the main checkout build, not the depot', () => {
-    expect(DEFAULT_ENTRY).toMatch(/Workspace\/Jazurite\/DigiSmith\/packages\/cli\/dist\/index\.js$/)
+    expect(DEFAULT_ENTRY).toBe(MAIN_CLI)
   })
   it('rejects a value that starts with a dash, a non-allowlisted key and a key with =, without spawning', async () => {
     const countFile = join(mkdtempSync(join(tmpdir(), 'nw-count-')), 'n')

@@ -1,15 +1,15 @@
 import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { createLogger } from '../logger.ts'
+import { MAIN_CHECKOUT, MAIN_CLI } from '../main-checkout.ts'
 import { readScanInterval } from './scan-interval.ts'
 import type { JobDef, JobSchedule } from './types.ts'
 
 const DRIFT_CHECK = join(homedir(), '.digismith-depot', 'bin', 'drift-check.ts')
-const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 // The config the scan interval is read from: the main checkout's, the same one the job's `--repo` points at.
 const CONFIG_FILE = join(MAIN_CHECKOUT, '.digismith', 'config.yml')
 // The built CLI of the main checkout: the same build the global `dg` runs. A missing dist fails the job with node's "Cannot find module".
-const DG = [join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')]
+const DG = [MAIN_CLI]
 
 export const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000
 export const MAX_TIMEOUT_MS = 2 * 60 * 60 * 1000

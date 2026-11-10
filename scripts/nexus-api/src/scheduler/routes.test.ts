@@ -51,6 +51,7 @@ const job = (name: string, over: Partial<JobDef> = {}): JobDef =>
 
 interface Setup {
   jobs?: readonly JobDef[]; mode?: Mode; notify?: (e: EngineEvent) => Promise<void>
+  warning?: string
   engine?: Partial<Engine>; getReading?: () => Promise<PowerMetrics | null>
 }
 function setup(o: Setup = {}) {
@@ -62,7 +63,7 @@ function setup(o: Setup = {}) {
   const token = ensureToken(dir)
   const lines: string[] = []
   const logger = createLogger((l) => lines.push(l), () => 0)
-  const app = buildApp(o.getReading ?? (async () => reading), { logger, jobs: { engine, jobs, token, now: () => T0 } })
+  const app = buildApp(o.getReading ?? (async () => reading), { logger, jobs: { engine, jobs, token, now: () => T0, ...(o.warning ? { warning: o.warning } : {}) } })
   const bodies: string[] = []
   const req = async (p: string, init: RequestInit = {}) => {
     const r = await app.request(p, init)
@@ -90,6 +91,20 @@ describe('GET /jobs', () => {
     expect(body.generatedAt).toBe(new Date(T0).toISOString())
     expect(body.jobs).toEqual(s.engine.snapshot())
     expect(body.jobs.map((j: { name: string }) => j.name)).toEqual(['selftest', 'other'])
+  })
+
+  it('has no warning when the main checkout CLI is there', async () => {
+    const s = setup()
+    expect((await s.req(BASE)).json()).not.toHaveProperty('warning')
+  })
+
+  it('carries the missing-CLI line as warning and still lists the jobs', async () => {
+    const warning = 'main checkout CLI missing: /x/packages/cli/dist/index.js (set DIGISMITH_MAIN_CHECKOUT)'
+    const s = setup({ warning })
+    const r = await s.req(BASE)
+    expect(r.status).toBe(200)
+    expect(r.json().warning).toBe(warning)
+    expect(r.json().jobs).toHaveLength(2)
   })
 
   it('503 internal_invalid when snapshot throws, and power-metrics still answers', async () => {

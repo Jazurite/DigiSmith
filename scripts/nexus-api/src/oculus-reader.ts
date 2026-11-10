@@ -1,10 +1,8 @@
 // scripts/nexus-api/src/oculus-reader.ts
 import { execFile } from 'node:child_process'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { MAIN_CLI } from './main-checkout.ts'
 
-const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
-export const DEFAULT_ENTRY = join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')
+export const DEFAULT_ENTRY = MAIN_CLI
 
 // The flags `dg oculus view` accepts (packages/cli/src/oculus/index.ts VALUE_FLAGS).
 const ALLOWED_KEYS = new Set(['run', 'ticket', 'since', 'before', 'tail', 'group', 'state', 'role', 'trigger', 'project', 'limit'])

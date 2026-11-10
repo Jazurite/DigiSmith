@@ -18,6 +18,7 @@ import { JOBS } from './scheduler/registry.ts'
 import type { JobDef } from './scheduler/types.ts'
 import { createReader } from './oculus-reader.ts'
 import { createSnapshotStore, snapshotDir, webRootsOf } from './oculus-snapshot.ts'
+import { checkMainCheckout, missingCliMessage, type MainCheckout } from './main-checkout.ts'
 import { stateDir } from './scheduler/runlog.ts'
 
 export const HOST = '127.0.0.1'
@@ -78,18 +79,23 @@ export interface NexusOptions {
   dg: { file: string; args: string[] }
   jobs?: readonly JobDef[]
   depot?: string
+  mainCheckout?: () => MainCheckout
 }
 
 export async function startNexus(opts: NexusOptions): Promise<{ server: Server; scheduler: boolean; stop: () => Promise<void> }> {
   const { logger } = opts
   const list = opts.jobs ?? JOBS
   let jobs: AppDeps['jobs']
+  // A moved checkout must not fail quietly: one error line at start, the same line on the jobs list. It never stops the API.
+  const check = (opts.mainCheckout ?? checkMainCheckout)()
+  const warning = check.ok ? undefined : missingCliMessage(check.cli)
+  if (warning) logger.mainCheckoutMissing(warning)
   let engine: Engine | null = null
   try {
     const token = ensureToken(opts.stateDir)
     engine = createEngine({ jobs: list, stateDir: opts.stateDir, logger, notify: createClickupNotifier({ dg: opts.dg, logger }) })
     await engine.start()
-    jobs = { engine, jobs: list, token }
+    jobs = { engine, jobs: list, token, ...(warning ? { warning } : {}) }
   } catch (err) {
     logger.error('scheduler_error', { where: 'start', code: errorCode(err) })
     if (engine) await engine.stop().catch(() => undefined)

@@ -13,6 +13,8 @@ export interface JobsDeps {
   jobs: readonly JobDef[]
   token: string
   now?: () => number
+  // A standing problem the caller found at start (the main checkout CLI is missing); shown on the list.
+  warning?: string
 }
 
 const DEFAULT_LIMIT = 50
@@ -37,7 +39,7 @@ export function createJobsRoutes(deps: JobsDeps): Hono<Env> {
     const bad = wrongMethod(c, 'GET')
     if (bad) return bad
     try {
-      const body: JobsResponse = { generatedAt: new Date(now()).toISOString(), jobs: engine.snapshot() }
+      const body: JobsResponse = { generatedAt: new Date(now()).toISOString(), jobs: engine.snapshot(), ...(deps.warning ? { warning: deps.warning } : {}) }
       return sendJson(c, 200, body)
     } catch {
       return internal(c)

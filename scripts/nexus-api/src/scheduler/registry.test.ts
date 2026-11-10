@@ -4,6 +4,7 @@ import { homedir, tmpdir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
+import { MAIN_CHECKOUT, MAIN_CLI } from '../main-checkout.ts'
 import { currentSlot, slotsOfNight } from './clock.ts'
 import { JOBS, MAX_TIMEOUT_MS, defineJob, scanScheduleOf, validateJobs } from './registry.ts'
 
@@ -91,7 +92,7 @@ describe('JOBS', () => {
     }
   })
   it('autonomous jobs run the built CLI of the main checkout, not strip-types source', () => {
-    const dist = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith', 'packages', 'cli', 'dist', 'index.js')
+    const dist = MAIN_CLI
     for (const name of ['autonomous-scan', 'autonomous-report']) {
       const { command } = JOBS.find((j) => j.name === name)!
       expect(command.file).toBe(process.execPath)
@@ -180,7 +181,7 @@ describe('JOBS', () => {
     expect(job.timeoutMs).toBe(120000)
     expect(job.order).toBe(40)
     expect(job.command.file).toBe(process.execPath)
-    expect(job.command.args.slice(-4)).toEqual(['autonomous', 'watch', '--repo', join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')])
+    expect(job.command.args.slice(-4)).toEqual(['autonomous', 'watch', '--repo', MAIN_CHECKOUT])
     for (const hhmm of ['10:00', '23:55']) {
       const ms = Date.parse(`2026-10-19T${hhmm}:00+07:00`)
       expect(currentSlot(ms, job.schedule!)).not.toBeNull()

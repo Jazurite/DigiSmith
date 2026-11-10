@@ -36,7 +36,7 @@ export interface JobInfo {
   queued: { since: string; trigger: RunTrigger } | null
   lastRun: RunRecord | null
 }
-export interface JobsResponse { generatedAt: string; jobs: JobInfo[] }
+export interface JobsResponse { generatedAt: string; jobs: JobInfo[]; warning?: string }
 export interface RunsResponse { job: string; runs: RunRecord[] }
 export interface RunNowRequest { confirm: string }
 export interface RunNowResponse { accepted: true; run: { id: string; startedAt: string } }

@@ -14,6 +14,6 @@ export function checkMainCheckout(): MainCheckout {
 }
 
 // The one line shown when the CLI is missing (API start log, jobs route `warning`).
-export function missingCliMessage(): string {
-  return `main checkout CLI missing: ${MAIN_CLI} (set DIGISMITH_MAIN_CHECKOUT)`
+export function missingCliMessage(cli: string = MAIN_CLI): string {
+  return `main checkout CLI missing: ${cli} (set DIGISMITH_MAIN_CHECKOUT)`
 }

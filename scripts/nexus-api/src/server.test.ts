@@ -104,6 +104,38 @@ describe('startNexus', () => {
     return { nexus, lines, base: `http://127.0.0.1:${port}` }
   }
 
+  it('logs ONE error line when the main checkout CLI is missing, and the jobs route carries it', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'nexus-start-'))
+    try {
+      const check = { ok: false, path: '/x', cli: '/x/packages/cli/dist/index.js' }
+      const lines: string[] = []
+      const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: tmp, dg, jobs: testJobs, depot: mkdtempSync(join(tmpdir(), 'nexus-depot-')), mainCheckout: () => check })
+      server = nexus.server
+      await new Promise<void>(r => server!.listen(0, HOST, r))
+      const { port } = server.address() as AddressInfo
+      const parsed = lines.map(l => JSON.parse(l))
+      expect(parsed).toEqual([expect.objectContaining({ level: 'error', msg: 'main_checkout_missing', detail: 'main checkout CLI missing: /x/packages/cli/dist/index.js (set DIGISMITH_MAIN_CHECKOUT)' })])
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/${API_VERSION}/jobs`)).json() as { warning?: string }
+      expect(body.warning).toBe('main checkout CLI missing: /x/packages/cli/dist/index.js (set DIGISMITH_MAIN_CHECKOUT)')
+      await nexus.stop()
+    } finally {
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('logs nothing about the checkout when the CLI is there', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'nexus-start-'))
+    try {
+      const lines: string[] = []
+      const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: tmp, dg, jobs: testJobs, depot: mkdtempSync(join(tmpdir(), 'nexus-depot-')), mainCheckout: () => ({ ok: true, path: '/x', cli: '/x/c.js' }) })
+      server = nexus.server
+      expect(lines).toEqual([])
+      await nexus.stop()
+    } finally {
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
   it('a state folder that cannot be made disables only the scheduler', async () => {
     const tmp = mkdtempSync(join(tmpdir(), 'nexus-start-'))
     try {
