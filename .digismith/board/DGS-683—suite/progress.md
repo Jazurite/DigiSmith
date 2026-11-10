@@ -82,3 +82,6 @@ Ticket pack ticket-final-r1 built (head 59cf28f7)
 Ticket pack: scripts/herdr scripts were committed 100644 (core.fileMode false): fixed with update-index --chmod=+x (6e4d2053). Changed-folder run: 3 known base failures only
 Ticket review r1: F1..F7 -> fixed (beb0b565); ticket-final-r2 requested
 Ticket review r2: F8, F9 fixed (df71443a, 3ca95ee4). Whole suite at 3ca95ee4: 303 files (300 pass, 3 fail), 5112 tests (5109 pass, 3 fail). The 3 fail on origin/main ee9549d6 too: guardrails scan_every_minutes, autonomous/index busy hand builder, run/index 7-day list. Main checkout run: 3 failed | 120 passed.
+Task 1: stamped (comment 1301150000218984)
+Task 2: stamped (comment 1301150000218985)
+Task 3: stamped (comment 1301150000218988)
