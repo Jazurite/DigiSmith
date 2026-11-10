@@ -408,7 +408,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           builder: (e) =>
             e
               .option("dry-run", { type: "boolean", default: false, describe: "observe and decide, write nothing" })
-              .option("repo", { type: "string", requiresArg: true, describe: "the main checkout git fetch runs in (default ~/Workspace/Jazurite/DigiSmith)" }),
+              .option("repo", { type: "string", requiresArg: true, describe: "the main checkout git fetch runs in (default ~/Workspace/Engineering/Jazurite/DigiSmith)" }),
           handler: (argv) => guarded(depsFactory, (d) => tickLines(d, argv.dryRun as boolean, argv.repo as string | undefined)),
         })
         .command({

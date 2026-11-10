@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { observeAll } from "./observe.ts";
 import { PromptError } from "./act.ts";
 import { writeLock } from "./fakes.test-util.ts";
@@ -403,5 +403,22 @@ describe("prompt delivery by cause", () => {
   };
   it.each([["ETIMEDOUT", "maybe"], ["SIGNAL:SIGKILL", "maybe"], ["ERR_CHILD_PROCESS_STDIO_MAXBUFFER", "maybe"], ["ENOENT", "no"], [2, "no"]] as const)("%s -> %s", async (c, want) => {
     expect(await delivered(c)).toBe(want);
+  });
+});
+
+describe("MAIN_CHECKOUT", () => {
+  it("defaults to the Engineering path under HOME", async () => {
+    vi.resetModules();
+    vi.stubEnv("DIGISMITH_MAIN_CHECKOUT", undefined as unknown as string);
+    const { MAIN_CHECKOUT } = await import("./observers-real.ts");
+    expect(MAIN_CHECKOUT).toBe(join(homedir(), "Workspace", "Engineering", "Jazurite", "DigiSmith"));
+    vi.unstubAllEnvs();
+  });
+  it("takes DIGISMITH_MAIN_CHECKOUT at import time", async () => {
+    vi.resetModules();
+    vi.stubEnv("DIGISMITH_MAIN_CHECKOUT", "/somewhere/else");
+    const { MAIN_CHECKOUT } = await import("./observers-real.ts");
+    expect(MAIN_CHECKOUT).toBe("/somewhere/else");
+    vi.unstubAllEnvs();
   });
 });

@@ -89,8 +89,8 @@ function runView(r: RunRecord): RunView {
   return { id: r.id, role: r.role, createdAt: r.created_at, started: has("started"), ended: has("ended"), merged: has("merged"), pushed: has("pushed"), phaseEvent };
 }
 
-/** The main checkout. Same value as MAIN_CHECKOUT in scripts/nexus-api/src/scheduler/registry.ts. */
-export const MAIN_CHECKOUT = join(homedir(), "Workspace", "Jazurite", "DigiSmith");
+/** The main checkout: DIGISMITH_MAIN_CHECKOUT, else the default. Same rule as scripts/nexus-api/src/main-checkout.ts (another package, so its own constant). */
+export const MAIN_CHECKOUT = process.env.DIGISMITH_MAIN_CHECKOUT ?? join(homedir(), "Workspace", "Engineering", "Jazurite", "DigiSmith");
 
 export interface ObserverDeps {
   exec: ExecOut; mainRepo: string; ticket: string; claimedAt: string;
