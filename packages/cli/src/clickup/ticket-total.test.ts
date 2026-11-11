@@ -308,7 +308,7 @@ describe("ticket-total", () => {
     appendStamp(KEY, stamp("1", 0.4635, 104, 1, 0));
     await run(fake({ description: "", markdown_description: "" }));
     const log = out(console.log as never);
-    expect(log).toContain("| 1 | 1 min 44 s | $0.4635 | 1 | 0 |");
+    expect(log).toContain("| 1 | 1 min 44 s (stored) | $0.4635 | 1 | 0 |");
     expect(log).not.toContain("Window:");
   });
 

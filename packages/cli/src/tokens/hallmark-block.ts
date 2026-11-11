@@ -18,6 +18,7 @@ export function sentinelCounts(text: string): { start: number; end: number; lega
 export interface BlockRow {
   task: string;
   agentSeconds: number;
+  stored?: true; // the time is the stamp's stored value (no closed registry window), not recomputed
   cost_usd: number | null;
   rounds: number | null; // null = reviews not recorded
   findings: number | null;
@@ -57,7 +58,7 @@ export function renderBlock(rows: BlockRow[], totals: BlockTotals, opts: { now?:
   const table = [
     "| Task | Agent time | Cost | Findings | Fix rounds |",
     "| --- | --- | --- | --- | --- |",
-    ...rows.map((r) => `| ${r.task}${r.stamped ? "" : " (not stamped)"} | ${formatDuration(r.agentSeconds)} | ${r.cost_usd === null ? "cost not priced" : usd(r.cost_usd)} | ${r.findings ?? nr} | ${r.fixRounds ?? nr} |`),
+    ...rows.map((r) => `| ${r.task}${r.stamped ? "" : " (not stamped)"} | ${formatDuration(r.agentSeconds)}${r.stored ? " (stored)" : ""} | ${r.cost_usd === null ? "cost not priced" : usd(r.cost_usd)} | ${r.findings ?? nr} | ${r.fixRounds ?? nr} |`),
   ].join("\n");
   const parts = [START, totalLine(totals), `Agent time: ${formatDuration(seconds)} over ${rows.length} ${rows.length === 1 ? "task" : "tasks"} (active time, gaps over ${ACTIVE_GAP_CAP_SECONDS / 60} min dropped)`];
   const starts = rows.flatMap((r) => (r.windowStart ? [Date.parse(r.windowStart)] : [])).filter((t) => !Number.isNaN(t));

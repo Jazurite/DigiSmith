@@ -32,7 +32,7 @@ function rowsFor(key: string, data: ReturnType<typeof collectRecords>): BlockRow
       // The stamps file stores 0 for missing review data; the source says what was really recorded.
       const none = s.reviews.source === "none";
       const rv = s.reviews;
-      return { task, agentSeconds: wb ? u.agentSeconds : s.agent_seconds, windowStart, windowEnd, cost_usd: costs.some((c) => c === null) ? null : costs.reduce((a: number, c) => a + (c as number), 0), rounds: none ? null : rv.rounds, findings: none ? null : rv.findings, fixRounds: none || rv.source === "findings.md" ? null : rv.fix_rounds, stamped: true, partial: s.partial };
+      return { task, agentSeconds: wb ? u.agentSeconds : s.agent_seconds, windowStart, windowEnd, ...(wb ? {} : { stored: true as const }), cost_usd: costs.some((c) => c === null) ? null : costs.reduce((a: number, c) => a + (c as number), 0), rounds: none ? null : rv.rounds, findings: none ? null : rv.findings, fixRounds: none || rv.source === "findings.md" ? null : rv.fix_rounds, stamped: true, partial: s.partial };
     }
     // No stamp: window and cost come from the registry and transcripts only. The ledger is gone by now,
     // so the "dispatch ... agent=<id>" rule cannot apply and subagent responses outside the window are missed.

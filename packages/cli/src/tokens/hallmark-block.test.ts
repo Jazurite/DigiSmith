@@ -42,6 +42,11 @@ describe("renderBlock", () => {
     const b = renderBlock(mix, totals, { now: NOW });
     expect(b).toContain("Window: 2026-11-02 12:00:00 to 2026-11-02 13:00:00 UTC+7");
   });
+  it("marks a stored agent time in the table cell", () => {
+    const b = renderBlock([{ ...rows[0], stored: true }, rows[1]], totals, { now: NOW });
+    expect(b).toContain("| 1 | 1 min 44 s (stored) |");
+    expect(b).toContain("| 2 (not stamped) | 1 min |");
+  });
   it("says task or tasks by count", () => {
     expect(renderBlock([rows[0]], totals, { now: NOW })).toContain("over 1 task (active");
     expect(renderBlock(rows, totals, { now: NOW })).toContain("over 2 tasks (active");
