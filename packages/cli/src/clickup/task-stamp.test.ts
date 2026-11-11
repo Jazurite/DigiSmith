@@ -106,7 +106,8 @@ describe("task-stamp", () => {
     await run(fake(), { yes: true });
     const s = readStamps(KEY)[0];
     expect(s.window_seconds).toBe(300);
-    expect(s.agent_seconds).toBeLessThan(300);
+    // the seed has one response (10:01:00) in the window: no gap between two responses, so 0 active seconds
+    expect(s.agent_seconds).toBe(0);
   });
 
   it("second run: ledger, then stamps file, then ticket comments (second page)", async () => {
