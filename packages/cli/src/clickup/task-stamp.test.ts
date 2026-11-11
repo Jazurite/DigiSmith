@@ -101,6 +101,14 @@ describe("task-stamp", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it("the stamps line keeps active time in agent_seconds and the wall window in window_seconds", async () => {
+    seed();
+    await run(fake(), { yes: true });
+    const s = readStamps(KEY)[0];
+    expect(s.window_seconds).toBe(300);
+    expect(s.agent_seconds).toBeLessThan(300);
+  });
+
   it("second run: ledger, then stamps file, then ticket comments (second page)", async () => {
     seed();
     await run(fake(), { yes: true });

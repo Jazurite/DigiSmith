@@ -63,6 +63,7 @@ function stampLine(n: string, commentId: string, u: TaskUsage, r: ReturnType<typ
     window_start: starts[0],
     window_end: ends[ends.length - 1],
     agent_seconds: u.agentSeconds,
+    window_seconds: u.windowSeconds,
     models,
     reviews: { rounds: r.rounds ?? 0, findings: r.findings ?? 0, fixed: r.fixed ?? 0, parked: r.parked ?? 0, rejected: r.rejected ?? 0, open: r.open ?? 0, fix_rounds: r.fixRounds ?? 0, source: r.source },
     partial,

@@ -29,7 +29,8 @@ export interface StampLine {
   comment_id: string;
   window_start: string;
   window_end: string;
-  agent_seconds: number;
+  agent_seconds: number; // active time
+  window_seconds?: number; // wall time of the closed windows; absent on older lines
   models: Record<string, StampModel>;
   reviews: StampReviews;
   partial: boolean;
@@ -48,7 +49,7 @@ function isStamp(v: unknown): v is StampLine {
   const str = (k: string) => typeof v[k] === "string";
   return (
     str("task") && str("comment_id") && str("window_start") && str("window_end") && str("stamped_at") &&
-    typeof v.agent_seconds === "number" && typeof v.partial === "boolean" && isObj(v.models) && isObj(v.reviews)
+    typeof v.agent_seconds === "number" && (v.window_seconds === undefined || typeof v.window_seconds === "number") && typeof v.partial === "boolean" && isObj(v.models) && isObj(v.reviews)
   );
 }
 

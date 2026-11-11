@@ -34,6 +34,19 @@ describe("stamps store", () => {
     expect(existsSync(join(dir, "DGS-1.stamps.jsonl"))).toBe(true);
     expect(readStamps("DGS-1")).toEqual([stamp("1", "c1")]);
   });
+  it("reads an old line without window_seconds and a new line with it", () => {
+    const old = stamp("1", "c1");
+    appendFileSync(join(dir, "DGS-1.stamps.jsonl"), `${JSON.stringify(old)}\n`);
+    appendStamp("DGS-1", { ...stamp("2", "c2"), window_seconds: 600 });
+    const got = readStamps("DGS-1");
+    expect(got.map((s) => s.comment_id)).toEqual(["c1", "c2"]);
+    expect(got[0].window_seconds).toBeUndefined();
+    expect(got[1].window_seconds).toBe(600);
+  });
+  it("rejects a line whose window_seconds is not a number", () => {
+    appendFileSync(join(dir, "DGS-1.stamps.jsonl"), `${JSON.stringify({ ...stamp("1", "c1"), window_seconds: "600" })}\n`);
+    expect(readStamps("DGS-1")).toEqual([]);
+  });
   it("returns [] when no file exists", () => {
     expect(readStamps("DGS-9")).toEqual([]);
   });

@@ -55,6 +55,14 @@ describe("renderStamp", () => {
     u.agentSeconds = 4920;
     expect(renderStamp({ key: "K-1", task: "1", usage: u, review: noReview })).toContain("(window 182 h, agent time 1 h 22 min)");
   });
+  it("shows an exact-hour window without minutes", () => {
+    const u = usage();
+    u.windowSeconds = 2 * 3600;
+    u.agentSeconds = 600;
+    const t = renderStamp({ key: "K-1", task: "1", usage: u, review: noReview });
+    expect(t).toContain("(window 2 h, agent time 10 min)");
+    expect(t).not.toContain("2 h 0 min");
+  });
   it("source line names active time and the cap in minutes", () => {
     const t = renderStamp({ key: "K-1", task: "1", usage: usage(), review: noReview });
     expect(t).toContain(`agent time = active time with gaps over ${ACTIVE_GAP_CAP_SECONDS / 60} min dropped`);
