@@ -291,6 +291,27 @@ describe("ticket-total", () => {
     expect(out(console.log as never)).toContain("Window: 2026-11-02 17:00:00 to 2026-11-02 19:05:00 UTC+7");
   });
 
+  it("window bounds compare by time across mixed timestamp formats", async () => {
+    const reg = createDepotRegistry(dir);
+    reg.append({ kind: "session", ticket: KEY, session_id: "s1", source: "t", role: "worker", ts: "2026-11-02T09:00:00Z" });
+    reg.append({ kind: "task_start", ticket: KEY, task: "1", session_id: "s1", ts: "2026-11-02T18:00:00.000Z" });
+    reg.append({ kind: "task_end", ticket: KEY, task: "1", session_id: "s1", ts: "2026-11-02T18:05:00.000Z" });
+    reg.append({ kind: "task_start", ticket: KEY, task: "2", session_id: "s1", ts: "2026-11-03T00:00:00+07:00" }); // 17:00Z
+    reg.append({ kind: "task_end", ticket: KEY, task: "2", session_id: "s1", ts: "2026-11-03T00:10:00+07:00" });
+    writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-11-02T18:01:00Z", input: 1, output: 1 }]);
+    await run(fake({ description: "", markdown_description: "" }));
+    expect(out(console.log as never)).toContain("Window: 2026-11-03 00:00:00 to 2026-11-03 01:05:00 UTC+7");
+  });
+
+  it("a stamped task with no registry window keeps the stored agent seconds and shows no Window line", async () => {
+    writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-11-02T10:01:00Z", input: 1, output: 1 }]);
+    appendStamp(KEY, stamp("1", 0.4635, 104, 1, 0));
+    await run(fake({ description: "", markdown_description: "" }));
+    const log = out(console.log as never);
+    expect(log).toContain("| 1 | 1 min 44 s | $0.4635 | 1 | 0 |");
+    expect(log).not.toContain("Window:");
+  });
+
   it("a non-ClickUp key is skipped", async () => {
     const f = fake({});
     await run(f, { task: "ABC-1", yes: true });

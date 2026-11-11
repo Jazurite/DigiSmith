@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { collectRecords, countTicket } from "./count.ts";
 import { createDepotRegistry } from "./registry.ts";
-import { ACTIVE_GAP_CAP_SECONDS, activeSeconds, taskUsage } from "./stamp.ts";
+import { ACTIVE_GAP_CAP_SECONDS, activeSeconds, taskUsage, windowBounds } from "./stamp.ts";
 import { writeSubagent, writeTranscript, type FakeResponse } from "./fixtures.test-util.ts";
 import { costFromPricing, resolveAnthropicPrice } from "./prices/cost.ts";
 import type { RegistryEntry } from "./types.ts";
@@ -214,5 +214,16 @@ describe("activeSeconds", () => {
   it("skips unparsable timestamps and honors a custom cap", () => {
     expect(activeSeconds([at(0), "nope", at(10)])).toBe(10);
     expect(activeSeconds([at(0), at(10), at(40)], 20)).toBe(10);
+  });
+});
+
+describe("windowBounds", () => {
+  it("is null for no windows", () => expect(windowBounds([])).toBeNull());
+  it("picks earliest start and latest end by time, not by string, across mixed formats", () => {
+    const w = [
+      { start: "2026-11-02T18:00:00.000Z", end: "2026-11-03T00:30:00+07:00" }, // end = 17:30Z
+      { start: "2026-11-03T00:00:00+07:00", end: "2026-11-02T20:00:00Z" }, // start = 17:00Z
+    ];
+    expect(windowBounds(w)).toEqual({ start: "2026-11-03T00:00:00+07:00", end: "2026-11-02T20:00:00Z" });
   });
 });

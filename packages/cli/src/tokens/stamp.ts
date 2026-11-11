@@ -133,16 +133,23 @@ export interface StampInput {
   missingSessions?: string[];
 }
 
+// Earliest start and latest end of a task's windows, compared by time (formats may differ); null when there are none.
+export function windowBounds(windows: { start: string; end: string }[]): { start: string; end: string } | null {
+  if (windows.length === 0) return null;
+  const start = windows.reduce((a, w) => (Date.parse(w.start) < Date.parse(a) ? w.start : a), windows[0].start);
+  const end = windows.reduce((a, w) => (Date.parse(w.end) > Date.parse(a) ? w.end : a), windows[0].end);
+  return { start, end };
+}
+
 // Plain text (ClickUp does not render Markdown); the first line is the idempotence marker.
 export function renderStamp(i: StampInput): string {
   const { usage, review: r } = i;
   const lines: string[] = [i.task === "final" ? `Hallmark final review of ${i.key}` : `Hallmark task ${i.task} of ${i.key}`];
 
-  if (usage.windows.length > 0) {
-    const firstStart = usage.windows.reduce((a, w) => (Date.parse(w.start) < Date.parse(a) ? w.start : a), usage.windows[0].start);
-    const start = utc7(firstStart);
-    const lastEnd = usage.windows.reduce((a, w) => (Date.parse(w.end) > Date.parse(a) ? w.end : a), usage.windows[0].end);
-    const end = utc7(lastEnd);
+  const bounds = windowBounds(usage.windows);
+  if (bounds) {
+    const start = utc7(bounds.start);
+    const end = utc7(bounds.end);
     const endText = end.slice(0, 10) === start.slice(0, 10) ? end.slice(11) : end;
     lines.push(`Window: ${start} to ${endText} UTC+7 (window ${formatDuration(usage.windowSeconds)}, agent time ${formatDuration(usage.agentSeconds)})`);
   } else {

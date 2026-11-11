@@ -5,7 +5,7 @@ import { printCall } from "./task-type-write.ts";
 import { collectRecords } from "../tokens/count.ts";
 import { applyBlock, renderBlock, sentinelCounts, type BlockRow, type BlockTotals } from "../tokens/hallmark-block.ts";
 import { createDepotRegistry } from "../tokens/registry.ts";
-import { priceOf, taskUsage } from "../tokens/stamp.ts";
+import { priceOf, taskUsage, windowBounds } from "../tokens/stamp.ts";
 import { readStamps } from "../tokens/stamps-store.ts";
 import { addCounts, emptyCounts, type Counts } from "../tokens/types.ts";
 
@@ -22,16 +22,17 @@ function rowsFor(key: string, data: ReturnType<typeof collectRecords>): BlockRow
   return [...ids].sort(taskOrder).map((task): BlockRow => {
     const s = latest.get(task);
     // Time always comes from the transcripts and registry (active time), never from the stored wall-clock figure.
-    // The stamp supplies reviews, findings, fix rounds, partial and cost.
+    // A stamped task with no closed registry window keeps its stored seconds and shows no Window. The stamp supplies reviews, findings, fix rounds, partial and cost.
     const u = taskUsage(data.records, data.entries, undefined, task, data.ticketSessions);
-    const windowStart = u.windows.length ? u.windows.reduce((a, w) => (w.start < a ? w.start : a), u.windows[0].start) : undefined;
-    const windowEnd = u.windows.length ? u.windows.reduce((a, w) => (w.end > a ? w.end : a), u.windows[0].end) : undefined;
+    const wb = windowBounds(u.windows);
+    const windowStart = wb?.start;
+    const windowEnd = wb?.end;
     if (s) {
       const costs = Object.values(s.models).map((m) => m.cost_usd);
       // The stamps file stores 0 for missing review data; the source says what was really recorded.
       const none = s.reviews.source === "none";
       const rv = s.reviews;
-      return { task, agentSeconds: u.agentSeconds, windowStart, windowEnd, cost_usd: costs.some((c) => c === null) ? null : costs.reduce((a: number, c) => a + (c as number), 0), rounds: none ? null : rv.rounds, findings: none ? null : rv.findings, fixRounds: none || rv.source === "findings.md" ? null : rv.fix_rounds, stamped: true, partial: s.partial };
+      return { task, agentSeconds: wb ? u.agentSeconds : s.agent_seconds, windowStart, windowEnd, cost_usd: costs.some((c) => c === null) ? null : costs.reduce((a: number, c) => a + (c as number), 0), rounds: none ? null : rv.rounds, findings: none ? null : rv.findings, fixRounds: none || rv.source === "findings.md" ? null : rv.fix_rounds, stamped: true, partial: s.partial };
     }
     // No stamp: window and cost come from the registry and transcripts only. The ledger is gone by now,
     // so the "dispatch ... agent=<id>" rule cannot apply and subagent responses outside the window are missed.
