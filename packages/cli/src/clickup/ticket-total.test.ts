@@ -89,7 +89,7 @@ describe("ticket-total", () => {
     const log = out(console.log as never);
     expect(log).toContain(START);
     expect(log).toContain("PUT /task/tid1");
-    expect(log).toContain("| 1 | 1 min 44 s | $0.4635 | 0 | 0 |");
+    expect(log).toContain("| 1 | 0 s | $0.4635 | 0 | 0 |");
     expect(log).toContain("nothing sent");
     expect(f.updateTask).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(0);
@@ -102,7 +102,7 @@ describe("ticket-total", () => {
     appendStamp(KEY, none);
     await run(fake({ description: "", markdown_description: "" }));
     const log = out(console.log as never);
-    expect(log).toContain("| 1 | 1 min 44 s | $0.4635 | not recorded | not recorded |");
+    expect(log).toContain("| 1 | 0 s | $0.4635 | not recorded | not recorded |");
     expect(log).toContain("(1 task(s) not recorded)");
   });
 
@@ -112,7 +112,7 @@ describe("ticket-total", () => {
     f.reviews.source = "findings.md";
     appendStamp(KEY, f);
     await run(fake({ description: "", markdown_description: "" }));
-    expect(out(console.log as never)).toContain("| 1 | 1 min 44 s | $0.4635 | 2 | not recorded |");
+    expect(out(console.log as never)).toContain("| 1 | 0 s | $0.4635 | 2 | not recorded |");
   });
 
   it("totals sum every response of the ticket's sessions, including outside any task window", async () => {
@@ -248,6 +248,47 @@ describe("ticket-total", () => {
     await run(f, { yes: true });
     expect(warns().length).toBeGreaterThanOrEqual(2);
     expect(process.exitCode).toBe(1);
+  });
+
+  // Two tasks, each with responses 1 min apart inside its window; task 1 is stamped with the old 182 h wall-clock figure.
+  function seedTwo() {
+    const reg = createDepotRegistry(dir);
+    reg.append({ kind: "session", ticket: KEY, session_id: "s1", source: "t", role: "worker", ts: "2026-11-02T09:00:00Z" });
+    reg.append({ kind: "task_start", ticket: KEY, task: "1", session_id: "s1", ts: "2026-11-02T10:00:00Z" });
+    reg.append({ kind: "task_end", ticket: KEY, task: "1", session_id: "s1", ts: "2026-11-02T10:05:00Z" });
+    reg.append({ kind: "task_start", ticket: KEY, task: "2", session_id: "s1", ts: "2026-11-02T12:00:00Z" });
+    reg.append({ kind: "task_end", ticket: KEY, task: "2", session_id: "s1", ts: "2026-11-02T12:05:00Z" });
+    writeTranscript(projects, "s1", [
+      { id: "a1", req: "ra1", ts: "2026-11-02T10:01:00Z", input: 10, output: 10 },
+      { id: "a2", req: "ra2", ts: "2026-11-02T10:02:00Z", input: 10, output: 10 },
+      { id: "b1", req: "rb1", ts: "2026-11-02T12:01:00Z", input: 10, output: 10 },
+      { id: "b2", req: "rb2", ts: "2026-11-02T12:03:00Z", input: 10, output: 10 },
+    ]);
+  }
+
+  it("a stamped task shows active time from the transcripts, not the stored 182 h; the stamp still gives reviews and partial", async () => {
+    seedTwo();
+    appendStamp(KEY, { ...stamp("1", 0.4635, 182 * 3600, 3, 2), partial: true });
+    await run(fake({ description: "", markdown_description: "" }));
+    const log = out(console.log as never);
+    expect(log).toContain("| 1 | 1 min | $0.4635 | 3 | 2 |");
+    expect(log).not.toContain("182 h");
+    expect(log).toContain("Partial: 1 task stamp(s) were posted with partial data");
+  });
+
+  it("an unstamped task shows its active time as before", async () => {
+    seedTwo();
+    await run(fake({ description: "", markdown_description: "" }));
+    const log = out(console.log as never);
+    expect(log).toContain("| 1 (not stamped) | 1 min |");
+    expect(log).toContain("| 2 (not stamped) | 2 min |");
+  });
+
+  it("the block shows a Window line from the first window start to the last window end across tasks", async () => {
+    seedTwo();
+    appendStamp(KEY, stamp("1", 0.4635, 182 * 3600, 0, 0));
+    await run(fake({ description: "", markdown_description: "" }));
+    expect(out(console.log as never)).toContain("Window: 2026-11-02 17:00:00 to 2026-11-02 19:05:00 UTC+7");
   });
 
   it("a non-ClickUp key is skipped", async () => {
