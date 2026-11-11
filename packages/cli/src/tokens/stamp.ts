@@ -13,7 +13,7 @@ export interface TaskUsage {
   total: { counts: Counts; cost_usd: number | null; priced: boolean };
   windows: { start: string; end: string }[];
   // Active time: per closed window, the gaps of at most ACTIVE_GAP_CAP_SECONDS between the ticket's own
-  // responses (controller and subagents merged), summed over windows.
+  // responses (controller and subagents of the window's own session merged), summed over windows.
   agentSeconds: number;
   // Wall clock: sum of closed windows (each task_start with its task_end).
   windowSeconds: number;
@@ -45,20 +45,20 @@ export function priceOf(r: UsageRecord): number | null {
 // A second task_start while one is open in that session is ignored (the first start wins). Windows of
 // different sessions are paired separately and may overlap; each counts in full, so windowSeconds is the
 // plain sum of closed windows, not wall-clock time; agentSeconds counts active time inside them.
-function closedWindows(entries: RegistryEntry[], task: string): { start: string; end: string }[] {
+function closedWindows(entries: RegistryEntry[], task: string): { start: string; end: string; session_id: string }[] {
   const marks = entries
     .map((e, order) => ({ e, t: Date.parse(e.ts), order }))
     .filter((x) => (x.e.kind === "task_start" || x.e.kind === "task_end") && x.e.task === task && !Number.isNaN(x.t))
     .sort((a, b) => a.t - b.t || Number(b.e.kind === "task_end") - Number(a.e.kind === "task_end") || a.order - b.order);
   const open = new Map<string, string>();
-  const out: { start: string; end: string }[] = [];
+  const out: { start: string; end: string; session_id: string }[] = [];
   for (const { e } of marks) {
     if (e.kind === "task_start") {
       if (!open.has(e.session_id)) open.set(e.session_id, e.ts);
     } else if (e.kind === "task_end") {
       const s = open.get(e.session_id);
       if (s !== undefined) {
-        out.push({ start: s, end: e.ts });
+        out.push({ start: s, end: e.ts, session_id: e.session_id });
         open.delete(e.session_id);
       }
     }
@@ -88,13 +88,16 @@ export function taskUsage(
     counts = addCounts(counts, c);
     cost = cost === null || p === null ? null : cost + p;
   }
-  const windows = closedWindows(entries, task);
+  const closed = closedWindows(entries, task);
+  const windows = closed.map(({ start, end }) => ({ start, end }));
   const windowSeconds = windows.reduce((s, w) => s + Math.max(0, (Date.parse(w.end) - Date.parse(w.start)) / 1000), 0);
-  const agentSeconds = windows.reduce((sum, w) => {
+  // Each window counts only the responses of its own session (subagents share that session id), so
+  // parallel sessions add their own active time and never merge, as cost does.
+  const agentSeconds = closed.reduce((sum, w) => {
     const lo = Date.parse(w.start);
     const hi = Date.parse(w.end);
     const stamps = records.filter((r) => {
-      if (!own.has(r.session_id)) return false;
+      if (!own.has(r.session_id) || r.session_id !== w.session_id) return false;
       const t = Date.parse(r.ts);
       return t >= lo && t <= hi;
     }).map((r) => r.ts);

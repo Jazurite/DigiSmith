@@ -100,12 +100,30 @@ describe("taskUsage", () => {
 });
 
 describe("task windows", () => {
-  it("counts overlapping windows from two sessions both", () => {
-    const entries = [session(), session("sess-c"), start("1", "2026-10-10T01:00:00Z"), end("1", "2026-10-10T01:10:00Z"), start("1", "2026-10-10T01:05:00Z", "sess-c"), end("1", "2026-10-10T01:15:00Z", "sess-c")];
-    const { c } = run([resp("a", "2026-10-10T01:02:00Z")], entries);
+  it("counts overlapping windows of two sessions each on their own responses", () => {
+    const entries = [session(), session("sess-c"), start("1", "2026-10-10T01:00:00Z"), end("1", "2026-10-10T01:30:00Z"), start("1", "2026-10-10T01:05:00Z", "sess-c"), end("1", "2026-10-10T01:35:00Z", "sess-c")];
+    const p = projects();
+    // 01:07 sits in the overlap and belongs to sess-a only.
+    writeTranscript(p, S, [resp("a1", "2026-10-10T01:00:00Z"), resp("a2", "2026-10-10T01:07:00Z"), resp("a3", "2026-10-10T01:20:00Z")]);
+    writeTranscript(p, "sess-c", [resp("c1", "2026-10-10T01:10:00Z"), resp("c2", "2026-10-10T01:15:00Z"), resp("c3", "2026-10-10T01:30:00Z")]);
+    const r = reg();
+    for (const e of entries) r.append(e);
+    const c = collectRecords({ ticket: T, registry: r, projectsDir: p });
     const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
     expect(u.windows).toHaveLength(2);
-    expect(u.windowSeconds).toBe(600 + 600);
+    expect(u.windowSeconds).toBe(1800 + 1800);
+    expect(u.agentSeconds).toBe(420 + 300);
+  });
+
+  it("does not count another session's response inside a window", () => {
+    const entries = [session(), session("sess-c"), start("1", "2026-10-10T01:00:00Z"), end("1", "2026-10-10T01:30:00Z")];
+    const p = projects();
+    writeTranscript(p, S, [resp("a1", "2026-10-10T01:00:00Z"), resp("a2", "2026-10-10T01:20:00Z")]);
+    writeTranscript(p, "sess-c", [resp("c1", "2026-10-10T01:10:00Z")]);
+    const r = reg();
+    for (const e of entries) r.append(e);
+    const c = collectRecords({ ticket: T, registry: r, projectsDir: p });
+    const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
     expect(u.agentSeconds).toBe(0);
   });
 
