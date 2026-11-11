@@ -17,7 +17,7 @@ describe("renderBlock", () => {
     expect(START).toBe("Hallmark totals begin (dg clickup ticket-total)");
     expect(END).toBe("Hallmark totals end");
     expect(b).toContain("Total: in 10, out 20, cache read 30, cache write 5 = $1.5000 list price");
-    expect(b).toContain("Agent time: 2 min 44 s over 2 tasks (sum of task windows)");
+    expect(b).toContain("Agent time: 2 min 44 s over 2 tasks (active time, gaps over 10 min dropped)");
     expect(b).toContain("Reviews: 0 rounds, 0 findings, 0 fix rounds");
     expect(b).toContain("| Task | Agent time | Cost | Findings | Fix rounds |\n| --- | --- | --- | --- | --- |\n| 1 | 1 min 44 s | $0.4635 | 0 | 0 |\n| 2 (not stamped) | 1 min | cost not priced | not recorded | not recorded |");
     expect(b).toContain("Updated 2026-11-02 17:00 UTC+7");
@@ -26,9 +26,20 @@ describe("renderBlock", () => {
     expect(b).toMatch(/\n\nAgent time:.*\n\nReviews:.*\n\n\| Task/);
     expect(b).toMatch(/\n\nUpdated .*\n\nHallmark totals end$/);
   });
+  it("stall case: 182 h window with 1 h active shows both lines", () => {
+    const stall: BlockRow = { ...rows[0], agentSeconds: 3600, windowStart: "2026-11-02T03:00:00Z", windowEnd: "2026-11-09T21:00:00Z" };
+    const b = renderBlock([stall], totals, { now: NOW });
+    expect(b).toContain("Agent time: 1 h over 1 task (active time, gaps over 10 min dropped)");
+    expect(b).toContain("\n\nWindow: 2026-11-02 10:00:00 to 2026-11-10 04:00:00 UTC+7\n\n");
+  });
+  it("Window spans earliest start to latest end; no window, no line", () => {
+    const two = [{ ...rows[0], windowStart: "2026-11-02T05:00:00Z", windowEnd: "2026-11-02T06:00:00Z" }, { ...rows[1], windowStart: "2026-11-02T03:00:00Z", windowEnd: "2026-11-02T04:00:00Z" }];
+    expect(renderBlock(two, totals, { now: NOW })).toContain("Window: 2026-11-02 10:00:00 to 2026-11-02 13:00:00 UTC+7");
+    expect(renderBlock(rows, totals, { now: NOW })).not.toContain("Window:");
+  });
   it("says task or tasks by count", () => {
-    expect(renderBlock([rows[0]], totals, { now: NOW })).toContain("over 1 task (sum");
-    expect(renderBlock(rows, totals, { now: NOW })).toContain("over 2 tasks (sum");
+    expect(renderBlock([rows[0]], totals, { now: NOW })).toContain("over 1 task (active");
+    expect(renderBlock(rows, totals, { now: NOW })).toContain("over 2 tasks (active");
   });
   it("adds a Partial line for partial stamps, alone and with missing sessions", () => {
     const p = [{ ...rows[0], partial: true }, { ...rows[0], task: "3", partial: true }, rows[1]];

@@ -1,4 +1,4 @@
-import { formatDuration, utc7 } from "./stamp.ts";
+import { ACTIVE_GAP_CAP_SECONDS, formatDuration, utc7 } from "./stamp.ts";
 import type { Counts } from "./types.ts";
 
 export const START = "Hallmark totals begin (dg clickup ticket-total)";
@@ -23,6 +23,8 @@ export interface BlockRow {
   findings: number | null;
   fixRounds: number | null;
   stamped: boolean;
+  windowStart?: string; // ISO, wall-clock window of the task
+  windowEnd?: string;
   partial?: boolean; // the stamp was posted with partial data
 }
 
@@ -57,7 +59,11 @@ export function renderBlock(rows: BlockRow[], totals: BlockTotals, opts: { now?:
     "| --- | --- | --- | --- | --- |",
     ...rows.map((r) => `| ${r.task}${r.stamped ? "" : " (not stamped)"} | ${formatDuration(r.agentSeconds)} | ${r.cost_usd === null ? "cost not priced" : usd(r.cost_usd)} | ${r.findings ?? nr} | ${r.fixRounds ?? nr} |`),
   ].join("\n");
-  const parts = [START, totalLine(totals), `Agent time: ${formatDuration(seconds)} over ${rows.length} ${rows.length === 1 ? "task" : "tasks"} (sum of task windows)`, reviews];
+  const parts = [START, totalLine(totals), `Agent time: ${formatDuration(seconds)} over ${rows.length} ${rows.length === 1 ? "task" : "tasks"} (active time, gaps over ${ACTIVE_GAP_CAP_SECONDS / 60} min dropped)`];
+  const starts = rows.flatMap((r) => (r.windowStart ? [Date.parse(r.windowStart)] : [])).filter((t) => !Number.isNaN(t));
+  const ends = rows.flatMap((r) => (r.windowEnd ? [Date.parse(r.windowEnd)] : [])).filter((t) => !Number.isNaN(t));
+  if (starts.length > 0 && ends.length > 0) parts.push(`Window: ${utc7(new Date(Math.min(...starts)).toISOString())} to ${utc7(new Date(Math.max(...ends)).toISOString())} UTC+7`);
+  parts.push(reviews);
   if ((opts.missing ?? 0) > 0) parts.push(`Partial: ${opts.missing} session(s) without transcript`);
   const stampsPartial = rows.filter((r) => r.stamped && r.partial).length;
   if (stampsPartial > 0) parts.push(`Partial: ${stampsPartial} task stamp(s) were posted with partial data`);
