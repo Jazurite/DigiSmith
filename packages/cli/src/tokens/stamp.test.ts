@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { collectRecords, countTicket } from "./count.ts";
 import { createDepotRegistry } from "./registry.ts";
-import { taskUsage } from "./stamp.ts";
+import { ACTIVE_GAP_CAP_SECONDS, activeSeconds, taskUsage } from "./stamp.ts";
 import { writeSubagent, writeTranscript, type FakeResponse } from "./fixtures.test-util.ts";
 import { costFromPricing, resolveAnthropicPrice } from "./prices/cost.ts";
 import type { RegistryEntry } from "./types.ts";
@@ -136,5 +136,35 @@ describe("collectRecords", () => {
       sessions: [{ session_id: S, role: "worker", attribution: "registry" }],
       unattributed: {},
     });
+  });
+});
+
+describe("activeSeconds", () => {
+  const at = (sec: number): string => new Date(Date.UTC(2026, 9, 10, 0, 0, 0) + sec * 1000).toISOString();
+  it("defaults the cap to 600 seconds", () => {
+    expect(ACTIVE_GAP_CAP_SECONDS).toBe(600);
+  });
+  it("is 0 for no response and for one response", () => {
+    expect(activeSeconds([])).toBe(0);
+    expect(activeSeconds([at(0)])).toBe(0);
+  });
+  it("sums gaps under the cap", () => {
+    expect(activeSeconds([at(0), at(100), at(250)])).toBe(250);
+  });
+  it("drops a gap over the cap", () => {
+    expect(activeSeconds([at(0), at(100), at(100 + 601), at(100 + 601 + 50)])).toBe(150);
+  });
+  it("counts a gap exactly at the cap", () => {
+    expect(activeSeconds([at(0), at(600)])).toBe(600);
+  });
+  it("sorts unsorted input", () => {
+    expect(activeSeconds([at(250), at(0), at(100)])).toBe(250);
+  });
+  it("gives 0 for equal timestamps", () => {
+    expect(activeSeconds([at(5), at(5), at(5)])).toBe(0);
+  });
+  it("skips unparsable timestamps and honors a custom cap", () => {
+    expect(activeSeconds([at(0), "nope", at(10)])).toBe(10);
+    expect(activeSeconds([at(0), at(10), at(40)], 20)).toBe(10);
   });
 });

@@ -16,6 +16,21 @@ export interface TaskUsage {
   agentSeconds: number;
 }
 
+// A gap between two responses counts as active time only when it is at most this long.
+export const ACTIVE_GAP_CAP_SECONDS = 600;
+
+// Active seconds: sort the response timestamps (ISO strings), sum each gap that is at most the cap.
+// Unparsable timestamps are skipped; fewer than two valid timestamps give 0.
+export function activeSeconds(timestamps: string[], cap: number = ACTIVE_GAP_CAP_SECONDS): number {
+  const times = timestamps.map((t) => Date.parse(t)).filter((t) => !Number.isNaN(t)).sort((a, b) => a - b);
+  let total = 0;
+  for (let i = 1; i < times.length; i++) {
+    const gap = (times[i] - times[i - 1]) / 1000;
+    if (gap <= cap) total += gap;
+  }
+  return total;
+}
+
 export function priceOf(r: UsageRecord): number | null {
   const pricing = resolveAnthropicPrice(r.model);
   if (!pricing) return null;
