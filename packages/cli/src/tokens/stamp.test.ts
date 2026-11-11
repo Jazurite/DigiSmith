@@ -37,7 +37,8 @@ describe("taskUsage", () => {
     expect(u.total.counts.responses).toBe(1);
     expect(u.total.priced).toBe(true);
     expect(u.windows).toEqual([{ start: "2026-10-10T01:00:00Z", end: "2026-10-10T02:00:00Z" }]);
-    expect(u.agentSeconds).toBe(3600);
+    expect(u.windowSeconds).toBe(3600);
+    expect(u.agentSeconds).toBe(0);
   });
 
   it("prices each response on its own for the Haiku 5.5 long tier", () => {
@@ -67,7 +68,8 @@ describe("taskUsage", () => {
     const entries = [session(), start("1", "2026-10-10T01:00:00Z"), end("1", "2026-10-10T01:10:00Z"), start("1", "2026-10-10T05:00:00Z"), end("1", "2026-10-10T05:20:00Z")];
     const { c } = run([resp("a", "2026-10-10T01:05:00Z"), resp("b", "2026-10-10T03:00:00Z"), resp("c", "2026-10-10T05:10:00Z")], entries);
     const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
-    expect(u.agentSeconds).toBe(600 + 1200);
+    expect(u.windowSeconds).toBe(600 + 1200);
+    expect(u.agentSeconds).toBe(0);
     expect(u.windows).toHaveLength(2);
     expect(u.total.counts.responses).toBe(2);
   });
@@ -103,7 +105,8 @@ describe("task windows", () => {
     const { c } = run([resp("a", "2026-10-10T01:02:00Z")], entries);
     const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
     expect(u.windows).toHaveLength(2);
-    expect(u.agentSeconds).toBe(600 + 600);
+    expect(u.windowSeconds).toBe(600 + 600);
+    expect(u.agentSeconds).toBe(0);
   });
 
   it("keeps the first task_start when a second arrives while one is open", () => {
@@ -111,7 +114,34 @@ describe("task windows", () => {
     const { c } = run([resp("a", "2026-10-10T01:07:00Z")], entries);
     const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
     expect(u.windows).toEqual([{ start: "2026-10-10T01:00:00Z", end: "2026-10-10T01:10:00Z" }]);
-    expect(u.agentSeconds).toBe(600);
+    expect(u.windowSeconds).toBe(600);
+    expect(u.agentSeconds).toBe(0);
+  });
+
+  it("counts active time from merged controller and subagent responses, dropping long gaps and outside responses", () => {
+    const entries = [
+      session(), session("sess-c"),
+      start("1", "2026-10-10T01:00:00Z"), end("1", "2026-10-10T01:30:00Z"),
+      start("1", "2026-10-10T05:00:00Z", "sess-c"), end("1", "2026-10-10T05:10:00Z", "sess-c"),
+    ];
+    const p = projects();
+    writeTranscript(p, S, [resp("a", "2026-10-10T01:00:00Z"), resp("b", "2026-10-10T01:05:00Z"), resp("g", "2026-10-10T01:25:00Z"), resp("out", "2026-10-10T03:00:00Z")]);
+    writeSubagent(p, S, "ag1", [resp("s", "2026-10-10T01:07:00Z")]);
+    writeTranscript(p, "sess-c", [resp("c", "2026-10-10T05:01:00Z"), resp("d", "2026-10-10T05:03:00Z")]);
+    const r = reg();
+    for (const e of entries) r.append(e);
+    const c = collectRecords({ ticket: T, registry: r, projectsDir: p });
+    const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
+    // window 1: 01:00, 01:05, 01:07, 01:25 -> 300 + 120 (gap 1080 dropped); window 2: 120
+    expect(u.agentSeconds).toBe(300 + 120 + 120);
+    expect(u.windowSeconds).toBe(1800 + 600);
+  });
+
+  it("drops a 7-day gap inside a window", () => {
+    const entries = [session(), start("1", "2026-10-10T00:00:00Z"), end("1", "2026-10-17T00:10:00Z")];
+    const { c } = run([resp("a", "2026-10-10T00:00:00Z"), resp("b", "2026-10-10T00:04:00Z"), resp("c", "2026-10-17T00:00:00Z"), resp("d", "2026-10-17T00:05:00Z")], entries);
+    const u = taskUsage(c.records, c.entries, undefined, "1", c.ticketSessions);
+    expect(u.agentSeconds).toBe(240 + 300);
   });
 });
 

@@ -12,8 +12,11 @@ export interface TaskUsage {
   models: Record<string, ModelUsage>;
   total: { counts: Counts; cost_usd: number | null; priced: boolean };
   windows: { start: string; end: string }[];
-  // Source: sum of closed windows (each task_start with its task_end).
+  // Active time: per closed window, the gaps of at most ACTIVE_GAP_CAP_SECONDS between the ticket's own
+  // responses (controller and subagents merged), summed over windows.
   agentSeconds: number;
+  // Wall clock: sum of closed windows (each task_start with its task_end).
+  windowSeconds: number;
 }
 
 // A gap between two responses counts as active time only when it is at most this long.
@@ -40,8 +43,8 @@ export function priceOf(r: UsageRecord): number | null {
 
 // Closed windows of one task: a task_start paired with the next task_end of the same task and session.
 // A second task_start while one is open in that session is ignored (the first start wins). Windows of
-// different sessions are paired separately and may overlap; each counts in full, so agentSeconds is the
-// plain sum of closed windows, not wall-clock time.
+// different sessions are paired separately and may overlap; each counts in full, so windowSeconds is the
+// plain sum of closed windows, not wall-clock time; agentSeconds counts active time inside them.
 function closedWindows(entries: RegistryEntry[], task: string): { start: string; end: string }[] {
   const marks = entries
     .map((e, order) => ({ e, t: Date.parse(e.ts), order }))
@@ -86,8 +89,18 @@ export function taskUsage(
     cost = cost === null || p === null ? null : cost + p;
   }
   const windows = closedWindows(entries, task);
-  const agentSeconds = windows.reduce((s, w) => s + Math.max(0, (Date.parse(w.end) - Date.parse(w.start)) / 1000), 0);
-  return { models, total: { counts, cost_usd: cost, priced: cost !== null }, windows, agentSeconds };
+  const windowSeconds = windows.reduce((s, w) => s + Math.max(0, (Date.parse(w.end) - Date.parse(w.start)) / 1000), 0);
+  const agentSeconds = windows.reduce((sum, w) => {
+    const lo = Date.parse(w.start);
+    const hi = Date.parse(w.end);
+    const stamps = records.filter((r) => {
+      if (!own.has(r.session_id)) return false;
+      const t = Date.parse(r.ts);
+      return t >= lo && t <= hi;
+    }).map((r) => r.ts);
+    return sum + activeSeconds(stamps);
+  }, 0);
+  return { models, total: { counts, cost_usd: cost, priced: cost !== null }, windows, agentSeconds, windowSeconds };
 }
 
 // UTC+7 wall time "YYYY-MM-DD HH:MM:SS" (adds 7 h; no library).

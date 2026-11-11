@@ -133,7 +133,7 @@ describe("ticket-total", () => {
     seed();
     await run(fake({ description: "", markdown_description: "" }));
     const log = out(console.log as never);
-    expect(log).toContain("| 1 (not stamped) | 5 min |");
+    expect(log).toContain("| 1 (not stamped) | 0 s |");
     expect(log).toContain("| not recorded | not recorded |");
   });
 
