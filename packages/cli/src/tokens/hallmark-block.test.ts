@@ -26,7 +26,7 @@ describe("renderBlock", () => {
     expect(b).toMatch(/\n\nAgent time:.*\n\nReviews:.*\n\n\| Task/);
     expect(b).toMatch(/\n\nUpdated .*\n\nHallmark totals end$/);
   });
-  it("stall case: 182 h window with 1 h active shows both lines", () => {
+  it("stall case: 186 h window with 1 h active shows both lines", () => {
     const stall: BlockRow = { ...rows[0], agentSeconds: 3600, windowStart: "2026-11-02T03:00:00Z", windowEnd: "2026-11-09T21:00:00Z" };
     const b = renderBlock([stall], totals, { now: NOW });
     expect(b).toContain("Agent time: 1 h over 1 task (active time, gaps over 10 min dropped)");
@@ -36,6 +36,11 @@ describe("renderBlock", () => {
     const two = [{ ...rows[0], windowStart: "2026-11-02T05:00:00Z", windowEnd: "2026-11-02T06:00:00Z" }, { ...rows[1], windowStart: "2026-11-02T03:00:00Z", windowEnd: "2026-11-02T04:00:00Z" }];
     expect(renderBlock(two, totals, { now: NOW })).toContain("Window: 2026-11-02 10:00:00 to 2026-11-02 13:00:00 UTC+7");
     expect(renderBlock(rows, totals, { now: NOW })).not.toContain("Window:");
+  });
+  it("Window spans only the rows that have one in a mix", () => {
+    const mix = [{ ...rows[0], windowStart: "2026-11-02T05:00:00Z", windowEnd: "2026-11-02T06:00:00Z" }, rows[1]];
+    const b = renderBlock(mix, totals, { now: NOW });
+    expect(b).toContain("Window: 2026-11-02 12:00:00 to 2026-11-02 13:00:00 UTC+7");
   });
   it("says task or tasks by count", () => {
     expect(renderBlock([rows[0]], totals, { now: NOW })).toContain("over 1 task (active");
