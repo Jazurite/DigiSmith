@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-721 — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-721 — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-11-11</span>
+    <span>Ticket: <strong>DGS-721</strong></span>
+    <span>Commit range: <code>7c22d223..f8edd948</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Hallmark agent time counted <code>task_end - task_start</code>, so a stalled build counted in full: DGS-546 task 8 showed 182 h 21 min. Agent time is now active time. For each closed window, the spans between consecutive responses of the window's own session (subagents included) are added, and a gap over <code>ACTIVE_GAP_CAP_SECONDS</code> (600 s) is dropped. The wall-clock window stays as a second line, so a stall stays visible. <code>task-stamp</code> and <code>ticket-total</code> use the same rule; posted comments are not rewritten, and <code>ticket-total</code> recomputes. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (7 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix rounds before merge (task 2, task 6, final wave).</p>
+  <p>Reference documents: the <a href="spec.md">design spec</a> and the <a href="plan.md">implementation plan</a>.</p>
+  <h3>Sanity check on DGS-679 (by hand, session 10102674)</h3>
+  <ul>
+    <li>Whole-session active time with the 600 s cap: <strong>1178.7 s</strong>; Claude Code <code>totalAPIDuration</code>: 554 606 ms (554.6 s). Active time is above API time, as expected: it includes tool time and short waits.</li>
+    <li>Active time per task: 88.5 / 106.6 / 120.2 s (sum 315.3 s), against windows of 103.7 / 124.2 / 133.2 s (sum 361.1 s). Window active time is at most the 361 s window.</li>
+    <li>241 records in all, 102 in that session, first 2026-10-27T09:48:30Z, last 10:08:09Z.</li>
+  </ul>
+  <h3>Whole suites (vitest, forks 2, load 3.97)</h3>
+  <ul>
+    <li><code>packages/cli/src/tokens</code>: 19 files, 223 tests, all passed.</li>
+    <li><code>packages/cli/src/clickup</code>: 48 files, 741 tests, all passed.</li>
+    <li>No failures, so no proof on origin/main is needed. Known base failure <code>autonomous/guardrails.test.ts</code> (DGS-720) is outside these folders.</li>
+  </ul>
+  <p>Findings table: <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Active-seconds function</h4><p>Pure helper <code>activeSeconds</code> and the constant <code>ACTIVE_GAP_CAP_SECONDS</code> = 600.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4><code>taskUsage</code> uses it</h4><p><code>agentSeconds</code> is active time per window session; new <code>windowSeconds</code> keeps the wall sum.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Stamp comment text</h4><p>The Window line shows the window length and the active time; the Source line names active time and the cap.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Stamp line and store</h4><p><code>agent_seconds</code> is active; optional <code>window_seconds</code> added; old lines still load.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Ticket block text</h4><p>Agent time reads "active time, gaps over 10 min dropped" with a second <code>Window:</code> line.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4><code>ticket-total</code> recomputes</h4><p>Time comes from <code>taskUsage</code> for every task; a stamped task with no closed window keeps its stored seconds.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>README and sanity check</h4><p>The tokens README describes active time; the DGS-679 comparison is in the Summary.</p></div>
+    <div class="card"><span class="tag">Final wave</span><h4>Stored marker</h4><p>A stored value shows "(stored)" in the Agent time cell; the spec text names the window's own session.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1 Active-seconds function</td><td>activeSeconds, cap constant</td><td>Approved, clean (1 minor rejected)</td><td>none</td></tr>
+    <tr><td>2 taskUsage</td><td>active and window seconds</td><td>Approved after 1 fix round</td><td>none</td></tr>
+    <tr><td>3 Stamp comment text</td><td>Window and Source lines</td><td>Approved, clean (1 minor fixed in task 4)</td><td>none</td></tr>
+    <tr><td>4 Stamp line and store</td><td>agent_seconds, window_seconds</td><td>Approved, clean (1 minor fixed in task 5)</td><td>none</td></tr>
+    <tr><td>5 Ticket block text</td><td>Active text and Window line</td><td>Approved, clean (2 minors fixed in task 6)</td><td>none</td></tr>
+    <tr><td>6 ticket-total</td><td>Recompute, window bounds</td><td>Approved after 1 fix round</td><td>none</td></tr>
+    <tr><td>7 README and sanity</td><td>Docs, DGS-679 numbers</td><td>Docs only; covered by the whole-branch review</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: opus whole-branch review found 0 Critical, 0 Important, 2 Minor; both fixed in one wave (f8edd948 and the spec text). No scoped re-review, by the Maestro's order.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>Spec said all ticket sessions merge in a window; code counts the window's own session.</td><td>Fixed: spec Decision text updated (untracked board file).</td></tr>
+    <tr><td>Minor</td><td>A stamped task with no closed window showed stored (possibly wall-clock) seconds unmarked.</td><td>Fixed (f8edd948): the row shows "(stored)"; one test, one README line.</td></tr>
+  </table>
+  </div>
+  <p>Full table: <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">172b37af</span> fix(tokens): add activeSeconds helper</li>
+    <li><span class="sha">486f7e72</span> fix(tokens): count active time in taskUsage</li>
+    <li><span class="sha">bca6d403</span> fix(tokens): count active time per window session</li>
+    <li><span class="sha">f78b2f27</span> fix(tokens): show window and active time in the stamp</li>
+    <li><span class="sha">9fdd59fd</span> fix(tokens): write active and window seconds to the stamps line</li>
+    <li><span class="sha">64486ae0</span> test(clickup): assert exact active seconds in the stamp line test</li>
+    <li><span class="sha">225a74f1</span> fix(tokens): show active time and window in the ticket block</li>
+    <li><span class="sha">a1dc2936</span> test(tokens): fix stall test title and pin the partial window row</li>
+    <li><span class="sha">b6b41705</span> fix(clickup): ticket-total shows active time and window for every task</li>
+    <li><span class="sha">b1a400d7</span> fix(tokens): share windowBounds and keep stored seconds without a window</li>
+    <li><span class="sha">9dceba45</span> docs(tokens): describe active agent time</li>
+    <li><span class="sha">f8edd948</span> fix(clickup): mark stored agent time in the ticket block</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-721—agent-time/report.html</footer>
+
+</body>
+</html>
