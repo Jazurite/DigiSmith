@@ -84,6 +84,10 @@ Two commands put token cost into ClickUp. Both write only with `--yes`. Without 
 
 Cost is priced per response, from the window of the task, at the list price of the model of each response.
 
+Agent time is active time. For each closed window (a `task_start` with its `task_end`) the reader takes the responses of the window's own session, subagents included, and adds up the spans between consecutive responses. A span longer than `ACTIVE_GAP_CAP_SECONDS` (600 s) is dropped, so a pause does not count. The windows are added up. The wall-clock window stays: it is the Window line in the stamp comment and in the ticket block.
+
+`ticket-total` recomputes the time of every task. If a stamped task has no closed window in the registry, it keeps the seconds stored in its stamp. Comments that are already posted are not rewritten.
+
 Stamps file: `~/.digismith-depot/token-registry/<Key>.stamps.jsonl`. Each stamp is also appended to this file as one JSON line. The ledger is deleted before finishing, so the total reads the stamps file, not the ledger.
 
 Idempotence: a stamp that is already in the ledger (a line), in the stamps file or in ClickUp (the marker on the first line of the comment) is not posted again. A second run changes nothing.
