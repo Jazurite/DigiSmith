@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ANTHROPIC_PRICES_VERSION } from "./prices/anthropic.ts";
 import type { ReviewData } from "./review-data.ts";
-import { formatDuration, renderStamp, utc7 } from "./stamp.ts";
+import { ACTIVE_GAP_CAP_SECONDS, formatDuration, renderStamp, utc7 } from "./stamp.ts";
 import type { TaskUsage } from "./stamp.ts";
 
 const usage = (): TaskUsage => ({
@@ -12,16 +12,17 @@ const usage = (): TaskUsage => ({
   total: { counts: { input: 42, output: 10942, cache_read: 3240879, cache_write_5m: 98191, cache_write_1h: 8816, responses: 19 }, cost_usd: 0.4635, priced: true },
   windows: [{ start: "2026-10-27T09:50:59.499Z", end: "2026-10-27T09:52:43.207Z" }],
   agentSeconds: 103.708,
+  windowSeconds: 103.708,
 });
 const noReview: ReviewData = { rounds: null, findings: null, fixed: null, parked: null, rejected: null, open: null, fixRounds: null, source: "none" };
-const src = `Source: registry window + transcripts, per-response list prices (list prices version ${ANTHROPIC_PRICES_VERSION}); agent time = sum of closed windows`;
+const src = `Source: registry window + transcripts, per-response list prices (list prices version ${ANTHROPIC_PRICES_VERSION}); agent time = active time with gaps over ${ACTIVE_GAP_CAP_SECONDS / 60} min dropped`;
 
 describe("renderStamp", () => {
   it("renders the DGS-679 task 1 comment", () => {
     expect(renderStamp({ key: "DGS-679", task: "1", usage: usage(), review: noReview })).toBe(
       [
         "Hallmark task 1 of DGS-679",
-        "Window: 2026-10-27 16:50:59 to 16:52:43 UTC+7 (agent time 1 min 44 s)",
+        "Window: 2026-10-27 16:50:59 to 16:52:43 UTC+7 (window 1 min 44 s, agent time 1 min 44 s)",
         "claude-sonnet-5-5: in 24, out 5348, cache read 2766374, cache write 41753 (10 responses) = $0.4478",
         "claude-haiku-5-5: in 18, out 5594, cache read 474505, cache write 65254 (9 responses) = $0.0157",
         "Task total: in 42, out 10942, cache read 3240879, cache write 107007 = $0.4635 (list price)",
@@ -37,7 +38,8 @@ describe("renderStamp", () => {
     const u = usage();
     u.windows = [{ start: "2026-10-27T16:50:00Z", end: "2026-10-27T17:10:00Z" }];
     u.agentSeconds = 1200;
-    expect(renderStamp({ key: "K-1", task: "2", usage: u, review: noReview })).toContain("Window: 2026-10-27 23:50:00 to 2026-10-28 00:10:00 UTC+7 (agent time 20 min)");
+    u.windowSeconds = 1200;
+    expect(renderStamp({ key: "K-1", task: "2", usage: u, review: noReview })).toContain("Window: 2026-10-27 23:50:00 to 2026-10-28 00:10:00 UTC+7 (window 20 min, agent time 20 min)");
   });
   it("uses the earliest start over unsorted windows and plural responses", () => {
     const u = usage();
@@ -45,6 +47,18 @@ describe("renderStamp", () => {
     const t = renderStamp({ key: "K-1", task: "1", usage: u, review: noReview });
     expect(t).toContain("Window: 2026-10-27 16:00:00 to 17:05:00 UTC+7");
     expect(t).toContain("(10 responses) = $0.4478");
+  });
+  it("shows a long window next to a short active time", () => {
+    const u = usage();
+    u.windows = [{ start: "2026-11-03T00:05:11Z", end: "2026-11-10T05:00:00Z" }];
+    u.windowSeconds = 182 * 3600;
+    u.agentSeconds = 4920;
+    expect(renderStamp({ key: "K-1", task: "1", usage: u, review: noReview })).toContain("(window 182 h, agent time 1 h 22 min)");
+  });
+  it("source line names active time and the cap in minutes", () => {
+    const t = renderStamp({ key: "K-1", task: "1", usage: usage(), review: noReview });
+    expect(t).toContain(`agent time = active time with gaps over ${ACTIVE_GAP_CAP_SECONDS / 60} min dropped`);
+    expect(t).not.toContain("sum of closed windows");
   });
   it("marks unpriced model and partly priced total", () => {
     const u = usage();

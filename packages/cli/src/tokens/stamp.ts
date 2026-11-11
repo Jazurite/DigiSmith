@@ -144,7 +144,7 @@ export function renderStamp(i: StampInput): string {
     const lastEnd = usage.windows.reduce((a, w) => (Date.parse(w.end) > Date.parse(a) ? w.end : a), usage.windows[0].end);
     const end = utc7(lastEnd);
     const endText = end.slice(0, 10) === start.slice(0, 10) ? end.slice(11) : end;
-    lines.push(`Window: ${start} to ${endText} UTC+7 (agent time ${formatDuration(usage.agentSeconds)})`);
+    lines.push(`Window: ${start} to ${endText} UTC+7 (window ${formatDuration(usage.windowSeconds)}, agent time ${formatDuration(usage.agentSeconds)})`);
   } else {
     lines.push(`Window: ${nr}`);
   }
@@ -173,6 +173,6 @@ export function renderStamp(i: StampInput): string {
     findings = `${r.findings} (${parts.join(", ")})`;
   }
   lines.push(`Reviews: ${reviews} | Findings: ${findings} | Fix rounds: ${r.fixRounds ?? nr}`);
-  lines.push(`Source: registry window + transcripts, per-response list prices (list prices version ${ANTHROPIC_PRICES_VERSION}); agent time = sum of closed windows`);
+  lines.push(`Source: registry window + transcripts, per-response list prices (list prices version ${ANTHROPIC_PRICES_VERSION}); agent time = active time with gaps over ${ACTIVE_GAP_CAP_SECONDS / 60} min dropped`);
   return lines.join("\n");
 }
