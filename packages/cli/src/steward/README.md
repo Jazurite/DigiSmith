@@ -2,7 +2,7 @@
 
 Keeps ClickUp in step with the work (DGS-549). Not a session: each call loads one ticket's state file, acts, saves, ends.
 
-    dg steward event <event> --ticket <KEY> [--by <who>] [--sha <sha>] [--answer yes|no] [--quote "<Jack's words>"] [--dry-run]
+    dg steward event <event> --ticket <KEY> [--by <who>] [--sha <sha>] [--answer yes|no] [--quote "<Jack's words>"] [--hook] [--dry-run]
     dg steward rebuild --ticket <KEY>
 
 State: `~/.digismith-depot/steward/<KEY>.json` (one per ticket; rebuildable; never removed in version 1).
@@ -27,7 +27,21 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 `scheduled` leaves by `dg autonomous schedule-release` (DGS-601), not by a Steward event.
 
 A non-zero exit (code 2) means a usage error only. Tracker or state failures print one line and exit 0.
-Which skill or step sends which event is DGS-551.
+
+## Who sends what (DGS-551)
+
+The status flow is the SOP DGS-731. Every send is `dg steward event <event> --ticket <KEY> --hook --by <who>`. `--hook`: silent without a ClickUp tracker; a usage error in the handler exits 0. A refusal is logged in the state file and printed once; nothing retries it. yargs checks the flags before the handler runs, so a bad flag still exits non-zero: every hook line in a skill ends with `|| true`.
+
+| Event | Sent by | Where |
+|---|---|---|
+| `refinement-started` | the refine worker | bootstrap, adopt |
+| `started` | the factory (in process), the Builder | `autonomous/steward-started.ts`, the order text, subagent-driven-development, executing-plans, init |
+| `review-started` | Builder, Reviewer | subagent-driven-development (final review), reviewer (ticket review) |
+| `merged` | finishing, Option 1 | after the push; Option 2: whoever merges the PR |
+| `documented` | report-implementation, finishing | after `report.html` is committed |
+| `shaped`, `approved`, `accepted`, `completed`, `discard`, `close` | the Maestro, never a hook | see the Maestro rule |
+
+Not hooked: `claimed` (the factory's lock, `autonomous/scan.ts`), the claim rollback, `scheduled` to `to do` (`schedule-release`). `status-writers.test.ts` keeps this list honest.
 
 ## Dates and "Reschedule dependencies"
 
