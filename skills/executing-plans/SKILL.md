@@ -23,6 +23,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 
 Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
 
+Send the Steward its event (DGS-551). Same key rule as the block above; no key: skip silently:
+
+```bash
+dg steward event started --ticket <Key> --hook --by worker || true
+```
+
+A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+
 ### Step 1: Load and Review Plan
 1. Ensure an isolated workspace: use digismith:using-git-worktrees to create one or verify the existing one
 2. Read plan file

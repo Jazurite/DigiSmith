@@ -90,6 +90,14 @@ Check, in order:
      repeat of an open step. Same skip rule as above: no key → skip; a non-zero exit or
      warning never blocks.
 
+     Send the Steward its event (DGS-551) (a resumed build). Same key rule as the block above; no key: skip silently:
+
+     ```bash
+     dg steward event started --ticket <Key> --hook --by worker || true
+     ```
+
+     A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+
      Then read `profile` from `.digismith/config.yml`, or from `.digismith/profile`
      when `config.yml` or its `profile` key is missing (A.4 fallback). If
      `config.yml` exists but cannot be read or parsed, handle it the same way as a

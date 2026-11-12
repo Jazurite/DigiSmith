@@ -515,6 +515,14 @@ what Step 2's new sub-step 7 below makes possible.
    silently. A non-zero exit or a warning never blocks the ticket flow
    (same disposition as Step 1.5's missing transcript).
 
+   Send the Steward its event (DGS-551), only when `<step>` is `brainstorming`. Same key rule as the block above; no key: skip silently:
+
+   ```bash
+   dg steward event refinement-started --ticket <Key> --hook --by worker || true
+   ```
+
+   A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+
 ### Step 3: Hand Off to Brainstorming
 
 From inside that worktree, invoke `digismith:brainstorming`, passing both the slug already

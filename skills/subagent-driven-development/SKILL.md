@@ -122,6 +122,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 
 Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
 
+Send the Steward its event (DGS-551). Same key rule as the block above; no key: skip silently:
+
+```bash
+dg steward event started --ticket <Key> --hook --by worker || true
+```
+
+A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+
 Conversation memory does not survive compaction. In real sessions,
 controllers that lost their place have re-dispatched entire completed task
 sequences — the single most expensive failure observed. Track progress in
@@ -635,6 +643,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 Same key rule as the step-start block in Setup.
+
+Send the Steward its event (DGS-551) (the whole-branch review starts). Same key rule as the block above; no key: skip silently:
+
+```bash
+dg steward event review-started --ticket <Key> --hook --by worker || true
+```
+
+A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
 
 The final whole-branch review gets a package too: run
 `scripts/review-package PLAN_FILE MERGE_BASE HEAD` (MERGE_BASE = the commit the

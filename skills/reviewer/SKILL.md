@@ -63,12 +63,19 @@ For the conductor or Maestro, not for the Reviewer worker.
 
 ## Steward moments
 
-`review-started`: the conductor sends it when it starts the `ticket` Reviewer. `merged`: the merge hook sends it. The Reviewer never merges. A `task` review sends no event. The wiring is DGS-551.
+`review-started`: the `ticket` Reviewer sends it itself (rule below); a `task` review sends no event. `merged`: the merge hook sends it. The Reviewer never merges. The wiring is DGS-551.
 
 ## Rules for the Reviewer
 
 - Read only on the checkout. Write only `<pack>/report.md`.
 - Register this session first, at the start of every review, including after a `/clear`: `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket <KEY> --role reviewer`. `pack.md` has a `ticket:` line: its value is `<KEY>`. A `ticket: none` line means the work has no tracker key: skip the command. The command skips a session that is already registered.
+- Only when `pack.md` says `type: ticket` (the whole-branch review, `STOP: ticket-review-ready`), and a ticket key is there, send the Steward its event (DGS-551) right after the registration. A `type: task` review sends nothing:
+
+  ```bash
+  dg steward event review-started --ticket <Key> --hook --by reviewer || true
+  ```
+
+  A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
 - Read only what `pack.md` lists besides the card and the primitive. Never read the Builder's conversation, other reviewers' reports or the rest of the ledger.
 - The report is the primitive's own output plus the findings block.
 - Report a need to change something as a finding. Never edit.

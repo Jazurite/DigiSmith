@@ -350,6 +350,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 normally this), else `brainstorming`. No ticket key → skip, silently. A
 non-zero exit or a warning never blocks adoption.
 
+Send the Steward its event (DGS-551), only when `<step>` is `brainstorming`. Same key rule as the block above; no key: skip silently:
+
+```bash
+dg steward event refinement-started --ticket <Key> --hook --by worker || true
+```
+
+A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+
 ### Step 7: Hand Off to Build
 
 Invoke `digismith:subagent-driven-development` directly against
