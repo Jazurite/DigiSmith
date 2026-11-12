@@ -72,6 +72,14 @@ describe("dg steward", () => {
     expect(defaultDeps({ cwd }).tracker).toBeNull();
     expect(err).toHaveBeenCalledTimes(1);
   });
+  it("completed without --quote is a usage error (exit 2); with --hook it exits 0", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await cli(new FakeTracker(snapshot("in progress"))).parse(["steward", "event", "completed", "--ticket", "DGS-1"]);
+    expect(process.exitCode).toBe(2);
+    process.exitCode = 0;
+    await cli(new FakeTracker(snapshot("in progress"))).parse(["steward", "event", "completed", "--ticket", "DGS-1", "--hook"]);
+    expect(process.exitCode ?? 0).toBe(0);
+  });
   it("a gate event without a quote is a usage error (exit 2)", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await cli(new FakeTracker(snapshot("refinement"))).parse(["steward", "event", "approved", "--ticket", "DGS-1"]);

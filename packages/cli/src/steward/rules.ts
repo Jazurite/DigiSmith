@@ -41,6 +41,7 @@ export function evaluate(input: EventInput, view: TicketView, cfg: Config): Rule
     case "release-started": return releaseStarted(view);
     case "discard": return closeOut("discarded", view);
     case "close": return closeOut("Closed", view);
+    case "completed": return completed(view);
     default: return refuse(`unknown event ${String(event)}`);
   }
 }
@@ -65,6 +66,13 @@ function merged(view: TicketView, cfg: Config): RuleResult {
   if (view.signoff === "Auto") return move(cfg.releaseStage ? "release" : "done", { recordMerge: true });
   if (view.signoff === "Jack") return move("acceptance", { recordMerge: true });
   return { kind: "record", recordMerge: true };
+}
+
+/** A ticket that ends without a merge (a decision or SOP ticket): the Maestro sends it, never a hook. */
+function completed(view: TicketView): RuleResult {
+  if (view.status === "done" || view.status === "documented") return NOOP;
+  if (view.status !== "in progress") return refuse(`completed is valid from in progress; the ticket is in ${view.status}`);
+  return move("done");
 }
 
 function verified(view: TicketView): RuleResult {

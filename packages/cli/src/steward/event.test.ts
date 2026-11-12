@@ -511,3 +511,15 @@ describe("dry run and a corrupt file", () => {
     expect(fs.readdirSync(dir)).toEqual(["DGS-1.json"]);
   });
 });
+
+describe("completed", () => {
+  it("moves in progress to done with a due date, logs it, and a second send writes nothing", async () => {
+    const t = new FakeTracker(snapshot("in progress"));
+    const input: EventInput = { event: "completed", quote: "Maestro: decision recorded, Sign-off Auto", by: "digismith-maestro" };
+    await run(t, input);
+    expect(t.ticket).toMatchObject({ status: "done", dueDate: "2026-10-18" });
+    expect(readState(dir, "DGS-1")!.log.at(-1)).toMatchObject({ event: "completed", by: "digismith-maestro", outcome: "applied" });
+    await run(t, input);
+    expect(t.calls.filter((c) => c.startsWith("status:"))).toEqual(["status:done"]);
+  });
+});

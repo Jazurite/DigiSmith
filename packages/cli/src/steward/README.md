@@ -23,6 +23,7 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 | `released` | release | done |
 | `documented` | done | documented |
 | `discard`, `close` (need `--quote`) | any open status | discarded, Closed |
+| `completed` (gate, needs `--quote`) | in progress | done (due date); a ticket that ends without a merge |
 
 `scheduled` leaves by `dg autonomous schedule-release` (DGS-601), not by a Steward event.
 

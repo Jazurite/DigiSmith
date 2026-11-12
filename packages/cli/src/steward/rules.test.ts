@@ -196,3 +196,25 @@ describe("approved --into and started from claimed", () => {
     expect(evaluate({ event: "started" }, view("scheduled"), OFF)).toEqual({ kind: "refuse", reason: "started is valid from to do or claimed; the ticket is in scheduled" });
   });
 });
+
+describe("completed (a ticket that ends without a merge)", () => {
+  const cev = { event: "completed" as const, quote: "Maestro: decision recorded, Sign-off Auto" };
+  it("moves in progress to done with the due date", () => {
+    expect(evaluate(cev, view("in progress"), OFF)).toEqual({ kind: "move", to: "done", dueDate: true });
+  });
+  it("is a noop from done and documented", () => {
+    expect(evaluate(cev, view("done"), OFF)).toEqual({ kind: "noop" });
+    expect(evaluate(cev, view("documented"), OFF)).toEqual({ kind: "noop" });
+  });
+  it.each(["backlog", "concept", "refinement", "to do", "claimed", "review", "acceptance", "release"])("is refused from %s", (status) => {
+    const r = evaluate(cev, view(status), OFF);
+    expect(r.kind).toBe("refuse");
+    expect(JSON.stringify(r)).toContain("completed is valid from in progress");
+  });
+  it("is refused without a quote", () => {
+    expect(evaluate({ event: "completed" }, view("in progress"), OFF).kind).toBe("refuse");
+  });
+  it("is a gate event", () => {
+    expect(GATE_EVENTS).toContain("completed");
+  });
+});

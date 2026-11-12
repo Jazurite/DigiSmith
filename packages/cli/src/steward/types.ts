@@ -7,12 +7,12 @@ export type Status = (typeof STATUSES)[number];
 export const EVENTS = [
   "filed", "shaped", "discovery-started", "refinement-started", "approved", "started",
   "review-started", "merged", "verified", "accepted", "release-started", "released", "documented",
-  "discard", "close",
+  "discard", "close", "completed",
 ] as const;
 export type EventName = (typeof EVENTS)[number];
 
 /** Events that carry Jack's own answer: refused without --quote. */
-export const GATE_EVENTS: readonly EventName[] = ["approved", "accepted", "discard", "close"];
+export const GATE_EVENTS: readonly EventName[] = ["approved", "accepted", "discard", "close", "completed"];
 
 /** Statuses a ticket has left for good: discard and close do not apply to them. */
 export const FINISHED: readonly string[] = ["done", "documented", "discarded", "Closed"];
