@@ -20,7 +20,7 @@ describe("renderOrder", () => {
     expect(t).toContain("Build the thing");
     expect(t).toContain("86abc");
     expect(t).toContain("Sign-off: Auto");
-    expect(t).toContain('1. When the Builder starts building, send the Steward its event: `dg steward event started --ticket DGS-9 --hook --by builder`. A refusal is normal for a ticket built by hand; go on.');
+    expect(t).toContain('1. When the Builder starts building, send the Steward its event: `dg steward event started --ticket DGS-9 --hook --by builder || true`. A refusal or an error is normal (a ticket built by hand, an older dg); go on.');
     expect(t).not.toContain("update-task");
     expect(t).toContain("## Mandate (unattended work)");
     expect(t).not.toContain("works at night");
