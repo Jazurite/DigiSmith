@@ -27,7 +27,7 @@ export function renderOrder(i: OrderInput): string {
     i.specPlan,
     "",
     "## Steps",
-    `1. When the Builder starts building, set the ticket to in progress and read it back: \`dg clickup update-task ${i.key} --status "in progress"\`, then \`dg clickup get-task ${i.key}\`.`,
+    `1. When the Builder starts building, send the Steward its event: \`dg steward event started --ticket ${i.key} --hook --by builder\`. A refusal is normal for a ticket built by hand; go on.`,
     "2. Build the ticket per the conductor runbook: seat rule, Builder in role mode, Reviewers.",
     "3. Merge, then run the post-finish hooks 01-03.",
     "4. Write report.html and commit plan.md with it.",

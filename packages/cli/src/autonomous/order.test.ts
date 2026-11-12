@@ -20,7 +20,8 @@ describe("renderOrder", () => {
     expect(t).toContain("Build the thing");
     expect(t).toContain("86abc");
     expect(t).toContain("Sign-off: Auto");
-    expect(t).toContain('1. When the Builder starts building, set the ticket to in progress and read it back: `dg clickup update-task DGS-9 --status "in progress"`, then `dg clickup get-task DGS-9`.');
+    expect(t).toContain('1. When the Builder starts building, send the Steward its event: `dg steward event started --ticket DGS-9 --hook --by builder`. A refusal is normal for a ticket built by hand; go on.');
+    expect(t).not.toContain("update-task");
     expect(t).toContain("## Mandate (unattended work)");
     expect(t).not.toContain("works at night");
     expect(t).toContain("Spec and plan:");
