@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { sendStarted } from "./steward-started.ts";
+import { sendStarted, startViaSteward } from "./steward-started.ts";
+import { readStewardProfile } from "../steward/profile.ts";
 import type { EventDeps } from "../steward/event.ts";
 import { FakeTracker, snapshot } from "../steward/fake-tracker.test-util.ts";
 
@@ -34,5 +35,38 @@ describe("sendStarted", () => {
   });
   it("does nothing without a tracker", async () => {
     expect(await sendStarted(deps(null), "DGS-1")).toEqual([]);
+  });
+});
+
+describe("startViaSteward", () => {
+  it("skips an empty ticket without building deps", async () => {
+    const make = vi.fn();
+    await startViaSteward("", "/repo", make, () => {});
+    expect(make).not.toHaveBeenCalled();
+  });
+  it("builds the deps from the tick's repo, quiet, and sends started", async () => {
+    const t = new FakeTracker(snapshot("claimed"));
+    const make = vi.fn((_o: { quiet?: boolean; cwd?: string }) => deps(t));
+    const lines: string[] = [];
+    await startViaSteward("DGS-1", "/the/tick/repo", make, (l) => lines.push(l));
+    expect(make).toHaveBeenCalledWith({ quiet: true, cwd: "/the/tick/repo" });
+    expect(t.ticket.status).toBe("in progress");
+    expect(lines).toEqual([]);
+  });
+  it("prints one warning when the repo has no tracker, and goes on", async () => {
+    const lines: string[] = [];
+    await startViaSteward("DGS-1", "/the/tick/repo", () => deps(null), (l) => lines.push(l));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/no ClickUp tracker/);
+    expect(lines[0]).toContain("/the/tick/repo");
+  });
+  it("prints a refusal line", async () => {
+    const lines: string[] = [];
+    await startViaSteward("DGS-1", "/r", () => deps(new FakeTracker(snapshot("refinement"))), (l) => lines.push(l));
+    expect(lines.join("\n")).toMatch(/refused started/);
+  });
+  it("a repo without .digismith/config.yml reads as no tracker and does not throw", () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "stnoconf-"));
+    expect(readStewardProfile(cwd).tracker).toBe("none");
   });
 });
