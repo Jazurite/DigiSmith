@@ -48,6 +48,18 @@ describe("dg steward", () => {
     expect(log).not.toHaveBeenCalled();
     expect(err).not.toHaveBeenCalled();
   });
+  it("--hook reaches the deps factory as quiet: true; without it quiet is false", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "stq-"));
+    const seen: unknown[] = [];
+    const factory = (o?: { quiet?: boolean }): EventDeps => {
+      seen.push(o);
+      return { tracker: null, dir, now: () => new Date("2026-10-18T05:00:00Z"), config: { releaseStage: false }, sessionIds: () => [] };
+    };
+    const run = (extra: string[]) => yargs(["steward", "event", "started", "--ticket", "DGS-1", ...extra]).exitProcess(false).command(createStewardCommand(factory)).strict().parseAsync();
+    await run(["--hook"]);
+    await run([]);
+    expect(seen).toEqual([{ quiet: true }, { quiet: false }]);
+  });
   it("defaultDeps quiet: a jira profile prints nothing and has no tracker", () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "stprof-"));
     fs.mkdirSync(path.join(cwd, ".digismith"));

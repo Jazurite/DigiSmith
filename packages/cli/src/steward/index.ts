@@ -65,7 +65,7 @@ export function createStewardCommand(depsFactory: (o?: DepsOptions) => EventDeps
               .option("quote", { type: "string", requiresArg: true, describe: "Jack's own words; required for approved, accepted, discard and close" })
               .option("into", { type: "string", choices: [...APPROVE_TARGETS], describe: "approved only: the starter status (default to do)" })
               .option("dry-run", { type: "boolean", default: false, describe: "print the move, write nothing" })
-              .option("hook", { type: "boolean", default: false, describe: "called from a skill or the factory: silent without a ClickUp tracker, never a non-zero exit" }),
+              .option("hook", { type: "boolean", default: false, describe: "called from a skill or the factory: silent without a ClickUp tracker; a usage error in the handler exits 0 (yargs validation of flags still exits non-zero)" }),
           handler: (argv) =>
             guarded(depsFactory, async (deps) => {
               if (argv.into !== undefined && argv.event !== "approved") throw new UsageError("--into is valid only with approved");
