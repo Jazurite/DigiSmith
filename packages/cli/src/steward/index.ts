@@ -10,11 +10,13 @@ import { stewardDir } from "./state.ts";
 import { APPROVE_TARGETS, EVENTS, type ApproveTarget, type EventName } from "./types.ts";
 
 /** The real dependencies: the profile picks the tracker; none or an unbuilt one means no tracker. */
-export function defaultDeps(): EventDeps {
-  const profile = readStewardProfile(process.cwd());
+export interface DepsOptions { quiet?: boolean; cwd?: string }
+
+export function defaultDeps(opts: DepsOptions = {}): EventDeps {
+  const profile = readStewardProfile(opts.cwd ?? process.cwd());
   let tracker = null;
   if (profile.tracker === "clickup") tracker = new ClickUpTracker(createClient(), DIGISMITH_SPACE_ID);
-  if (profile.tracker === "jira") console.error("steward: the JIRA tracker is not built yet; nothing done");
+  if (profile.tracker === "jira" && !opts.quiet) console.error("steward: the JIRA tracker is not built yet; nothing done");
   return {
     tracker,
     dir: stewardDir(),
@@ -25,17 +27,17 @@ export function defaultDeps(): EventDeps {
   };
 }
 
-function guarded(depsFactory: () => EventDeps, body: (deps: EventDeps) => Promise<EventResult>): Promise<void> {
+function guarded(depsFactory: (o?: DepsOptions) => EventDeps, body: (deps: EventDeps) => Promise<EventResult>, hook = false): Promise<void> {
   return (async () => {
     try {
-      const res = await body(depsFactory());
+      const res = await body(depsFactory({ quiet: hook }));
       for (const line of res.out) console.log(line);
       for (const line of res.warn) console.error(line);
       process.exitCode = 0;
     } catch (err) {
       if (err instanceof UsageError) {
         console.error(`steward: ${err.message}`);
-        process.exitCode = 2;
+        process.exitCode = hook ? 0 : 2;
       } else {
         console.error(`steward: ${(err as Error).message}`);
         process.exitCode = 0;
@@ -44,7 +46,7 @@ function guarded(depsFactory: () => EventDeps, body: (deps: EventDeps) => Promis
   })();
 }
 
-export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps, runModel: ModelRunner = claudeRunner()): CommandModule {
+export function createStewardCommand(depsFactory: (o?: DepsOptions) => EventDeps = defaultDeps, runModel: ModelRunner = claudeRunner()): CommandModule {
   return {
     command: "steward",
     describe: "keep ClickUp in step with the work: apply status events, file new ideas",
@@ -62,7 +64,8 @@ export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps,
               .option("answer", { type: "string", choices: ["yes", "no"], describe: "Jack's answer, for accepted" })
               .option("quote", { type: "string", requiresArg: true, describe: "Jack's own words; required for approved, accepted, discard and close" })
               .option("into", { type: "string", choices: [...APPROVE_TARGETS], describe: "approved only: the starter status (default to do)" })
-              .option("dry-run", { type: "boolean", default: false, describe: "print the move, write nothing" }),
+              .option("dry-run", { type: "boolean", default: false, describe: "print the move, write nothing" })
+              .option("hook", { type: "boolean", default: false, describe: "called from a skill or the factory: silent without a ClickUp tracker, never a non-zero exit" }),
           handler: (argv) =>
             guarded(depsFactory, async (deps) => {
               if (argv.into !== undefined && argv.event !== "approved") throw new UsageError("--into is valid only with approved");
@@ -72,7 +75,7 @@ export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps,
                 { event: argv.event as EventName, by: argv.by as string | undefined, sha: argv.sha as string | undefined, answer: argv.answer as "yes" | "no" | undefined, quote: argv.quote as string | undefined, into: argv.into as ApproveTarget | undefined },
                 argv.dryRun as boolean,
               );
-            }),
+            }, argv.hook as boolean),
         })
         .command({
           command: "rebuild",

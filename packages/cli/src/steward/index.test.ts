@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { buildCli } from "../index.ts";
-import { createStewardCommand } from "./index.ts";
+import { createStewardCommand, defaultDeps } from "./index.ts";
 import type { EventDeps } from "./event.ts";
 import { FakeTracker, snapshot } from "./fake-tracker.test-util.ts";
 import * as os from "node:os";
@@ -28,6 +28,37 @@ describe("dg steward", () => {
     await cli(t).parse(["steward", "event", "started", "--ticket", "DGS-1"]);
     expect(log.mock.calls.flat().join("\n")).toContain("to do -> in progress");
     expect(process.exitCode ?? 0).toBe(0);
+  });
+  it("--hook: a usage error prints one line and exits 0", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await cli(new FakeTracker(snapshot("refinement"))).parse(["steward", "event", "approved", "--ticket", "DGS-1", "--hook"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(err.mock.calls.flat().join("\n")).toMatch(/--quote/);
+  });
+  it("--hook: a refusal keeps its stderr line and exits 0", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await cli(new FakeTracker(snapshot("refinement"))).parse(["steward", "event", "started", "--ticket", "DGS-1", "--hook", "--by", "worker"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(err.mock.calls.flat().join("\n")).toMatch(/refused started/);
+  });
+  it("--hook with no tracker prints nothing", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await cli(null).parse(["steward", "event", "started", "--ticket", "DGS-1", "--hook"]);
+    expect(log).not.toHaveBeenCalled();
+    expect(err).not.toHaveBeenCalled();
+  });
+  it("defaultDeps quiet: a jira profile prints nothing and has no tracker", () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "stprof-"));
+    fs.mkdirSync(path.join(cwd, ".digismith"));
+    fs.mkdirSync(path.join(cwd, "profiles"));
+    fs.writeFileSync(path.join(cwd, ".digismith", "config.yml"), "profile: jiraish\n");
+    fs.writeFileSync(path.join(cwd, "profiles", "jiraish.yml"), "tracker: jira\n");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(defaultDeps({ quiet: true, cwd }).tracker).toBeNull();
+    expect(err).not.toHaveBeenCalled();
+    expect(defaultDeps({ cwd }).tracker).toBeNull();
+    expect(err).toHaveBeenCalledTimes(1);
   });
   it("a gate event without a quote is a usage error (exit 2)", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
