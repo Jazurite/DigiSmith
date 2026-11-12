@@ -37,9 +37,9 @@ The status flow is the SOP DGS-731. Every send is `dg steward event <event> --ti
 |---|---|---|
 | `refinement-started` | the refine worker | bootstrap, adopt |
 | `started` | the factory (in process), the Builder | `autonomous/steward-started.ts`, the order text, subagent-driven-development, executing-plans, init |
-| `review-started` | Builder, Reviewer | subagent-driven-development (final review), reviewer (ticket review) |
+| `review-started` | the Builder | subagent-driven-development at `task-start --task final` (role mode runs it too); a Reviewer sends no event |
 | `merged` | finishing, Option 1 | after the push; Option 2: whoever merges the PR |
-| `documented` | report-implementation, finishing | after `report.html` is committed |
+| `documented` | report-implementation, finishing | after `report.html` is committed. The report's send is refused before the merge (the ticket is in review); finishing's send after the merge applies |
 | `shaped`, `approved`, `accepted`, `completed`, `discard`, `close` | the Maestro, never a hook | see the Maestro rule |
 
 Not hooked: `claimed` (the factory's lock, `autonomous/scan.ts`), the claim rollback, `scheduled` to `to do` (`schedule-release`). `status-writers.test.ts` keeps this list honest.
