@@ -75,7 +75,7 @@ For the conductor or Maestro, not for the Reviewer worker.
   dg steward event review-started --ticket <Key> --hook --by reviewer || true
   ```
 
-  A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+  The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
 - Read only what `pack.md` lists besides the card and the primitive. Never read the Builder's conversation, other reviewers' reports or the rest of the ledger.
 - The report is the primitive's own output plus the findings block.
 - Report a need to change something as a finding. Never edit.

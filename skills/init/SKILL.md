@@ -96,7 +96,7 @@ Check, in order:
      dg steward event started --ticket <Key> --hook --by worker || true
      ```
 
-     A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+     The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
 
      Then read `profile` from `.digismith/config.yml`, or from `.digismith/profile`
      when `config.yml` or its `profile` key is missing (A.4 fallback). If

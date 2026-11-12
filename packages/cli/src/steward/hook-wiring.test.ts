@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../../../../", import.meta.url));
-const NEVER_BLOCKS = "A non-zero exit never blocks: print a warning and go on.";
+// `|| true` keeps a non-zero exit from blocking, so the sentence tells the agent to read the line the command printed.
+const NEVER_BLOCKS = "The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.";
 
 // One row per hook point of spec 3. Task 5 adds the merge-time rows.
 export const HOOK_ROWS: { file: string; line: string }[] = [
@@ -54,7 +55,7 @@ describe("hook wiring (spec 3)", () => {
     expect(text.indexOf("dg steward event merged", at + 1)).toBe(-1);
     // right after the push, before the post-finish hooks fire
     expect(at).toBeLessThan(text.indexOf("fire the `post-finish` lifecycle hook"));
-    expect(at).toBeGreaterThan(text.indexOf("git push origin <base-branch>"));
+    expect(at).toBeGreaterThan(text.indexOf("git push origin <base-branch>", opt1));
   });
   it("no skill hook sends a gate or a version-2 event", () => {
     for (const row of HOOK_ROWS) {

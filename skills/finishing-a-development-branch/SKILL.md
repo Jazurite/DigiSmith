@@ -277,7 +277,7 @@ Send the Steward the merge (DGS-551). `<merge-commit-sha>` is `git rev-parse ref
 dg steward event merged --ticket <Key> --hook --by finishing --sha <merge-commit-sha> || true
 ```
 
-A non-zero exit never blocks: print a warning and go on. Only Option 1 sends this. Option 2 (push and PR) sends nothing: the merge happens later, and whoever merges the PR sends this line. Keep-as-is and discard send nothing.
+The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on. Only Option 1 sends this. Option 2 (push and PR) sends nothing: the merge happens later, and whoever merges the PR sends this line. Keep-as-is and discard send nothing.
 
 Once the push succeeds, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
 (in this skill's own folder) for the procedure. This runs in every repo,
@@ -312,7 +312,7 @@ When the ticket's `report.html` already exists in its board folder (`.digismith/
 dg steward event documented --ticket <Key> --hook --by finishing || true
 ```
 
-A non-zero exit never blocks: print a warning and go on.
+The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
 Once cleanup (Step 6) is done, continue to Step 7 to hand off.
 

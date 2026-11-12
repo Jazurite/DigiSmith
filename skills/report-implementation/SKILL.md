@@ -637,7 +637,7 @@ rendered empty.
      dg steward event documented --ticket <Key> --hook --by report || true
      ```
 
-     A non-zero exit never blocks: print a warning and go on.
+     The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
 ### Step 4a: Findings table (role mode only)
 

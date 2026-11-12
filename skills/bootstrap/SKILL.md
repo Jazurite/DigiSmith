@@ -521,7 +521,7 @@ what Step 2's new sub-step 7 below makes possible.
    dg steward event refinement-started --ticket <Key> --hook --by worker || true
    ```
 
-   A non-zero exit never blocks: print a warning and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
+   The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on. A refusal (the ticket is in another status, for example a ticket built by hand) is normal: the Steward logs it; do not retry.
 
 ### Step 3: Hand Off to Brainstorming
 
