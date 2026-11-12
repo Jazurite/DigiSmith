@@ -90,7 +90,7 @@ Check, in order:
      repeat of an open step. Same skip rule as above: no key → skip; a non-zero exit or
      warning never blocks.
 
-     Send the Steward its event (DGS-551) (a resumed build). Same key rule as the block above; no key: skip silently:
+     Send the Steward its event (DGS-551; a resumed build). Same key rule as the block above; no key: skip silently:
 
      ```bash
      dg steward event started --ticket <Key> --hook --by worker || true

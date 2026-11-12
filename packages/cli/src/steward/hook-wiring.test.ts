@@ -23,13 +23,24 @@ describe("hook wiring (spec 3)", () => {
     it(`${row.file} sends: ${row.line}`, () => {
       const text = readFileSync(root + row.file, "utf-8");
       expect(text).toContain(row.line);
-      expect(text).toContain(NEVER_BLOCKS);
+      // the sentence follows THIS hook block (its closing fence), not just anywhere in the file
+      const after = text.slice(text.indexOf(`${row.line} || true`));
+      const close = after.indexOf("```");
+      expect(after.slice(close + 3).trimStart().startsWith(NEVER_BLOCKS)).toBe(true);
     });
     // yargs can still exit non-zero before the handler runs, so every hook line ends with `|| true`.
     it(`${row.file} ends the line with || true: ${row.line}`, () => {
       expect(readFileSync(root + row.file, "utf-8")).toContain(`${row.line} || true`);
     });
   }
+  it("the reviewer hook is for a ticket review only and a key is needed", () => {
+    const text = readFileSync(root + "skills/reviewer/SKILL.md", "utf-8");
+    const at = text.indexOf("dg steward event review-started");
+    const bullet = text.slice(text.lastIndexOf("\n- ", at), at);
+    expect(bullet).toContain("`type: ticket`");
+    expect(bullet).toContain("a ticket key");
+    expect(bullet).toMatch(/`type: task` review sends nothing/);
+  });
   it("no skill hook sends a gate or a version-2 event", () => {
     for (const row of HOOK_ROWS) {
       const ev = /dg steward event (\S+)/.exec(row.line)![1];

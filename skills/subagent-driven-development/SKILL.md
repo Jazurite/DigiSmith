@@ -644,7 +644,7 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 
 Same key rule as the step-start block in Setup.
 
-Send the Steward its event (DGS-551) (the whole-branch review starts). Same key rule as the block above; no key: skip silently:
+Send the Steward its event (DGS-551; the whole-branch review starts). Same key rule as the block above; no key: skip silently:
 
 ```bash
 dg steward event review-started --ticket <Key> --hook --by worker || true

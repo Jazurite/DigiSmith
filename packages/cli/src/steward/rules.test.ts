@@ -12,6 +12,12 @@ const ev = (event: EventName, extra: Partial<EventInput> = {}): EventInput => ({
 const Q = { quote: "yes, go" };
 const to = (r: RuleResult) => (r.kind === "move" ? r.to : r.kind);
 
+describe("review-started sent twice (the Builder and the ticket Reviewer both send it)", () => {
+  it("is a noop once the ticket is in review", () => {
+    expect(evaluate(ev("review-started"), view("review"), OFF)).toEqual({ kind: "noop" });
+  });
+});
+
 describe("entry events, one per status", () => {
   const rows: [EventInput, TicketView, string][] = [
     [ev("shaped"), view("backlog"), "concept"],
