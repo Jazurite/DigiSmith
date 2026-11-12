@@ -185,7 +185,7 @@ describe("writers", () => {
   const mk = (exec: ExecOut) => {
     const events: unknown[][] = []; const statuses: string[] = [];
     const w = makeWriters({ exec, herdrBin: BIN, herdrWs: "w2", conductorName: "digismith-conductor",
-      tracker: { setStatus: async (s) => { statuses.push(s); } }, runEvent: async (...a) => { events.push(a); } });
+      tracker: { setStatus: async (s) => { statuses.push(s); } }, runEvent: async (...a) => { events.push(a); }, startViaSteward: async () => {} });
     return { w, events, statuses };
   };
   it("prompt runs herdr-ws agent prompt with HERDR_WS", async () => {
@@ -211,8 +211,8 @@ describe("writers", () => {
   });
   it("setStatus calls only the tracker", async () => {
     const f = fakeExec(); const m = mk(f.exec);
-    await m.w.setStatus("in progress");
-    expect(m.statuses).toEqual(["in progress"]);
+    await m.w.setStatus("claimed");
+    expect(m.statuses).toEqual(["claimed"]);
     expect(f.calls).toEqual([]);
   });
 });
@@ -221,11 +221,23 @@ describe("a full tick is read-only for git and goes only through herdr-ws", () =
   let dir: string;
   beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "obs-real-")); });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
+  it("makeWriters: in progress goes through the Steward, claimed through the tracker", async () => {
+    const calls: string[] = [];
+    const w = makeWriters({
+      exec: (async () => ({ stdout: "", stderr: "" })) as never, herdrBin: "h", herdrWs: "w2", conductorName: "c",
+      tracker: { setStatus: async (s) => { calls.push(`tracker ${s}`); } },
+      runEvent: async () => {},
+      startViaSteward: async () => { calls.push("steward started"); },
+    });
+    await w.setStatus("in progress");
+    await w.setStatus("claimed");
+    expect(calls).toEqual(["steward started", "tracker claimed"]);
+  });
   it("records no merge, push, commit, reset or checkout", async () => {
     writeLock(dir, { phase: "merge-ready", runs: { builder: "builder-1" } });
     const f = fakeExec((_file, a) => (a.includes("rev-parse") ? "abc123\n" : a[0] === "agent" && a[1] === "list" ? AGENTS : a[0] === "pane" ? here("input-box-empty.ansi") : ""));
     const d = deps(f.exec);
-    const w = makeWriters({ exec: f.exec, herdrBin: BIN, herdrWs: "w2", conductorName: "digismith-conductor", tracker: { setStatus: async () => {} }, runEvent: async () => {} });
+    const w = makeWriters({ exec: f.exec, herdrBin: BIN, herdrWs: "w2", conductorName: "digismith-conductor", tracker: { setStatus: async () => {} }, runEvent: async () => {}, startViaSteward: async () => {} });
     await runTick({ dir, now: () => new Date("2026-10-21T01:00:00.000Z"), observers: makeObservers(d), dryRun: false, ...w });
     const all = f.argv();
     expect(all.length).toBeGreaterThan(0);
@@ -386,7 +398,7 @@ describe("realExecOut names the cause", () => {
 
 describe("prompt delivery by cause", () => {
   const delivered = async (c: number | string) => {
-    const w = makeWriters({ exec: fakeExec(() => codeErr(c)).exec, herdrBin: BIN, herdrWs: "w2", conductorName: "c", tracker: { setStatus: async () => {} }, runEvent: async () => {} });
+    const w = makeWriters({ exec: fakeExec(() => codeErr(c)).exec, herdrBin: BIN, herdrWs: "w2", conductorName: "c", tracker: { setStatus: async () => {} }, runEvent: async () => {}, startViaSteward: async () => {} });
     return ((await w.prompt("x").catch((e) => e)) as PromptError).delivered;
   };
   it.each([["ETIMEDOUT", "maybe"], ["SIGNAL:SIGKILL", "maybe"], ["ERR_CHILD_PROCESS_STDIO_MAXBUFFER", "maybe"], ["ENOENT", "no"], [2, "no"]] as const)("%s -> %s", async (c, want) => {

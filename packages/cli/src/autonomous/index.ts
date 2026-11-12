@@ -21,6 +21,8 @@ import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
 import { runScan } from "./scan.ts";
+import { sendStarted } from "./steward-started.ts";
+import { defaultDeps } from "../steward/index.ts";
 import { runScheduleRelease } from "./schedule-release.ts";
 import { makeScanGuard } from "./scan-guard.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
@@ -114,6 +116,11 @@ function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Prom
     const writers = makeWriters({
       exec, herdrBin, herdrWs, conductorName: CONDUCTOR,
       tracker: { setStatus: (s) => tracker.setStatus(taskId, s) }, runEvent: realRunEvent(),
+      startViaSteward: async () => {
+        const ticket = state?.ticket ?? "";
+        if (ticket === "") return;
+        for (const line of await sendStarted(defaultDeps({ quiet: true }), ticket)) console.error(line);
+      },
     });
     return runTick({ dir: d.dir, now: d.now, observers, dryRun, ...writers });
   };

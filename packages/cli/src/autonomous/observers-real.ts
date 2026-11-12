@@ -143,6 +143,7 @@ export interface WriterDeps {
   exec: ExecOut; herdrBin: string; herdrWs: string; conductorName: string;
   tracker: { setStatus(s: string): Promise<void> };
   runEvent: (run: string, type: "phase", data: { phase: string }) => Promise<void>;
+  startViaSteward: () => Promise<void>;
 }
 
 export function makeWriters(d: WriterDeps): Pick<ActDeps, "prompt" | "writeMarker" | "setStatus"> {
@@ -158,7 +159,7 @@ export function makeWriters(d: WriterDeps): Pick<ActDeps, "prompt" | "writeMarke
       }
     },
     writeMarker: (run, phase) => d.runEvent(run, "phase", { phase }),
-    setStatus: (s) => d.tracker.setStatus(s),
+    setStatus: (s) => (s === "in progress" ? d.startViaSteward() : d.tracker.setStatus(s)),
   };
 }
 
