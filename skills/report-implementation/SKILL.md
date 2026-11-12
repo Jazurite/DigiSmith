@@ -631,6 +631,14 @@ rendered empty.
      a file that is on disk but not committed, and after the merge that stop
      has no recovery while the head pin is fixed.
 
+     Send the Steward `documented` (DGS-551). Same key rule as the token steps; no key: skip silently. The Steward accepts it only from done: a refusal while the ticket is still in review is normal and the finishing skill sends it again after the merge.
+
+     ```bash
+     dg steward event documented --ticket <Key> --hook --by report || true
+     ```
+
+     A non-zero exit never blocks: print a warning and go on.
+
 ### Step 4a: Findings table (role mode only)
 
 The review reports live in the plan's workspace, which the Finish step deletes,

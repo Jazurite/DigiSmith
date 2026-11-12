@@ -271,6 +271,14 @@ report the rejection plainly, and investigate — do not force-push
 automatically. Force-push only on your human partner's explicit request
 (see "The push was rejected — force-push will fix it" below).
 
+Send the Steward the merge (DGS-551). `<merge-commit-sha>` is `git rev-parse refs/digismith/post-finish/<feature-branch>/head`. Same key rule as the start block. Sign-off Auto goes to done with its due date, Sign-off Jack goes to acceptance, an unmarked ticket records the merge:
+
+```bash
+dg steward event merged --ticket <Key> --hook --by finishing --sha <merge-commit-sha> || true
+```
+
+A non-zero exit never blocks: print a warning and go on. Only Option 1 sends this. Option 2 (push and PR) sends nothing: the merge happens later, and whoever merges the PR sends this line. Keep-as-is and discard send nothing.
+
 Once the push succeeds, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
 (in this skill's own folder) for the procedure. This runs in every repo,
 DigiSmith's own included — a repo with no `.digismith/hooks/post-finish/`
@@ -297,6 +305,14 @@ dg clickup ticket-total --task <Key> --yes
 ```
 
 A non-zero exit never blocks finishing: print a warning and go on.
+
+When the ticket's `report.html` already exists in its board folder (`.digismith/board/<Key>—*/report.html`), send `documented`. A refusal from any status but done is normal (a Sign-off Jack ticket waits in acceptance; the Maestro sends it after the acceptance):
+
+```bash
+dg steward event documented --ticket <Key> --hook --by finishing || true
+```
+
+A non-zero exit never blocks: print a warning and go on.
 
 Once cleanup (Step 6) is done, continue to Step 7 to hand off.
 

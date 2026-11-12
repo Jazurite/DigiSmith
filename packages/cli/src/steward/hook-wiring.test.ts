@@ -14,6 +14,9 @@ export const HOOK_ROWS: { file: string; line: string }[] = [
   { file: "skills/executing-plans/SKILL.md", line: "dg steward event started --ticket <Key> --hook --by worker" },
   { file: "skills/init/SKILL.md", line: "dg steward event started --ticket <Key> --hook --by worker" },
   { file: "skills/reviewer/SKILL.md", line: "dg steward event review-started --ticket <Key> --hook --by reviewer" },
+  { file: "skills/finishing-a-development-branch/SKILL.md", line: "dg steward event merged --ticket <Key> --hook --by finishing --sha <merge-commit-sha>" },
+  { file: "skills/finishing-a-development-branch/SKILL.md", line: "dg steward event documented --ticket <Key> --hook --by finishing" },
+  { file: "skills/report-implementation/SKILL.md", line: "dg steward event documented --ticket <Key> --hook --by report" },
 ];
 
 const GATES = ["shaped", "approved", "accepted", "completed", "discard", "close", "filed", "discovery-started", "release-started", "released"];
@@ -40,6 +43,18 @@ describe("hook wiring (spec 3)", () => {
     expect(bullet).toContain("`type: ticket`");
     expect(bullet).toContain("a ticket key");
     expect(bullet).toMatch(/`type: task` review sends nothing/);
+  });
+  it("finishing sends merged only in Option 1, never in Option 2 (PR), keep or discard", () => {
+    const text = readFileSync(root + "skills/finishing-a-development-branch/SKILL.md", "utf-8");
+    const opt1 = text.indexOf("### Option 1: Merge Locally");
+    const opt2 = text.indexOf("### Option 2: Push and Create PR");
+    const at = text.indexOf("dg steward event merged");
+    expect(at).toBeGreaterThan(opt1);
+    expect(at).toBeLessThan(opt2);
+    expect(text.indexOf("dg steward event merged", at + 1)).toBe(-1);
+    // right after the push, before the post-finish hooks fire
+    expect(at).toBeLessThan(text.indexOf("fire the `post-finish` lifecycle hook"));
+    expect(at).toBeGreaterThan(text.indexOf("git push origin <base-branch>"));
   });
   it("no skill hook sends a gate or a version-2 event", () => {
     for (const row of HOOK_ROWS) {
