@@ -30,6 +30,7 @@ describe("assertUsage", () => {
     expect(() => assertUsage({ event: "accepted", quote: "q" })).toThrow(UsageError);
     expect(() => assertUsage({ event: "accepted", quote: "q", answer: "yes" })).not.toThrow();
     expect(() => assertUsage({ event: "started" })).not.toThrow();
+    expect(() => assertUsage({ event: "completed" })).toThrow(/the approver's own words \(Jack, or the Maestro for a Sign-off Auto ticket\)/);
   });
 });
 

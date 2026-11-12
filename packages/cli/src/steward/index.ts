@@ -62,7 +62,7 @@ export function createStewardCommand(depsFactory: (o?: DepsOptions) => EventDeps
               .option("by", { type: "string", requiresArg: true, describe: "who sends it (kept in the log only)" })
               .option("sha", { type: "string", requiresArg: true, describe: "merge sha, for merged" })
               .option("answer", { type: "string", choices: ["yes", "no"], describe: "Jack's answer, for accepted" })
-              .option("quote", { type: "string", requiresArg: true, describe: "Jack's own words; required for approved, accepted, discard and close" })
+              .option("quote", { type: "string", requiresArg: true, describe: "the approver's own words (Jack, or the Maestro for a Sign-off Auto ticket); required for approved, accepted, discard, close and completed" })
               .option("into", { type: "string", choices: [...APPROVE_TARGETS], describe: "approved only: the starter status (default to do)" })
               .option("dry-run", { type: "boolean", default: false, describe: "print the move, write nothing" })
               .option("hook", { type: "boolean", default: false, describe: "called from a skill or the factory: silent without a ClickUp tracker; a usage error in the handler exits 0 (yargs validation of flags still exits non-zero)" }),

@@ -206,13 +206,15 @@ describe("completed (a ticket that ends without a merge)", () => {
     expect(evaluate(cev, view("done"), OFF)).toEqual({ kind: "noop" });
     expect(evaluate(cev, view("documented"), OFF)).toEqual({ kind: "noop" });
   });
-  it.each(["backlog", "concept", "refinement", "to do", "claimed", "review", "acceptance", "release"])("is refused from %s", (status) => {
+  it.each(["backlog", "concept", "discovery", "refinement", "scheduled", "to do", "claimed", "review", "acceptance", "release", "discarded", "Closed"])("is refused from %s", (status) => {
     const r = evaluate(cev, view(status), OFF);
     expect(r.kind).toBe("refuse");
     expect(JSON.stringify(r)).toContain("completed is valid from in progress");
   });
-  it("is refused without a quote", () => {
-    expect(evaluate({ event: "completed" }, view("in progress"), OFF).kind).toBe("refuse");
+  it("is refused without a quote, naming the approver (Jack, or the Maestro for Sign-off Auto)", () => {
+    const r = evaluate({ event: "completed" }, view("in progress"), OFF);
+    expect(r.kind).toBe("refuse");
+    expect(JSON.stringify(r)).toContain("the approver's own words (Jack, or the Maestro for a Sign-off Auto ticket)");
   });
   it("is a gate event", () => {
     expect(GATE_EVENTS).toContain("completed");

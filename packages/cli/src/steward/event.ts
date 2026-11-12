@@ -29,7 +29,7 @@ export function todayUtc7(now: Date): string {
 
 export function assertUsage(input: EventInput): void {
   if (GATE_EVENTS.includes(input.event) && !(input.quote && input.quote.trim() !== "")) {
-    throw new UsageError(`${input.event} needs Jack's own words: pass --quote "<his words>"`);
+    throw new UsageError(`${input.event} needs the approver's own words (Jack, or the Maestro for a Sign-off Auto ticket): pass --quote "<the words>"`);
   }
   if (input.event === "accepted" && input.answer !== "yes" && input.answer !== "no") {
     throw new UsageError("accepted needs --answer yes or no");

@@ -28,7 +28,7 @@ function move(to: Status, extra: Omit<Extract<RuleResult, { kind: "move" }>, "ki
 export function evaluate(input: EventInput, view: TicketView, cfg: Config): RuleResult {
   const { event } = input;
   if (GATE_EVENTS.includes(event) && !(input.quote && input.quote.trim() !== "")) {
-    return refuse(`${event} needs Jack's own words (--quote)`);
+    return refuse(`${event} needs the approver's own words (Jack, or the Maestro for a Sign-off Auto ticket) (--quote)`);
   }
   if (event === "filed") return refuse("filed is made by dg steward file, not sent as an event");
   const entry = ENTRY[event];
