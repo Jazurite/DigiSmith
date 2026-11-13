@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { TICKET_PATTERN, depotRegistryDir } from "./registry.ts";
 
@@ -9,18 +9,27 @@ function fileFor(ticket: string): string {
   return join(depotRegistryDir(), `${ticket}.attachments.json`);
 }
 
+function isRecord(r: unknown): r is AttachedRecord {
+  if (typeof r !== "object" || r === null) return false;
+  const o = r as Record<string, unknown>;
+  return ["name", "sha256", "id", "attached_at"].every((k) => typeof o[k] === "string");
+}
+
 export function readAttached(ticket: string): AttachedRecord[] {
+  const file = fileFor(ticket);
   try {
-    const v = JSON.parse(readFileSync(fileFor(ticket), "utf8"));
-    return Array.isArray(v) ? (v as AttachedRecord[]) : [];
-  } catch (e) {
-    if ((e as Error).message.startsWith("invalid ticket key")) throw e;
+    const v = JSON.parse(readFileSync(file, "utf8"));
+    return Array.isArray(v) ? v.filter(isRecord) : [];
+  } catch {
     return [];
   }
 }
 
 export function recordAttached(ticket: string, rec: AttachedRecord): void {
+  const file = fileFor(ticket);
   const next = [...readAttached(ticket).filter((r) => r.name !== rec.name), rec];
   mkdirSync(depotRegistryDir(), { recursive: true });
-  writeFileSync(fileFor(ticket), JSON.stringify(next, null, 2));
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(next, null, 2));
+  renameSync(tmp, file);
 }

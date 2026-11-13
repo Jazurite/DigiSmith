@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -19,6 +19,22 @@ describe("attachments-store", () => {
   it("reads [] from a torn file", () => {
     writeFileSync(join(dir, "DGS-2.attachments.json"), "{not json");
     expect(readAttached("DGS-2")).toEqual([]);
+  });
+  it("leaves no temp files after a record", () => {
+    recordAttached("DGS-3", { name: "a.md", sha256: "a", id: "1", attached_at: "t" });
+    recordAttached("DGS-3", { name: "b.md", sha256: "b", id: "2", attached_at: "t" });
+    expect(readdirSync(dir)).toEqual(["DGS-3.attachments.json"]);
+  });
+  it("records over a torn file", () => {
+    writeFileSync(join(dir, "DGS-4.attachments.json"), "{not json");
+    recordAttached("DGS-4", { name: "a.md", sha256: "a", id: "1", attached_at: "t" });
+    expect(readAttached("DGS-4")).toEqual([{ name: "a.md", sha256: "a", id: "1", attached_at: "t" }]);
+    expect(readdirSync(dir)).toEqual(["DGS-4.attachments.json"]);
+  });
+  it("drops invalid elements on read", () => {
+    const good = { name: "a.md", sha256: "a", id: "1", attached_at: "t" };
+    writeFileSync(join(dir, "DGS-5.attachments.json"), JSON.stringify([good, null, 7, "x", { name: "b" }, { ...good, id: 2 }]));
+    expect(readAttached("DGS-5")).toEqual([good]);
   });
   it("rejects a bad ticket key", () => { expect(() => readAttached("../x")).toThrow(/invalid ticket key/); });
 });
