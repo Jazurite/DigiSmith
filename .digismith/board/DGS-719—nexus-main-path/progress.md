@@ -11,3 +11,4 @@
   - packages/cli/src/autonomous: 39 files, 978 tests, 1 fail = guardrails "sets scan_every_minutes to 15" (SAME failure on origin/main b9ccd97f, git archive copy in scratchpad)
   - scripts/conductor: 18 files, 349 pass
   - scripts/herdr: 3 files, 25 pass
+- Rebased on origin/main 4fb40784 (15:43 UTC+7): nexus-api 477/477, autonomous 988/989 (known guardrails DGS-720), conductor 349/349, herdr 25/25. Merge approved by the Maestro.
