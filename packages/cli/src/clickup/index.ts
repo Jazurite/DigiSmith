@@ -37,6 +37,7 @@ import { removeLinkCommand } from "./remove-link.ts";
 import frontdoorCommand from "./frontdoor/index.ts";
 import checklistCommand from "./checklist/index.ts";
 import { uploadAttachmentCommand } from "./upload-attachment.ts";
+import { attachRecordCommand } from "./attach-record.ts";
 
 const clickupCommand: CommandModule = {
   command: "clickup",
@@ -61,6 +62,7 @@ const clickupCommand: CommandModule = {
       .command(createListCommand)
       .command(updateListCommand)
       .command(uploadAttachmentCommand)
+      .command(attachRecordCommand)
       .command(listTaskTypesCommand)
       .command(createTaskTypeCommand)
       .command(updateTaskTypeCommand)
