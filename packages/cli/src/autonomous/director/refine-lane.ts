@@ -47,10 +47,12 @@ export async function runRefineLane(d: ScanDeps): Promise<{ key: string; reasons
   const returned = new Set<string>();
   for (const t of all) if (markReturned(d.dir, keyOf(t), now) > 0) { returned.add(keyOf(t)); appendEvent(d.dir, now, "refine-release", { ticket: keyOf(t), reason: "returned-from-concept" }); }
   // A lock is stale when its ticket left refinement, or came back from concept (a refused gate keeps the lock while the ticket waits for Jack).
-  let lock = readRefineLock(d.dir);
-  if (lock !== null && !("corrupt" in lock) && (!all.some((t) => keyOf(t) === lock!.ticket) || returned.has(lock.ticket))) {
+  const found = readRefineLock(d.dir);
+  const held = found !== null && !("corrupt" in found) ? found : null;
+  let lock = found;
+  if (held !== null && (!all.some((t) => keyOf(t) === held.ticket) || returned.has(held.ticket))) {
     clearRefineLock(d.dir);
-    appendEvent(d.dir, now, "refine-release", { ticket: lock.ticket, reason: "stale" });
+    appendEvent(d.dir, now, "refine-release", { ticket: held.ticket, reason: "stale" });
     lock = null;
   }
 

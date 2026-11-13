@@ -7,7 +7,7 @@ import { recordDecision, sendOrQueue, type RecordDeps } from "./record.ts";
 import type { StatusPort } from "./status.ts";
 
 export interface EscalateArgs { ticket: string; taskId: string; id: string; question: string; viaRelease: boolean }
-export type EscalateResult = { outcome: "asked" | "already-open" } | { outcome: "refused"; text: string };
+export type EscalateResult = { outcome: "asked" } | { outcome: "already-open" } | { outcome: "refused"; text: string };
 interface Line { key: string; ticket: string; id: string; question: string; askedAt: string; askedAtUtc7: string; state: "open" | "returned"; returnedAt?: string }
 
 const FILE = "escalations.jsonl";
