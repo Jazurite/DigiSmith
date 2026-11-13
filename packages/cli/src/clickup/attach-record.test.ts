@@ -3,8 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClickUpClient } from "@digismith/clickup-client";
+import { runTable } from "../reviewer/table.ts";
 import { attachFile, createAttachRecordCommand } from "./attach-record.ts";
 import { handlerOf } from "./handler-of.test-util.ts";
+
+vi.mock("../reviewer/table.ts", async (orig) => {
+  const actual = await orig<typeof import("../reviewer/table.ts")>();
+  return { ...actual, runTable: vi.fn(actual.runTable) };
+});
 
 let dir: string; let file: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "ar-")); process.env.DIGISMITH_TOKEN_REGISTRY_DIR = dir; file = join(dir, "plan.md"); writeFileSync(file, "v1"); });
@@ -135,5 +141,68 @@ describe("attach-record", () => {
     await run({} as never, { task: "DGS-9" } as never);
     expect(log).toHaveBeenCalledWith("skipped: no --file given");
     expect(process.exitCode).toBe(0);
+  });
+});
+
+describe("attach-record kinds", () => {
+  type KArgv = { task: string; kind?: string; workspace?: string; file?: string };
+  const runKind = (client: unknown, argv: KArgv) => handlerOf<KArgv>(createAttachRecordCommand(() => client as ClickUpClient))(argv);
+  const okClient = (up = vi.fn().mockResolvedValue({ id: "a1" })) => ({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [] }), uploadAttachment: up });
+  it("renders and attaches the ledger summary under its own name", async () => {
+    const ws = join(dir, "ws"); mkdirSync(ws);
+    writeFileSync(join(ws, "progress.md"), "# SDD ledger — plan: p.md\nTask 1: complete (commits abc)\n");
+    const up = vi.fn().mockResolvedValue({ id: "a1" });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await runKind(okClient(up), { task: "DGS-9", kind: "ledger-summary", workspace: ws });
+    expect(log).toHaveBeenCalledWith("attached ledger-summary.md (a1)");
+    expect(up.mock.calls[0][1]).toMatch(/ledger-summary\.md$/);
+  });
+  it("removes the temp folder after the upload", async () => {
+    const ws = join(dir, "ws"); mkdirSync(ws);
+    writeFileSync(join(ws, "progress.md"), "# SDD ledger — plan: p.md\n");
+    const up = vi.fn().mockResolvedValue({ id: "a1" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await runKind(okClient(up), { task: "DGS-9", kind: "ledger-summary", workspace: ws });
+    const { existsSync } = await import("node:fs");
+    expect(existsSync(up.mock.calls[0][1])).toBe(false);
+  });
+  it("skips when there is no ledger", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await runKind({}, { task: "DGS-9", kind: "ledger-summary", workspace: join(dir, "none") });
+    expect(log).toHaveBeenCalledWith("skipped ledger-summary.md: no ledger");
+    expect(process.exitCode).toBe(0);
+  });
+  it("attaches the reviews table under reviews.md", async () => {
+    const ws = join(dir, "ws"); mkdirSync(ws);
+    vi.mocked(runTable).mockImplementationOnce((o) => { writeFileSync(o.out as string, "| table |"); return { written: true, message: "ok" }; });
+    const up = vi.fn().mockResolvedValue({ id: "r1" });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await runKind(okClient(up), { task: "DGS-9", kind: "reviews", workspace: ws });
+    expect(runTable).toHaveBeenCalledWith({ workspace: ws, out: expect.stringMatching(/reviews\.md$/) });
+    expect(log).toHaveBeenCalledWith("attached reviews.md (r1)");
+    expect(up.mock.calls[0][1]).toMatch(/reviews\.md$/);
+  });
+  it("skips reviews when the workspace has none", async () => {
+    const ws = join(dir, "ws"); mkdirSync(ws);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await runKind({}, { task: "DGS-9", kind: "reviews", workspace: ws });
+    expect(log).toHaveBeenCalledWith("skipped reviews.md: no reviews found");
+    expect(process.exitCode).toBe(0);
+  });
+  it("refuses --file with --kind", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await runKind({}, { task: "DGS-9", file, kind: "reviews", workspace: dir });
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("--file"));
+    expect(process.exitCode).toBe(1);
+  });
+  it("sets exit 1 when the record write fails for a rendered kind", async () => {
+    const ws = join(dir, "ws"); mkdirSync(ws);
+    writeFileSync(join(ws, "progress.md"), "# SDD ledger — plan: p.md\n");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    process.env.DIGISMITH_TOKEN_REGISTRY_DIR = join(file, "not-a-dir");
+    await runKind(okClient(), { task: "DGS-9", kind: "ledger-summary", workspace: ws });
+    expect(err.mock.calls.some((c) => String(c[0]).includes("depot record failed"))).toBe(true);
+    expect(process.exitCode).toBe(1);
   });
 });
