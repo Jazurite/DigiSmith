@@ -306,10 +306,10 @@ dg clickup ticket-total --task <Key> --yes
 
 A non-zero exit never blocks finishing: print a warning and go on.
 
-Then send the token snapshot to the ClickUp ticket, and `report.html` only when it exists in the ticket's board folder (a re-send is a no-op by hash). `<snapshot path>` is the folder the snapshot command above wrote to. No key or a Jira key: skip silently:
+Then send the token snapshot to the ClickUp ticket, and `report.html` only when it exists in the ticket's board folder (a re-send is a no-op by hash). `<snapshot file>` is the file the `snapshot --write` command above printed: `tokens.json` in the board folder inside DigiSmith's own repo, `<ticket>.tokens.json` in the depot in any other repo. No key or a Jira key: skip silently:
 
 ```bash
-dg clickup attach-record --task <Key> --file <snapshot path>/tokens.json || true
+dg clickup attach-record --task <Key> --file <snapshot file> || true
 dg clickup attach-record --task <Key> --file <board folder>/report.html || true
 ```
 
@@ -393,10 +393,10 @@ dg clickup ticket-total --task <Key> --yes
 
 A non-zero exit never blocks finishing: print a warning and go on.
 
-Then send the token snapshot to the ClickUp ticket, and `report.html` only when it exists in the ticket's board folder (a re-send is a no-op by hash). `<snapshot path>` is the folder the snapshot command above wrote to. No key or a Jira key: skip silently:
+Then send the token snapshot to the ClickUp ticket, and `report.html` only when it exists in the ticket's board folder (a re-send is a no-op by hash). `<snapshot file>` is the file the `snapshot --write` command above printed: `tokens.json` in the board folder inside DigiSmith's own repo, `<ticket>.tokens.json` in the depot in any other repo. No key or a Jira key: skip silently:
 
 ```bash
-dg clickup attach-record --task <Key> --file <snapshot path>/tokens.json || true
+dg clickup attach-record --task <Key> --file <snapshot file> || true
 dg clickup attach-record --task <Key> --file <board folder>/report.html || true
 ```
 

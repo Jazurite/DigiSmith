@@ -292,7 +292,7 @@ After the spec review loop passes, ask the user to review the written spec befor
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 
-Once the user approves, send the spec to the ClickUp ticket. When the spec file is `design.html`, use `--file <board folder>/design.html` instead of `spec.md` (the attachment takes its file's name). No key or a Jira key: skip silently:
+Once the user approves, send the spec to the ClickUp ticket. When the spec file is `design.html`, use `--file <board folder>/design.html` instead of `spec.md`; the attachment takes its file's name; a `design.html` spec attaches as `design.html`. Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group. No key, or a Jira key: skip silently:
 
 ```bash
 dg clickup attach-record --task <Key> --file <board folder>/spec.md || true
@@ -300,7 +300,7 @@ dg clickup attach-record --task <Key> --file <board folder>/spec.md || true
 
 The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
-Same key rule as above. A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
 
 **Implementation:**
 
