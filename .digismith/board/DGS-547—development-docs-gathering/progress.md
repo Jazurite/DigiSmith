@@ -1,0 +1,122 @@
+# SDD ledger — plan: .digismith/board/DGS-547—development-docs-gathering/plan.md
+Review mode: role
+Task 1: dispatch implementer agent=ad40382c7b92a24fa (base 6bf22dc)
+Task 1: implemented
+Task 1: review requested
+Review task 1 r1: F1 -> fixing (atomic write via temp file + renameSync)
+Review task 1 r1: F2 -> fixing (drop non-record elements on read)
+Review task 1 r1: F3 -> fixing (pre-check key with TICKET_PATTERN)
+Task 1: dispatch fix agent=a444cd2c1500912c1 (base 8cf49d4)
+Review task 1 r1: F1 -> fixed (5c856949)
+Review task 1 r1: F2 -> fixed (5c856949)
+Review task 1 r1: F3 -> fixed (5c856949)
+Task 1: reviewed (4 findings)
+Task 1: complete (commits 6bf22dc..5c85694, 4 minors fixed, rides in task 2 pack)
+Task stamp: failed (task 1 not ended: task window not recorded by the counter)
+Task 2: dispatch implementer agent=a1e49e12aff308ff4 (base 5c85694)
+Task 2: implemented
+Task 2: review requested
+Review task 2 r1: F1 -> fixing (rm temp file on failed write or rename)
+Review task 2 r1: F2 -> fixing (warn on a same-titled attachment when the recorded id is gone)
+Task 2: dispatch fix agent=a95a0b18dd91c8219 (base 3021c05)
+Review task 2 r1: F1 -> fixed (f2a49f73)
+Review task 2 r1: F2 -> fixed (f2a49f73)
+Task 2: reviewed (2 findings)
+Task 2: complete (commits 5c85694..f2a49f7, 2 minors fixed, rides in task 3 pack)
+Task 2: stamped (comment 1301150000232179)
+Task 3: dispatch implementer agent=a0eed220efcb442ef (base f2a49f7)
+Task 3: implemented
+Task 3: review requested
+Review task 3 r1: F1 -> fixing (test branches; real grammar: Task N: minor (deferred):, Task N: parked —)
+Task 3: dispatch fix agent=ac5a4393bc853ffa9 (base 8481ac4)
+Review task 3 r1: F1 -> fixed (c3f41d55)
+Task 3: reviewed (1 findings)
+Task 3: complete (commits f2a49f7..c3f41d5, 1 minor fixed, rides in task 4 pack)
+Task 3: stamped (comment 1301150000232202)
+Task 4: dispatch implementer agent=ab7dd09e981c74738 (base c3f41d5)
+Task 4: implemented
+Task 4: review requested
+Review task 4 r1: F1 -> fixing (delete mock proxy test)
+Review task 4 r1: F2 -> fixing (name = basename(file); drop --name)
+Review task 4 r1: F3 -> fixing (warn + exit 1 when record write fails)
+Review task 4 r1: F4 -> fixing (no --file: skipped)
+Task 4: dispatch fix agent=a48e106e3ff77cd87 (base 6b5ecbc)
+Task 4: fix round 1/5 (4 addressed, 0 open — F1 delete proxy test, F2 name=basename, F3 record-failure warn, F4 no --file; commits 6b5ecbc..4684ddf)
+Task 4: review requested (r2)
+Review task 4 r1: F1 -> fixed (4684ddfc)
+Review task 4 r1: F2 -> fixed (4684ddfc)
+Review task 4 r1: F3 -> fixed (4684ddfc)
+Review task 4 r1: F4 -> fixed (4684ddfc)
+Review task 4 r2: F5 -> fixing (record-failure path keeps superseded and warn lines)
+Review task 4 r2: F6 -> fixing (structured {lines, failed} result; failure warn to stderr)
+Task 4: dispatch fix agent=af960b77029481853 (base 4684ddf)
+Review task 4 r2: F5 -> fixed (87810907)
+Review task 4 r2: F6 -> fixed (87810907)
+Task 4: fix round 2/5 (2 addressed, 0 open — F5 keep decision lines, F6 structured result; commits 4684ddf..8781090)
+Task 4: reviewed (6 findings)
+Task 4: complete (commits c3f41d5..8781090, 6 findings fixed, F5/F6 ride in task 5 pack)
+Task 4: stamped (comment 1301150000232225)
+Task 5: dispatch implementer agent=a9bdc11861bb077a8 (base 8781090)
+Task 5: implemented
+Task 5: review requested
+Review task 5 r1: F1 -> fixing (per-line stream flag instead of matching the message text)
+Task 5: dispatch fix agent=adce317b76587bf60 (base 44b6143)
+Review task 5 r1: F1 -> fixed (9ab05fdf)
+Task 5: reviewed (1 findings)
+Task 5: complete (commits 8781090..9ab05fd, 1 minor fixed, rides in task 6 pack)
+Task 5: stamped (comment 1301150000232242)
+Task 6: dispatch implementer agent=add78a40aeee61683 (base 9ab05fd)
+Task 6: implemented
+Task 6: review requested
+Review task 6 r1: F1 -> fixing (design.html attaches as design.html: sentence in the skill)
+Review task 6 r1: F2 -> fixing (tokens.json path: per-case file name or the path the snapshot printed)
+Review task 6 r1: F3 -> fixing (report.html attach after Step 4a)
+Task 6: dispatch fix agent=afadc24881435641f (base cb5b226)
+Review task 6 r1: F1 -> fixed (14874b3e)
+Review task 6 r1: F2 -> fixed (14874b3e)
+Review task 6 r1: F3 -> fixed (14874b3e)
+Task 6: controller check: key rule precedes the attach block in writing-plans (l.22), executing-plans (l.24), SDD (l.123), finishing (l.20); brainstorming had it after the block, fixed inline
+Task 6: fix round 1/5 (3 addressed, 0 open — F1 design.html sentence, F2 snapshot file, F3 report.html after 4a; commits cb5b226..14874b3)
+Task 6: review requested (r2)
+Review task 6 r2: F1 -> fixed (14874b3e)
+Review task 6 r2: F2 -> fixed (14874b3e)
+Review task 6 r2: F3 -> fixed (14874b3e)
+Task 6: reviewed (3 findings)
+Task 6: complete (commits 9ab05fd..14874b3, 3 findings fixed, review r2 clean)
+Task 6: stamped (comment 1301150000232290)
+Task 7: dispatch implementer agent=add78a40aeee61683 (test written in Task 6; Builder committed 8f65d90; base 14874b3)
+Task 7: implemented
+Task 7: review requested
+Review task 7 r1: F1 -> fixing (drop the [\s\S]*$ tail)
+Review task 7 r1: F2 -> fixing (assert indexOf > -1 before the ordering checks)
+Task 7: dispatch fix agent=a2c6f225f8d72fd1a (base 8f65d90)
+Review task 7 r1: F1 -> fixed (e8cafc7e)
+Review task 7 r1: F2 -> fixed (e8cafc7e)
+Task 7: reviewed (2 findings)
+Task 7: complete (commits 14874b3..e8cafc7, 2 minors fixed, rides in the whole-branch pack)
+Task 7: stamped (comment 1301150000232302)
+Task final: review requested
+Final review (base 6bf22dc0..e8cafc7e, claude-opus-5-5): with fixes: F1 Important attach failure ledger line unreachable behind || true; F2 Minor --name dropped; F3 Minor findings.md and reviews.md same table; F4 Minor ledger summary omits fix rounds and stamp lines; F5 Minor readAttached treats every read error as no record; F6 Minor two commits without the key scope
+Review ticket final r1: F1 -> fixing (trigger on printed warn: line, in all seven hook blocks)
+Review ticket final r1: F2 -> parked (accepted as built by the Maestro; listed in the deviations)
+Review ticket final r1: F3 -> fixing (findings.md only in an executing-plans build; SDD attaches reviews.md only)
+Review ticket final r1: F4 -> parked (accepted as the plan narrowed it; noted in report.md)
+Review ticket final r1: F5 -> fixing (only ENOENT and a parse error give []; other errors rethrow)
+Review ticket final r1: F6 -> parked (accepted by the Maestro, no history rewrite)
+Final review: parked — F2 --name dropped — ruling: accepted as built, attachment name is the file basename, listed in deviations
+Final review: parked — F4 ledger summary omits fix rounds and stamp lines — ruling: accepted as the plan narrowed it
+Final review: parked — F6 two commits without the key scope — ruling: accepted, no history rewrite
+Task final: dispatch fix agent=a56e6cc9ddb65fe2d (base e8cafc7)
+Review ticket final r1: F1 -> fixed (072e5228)
+Review ticket final r1: F3 -> fixed (072e5228)
+Review ticket final r1: F5 -> fixed (c110ffba)
+Task final: ledger summary leaves out fix rounds and task stamp lines (F4, accepted as the plan narrowed it)
+Scoped re-review requested (fix base e8cafc7e..072e5228)
+Task final: review requested (r2)
+Review ticket final r2: F1 -> fixed (072e5228)
+Review ticket final r2: F3 -> fixed (072e5228)
+Review ticket final r2: F5 -> fixed (c110ffba)
+Task final: reviewed (6 findings)
+Task final: complete (fix wave c110ffba, 072e5228; r2 clean)
+Task final: stamped (comment 1301150000232337)
+Task 1: note: the Maestro's relay named a fourth item (F4, test torn file then recordAttached); the Reviewer's pack raised F1-F3 only, so the two F4 verdict lines were removed (dg reviewer table rejects a finding no pack raised). The F4 test was added in commit 5c856949.
