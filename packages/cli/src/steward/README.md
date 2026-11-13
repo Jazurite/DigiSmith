@@ -14,7 +14,7 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 | `discovery-started` | concept | discovery |
 | `refinement-started` | concept, discovery | refinement |
 | `approved` (gate, needs `--quote`; `--into to do\|scheduled`, default to do) | refinement | to do or scheduled |
-| `returned` | refinement, discovery | concept (DGS-739; no quote; the Director's code sends it when a question waits for Jack; from concept it does nothing) |
+| `returned` | refinement, discovery, to do | concept (DGS-739; no quote; the Director's code sends it when a question waits for Jack; from concept it does nothing) |
 | `started` | to do, claimed | in progress (start date; a start later than today is replaced) |
 | `review-started` | in progress | review |
 | `merged` | review | Sign-off Auto: done. Jack: acceptance. Unmarked: stays, records the merge |

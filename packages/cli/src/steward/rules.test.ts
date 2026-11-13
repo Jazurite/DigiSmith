@@ -67,13 +67,13 @@ describe("returned (DGS-739: the Director sends a ticket back to concept to wait
   it("needs no quote and is not a gate", () => {
     expect(GATE_EVENTS).not.toContain("returned");
   });
-  it.each(["refinement", "discovery"])("moves %s to concept", (from) => {
+  it.each(["refinement", "discovery", "to do"])("moves %s to concept", (from) => {
     expect(to(evaluate(ev("returned"), view(from), OFF))).toBe("concept");
   });
   it("is a no-op on a ticket already in concept", () => {
     expect(evaluate(ev("returned"), view("concept"), OFF)).toEqual({ kind: "noop" });
   });
-  it.each(["backlog", "to do", "claimed", "in progress", "review", "done"])("is refused from %s", (from) => {
+  it.each(["backlog", "claimed", "in progress", "review", "done"])("is refused from %s", (from) => {
     expect(to(evaluate(ev("returned"), view(from), OFF))).toBe("refuse");
   });
 });

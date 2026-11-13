@@ -536,11 +536,17 @@ describe("returned (DGS-739)", () => {
     expect(t.calls.filter((c) => c.startsWith("status:"))).toEqual(["status:concept"]);
     expect(readState(dir, "DGS-1")!.log.at(-1)?.outcome).toBe("noop");
   });
-  it("is refused from any other status and writes nothing", async () => {
+  it("moves a to do ticket to concept (an escalation of a ticket the scan has not claimed yet)", async () => {
     const t = new FakeTracker(snapshot("to do"));
+    await run(t, { event: "returned", by: "director" });
+    expect(t.ticket).toMatchObject({ status: "concept" });
+    expect(readState(dir, "DGS-1")!.log.at(-1)).toMatchObject({ event: "returned", outcome: "applied", note: "to do -> concept" });
+  });
+  it("is refused from in progress and writes nothing", async () => {
+    const t = new FakeTracker(snapshot("in progress", { startDate: "2026-11-01" }));
     const lines = await run(t, { event: "returned", by: "director" });
-    expect(t.calls).toEqual([]);
-    expect(lines[0]).toMatch(/refused returned/);
+    expect(t.calls.filter((c) => c.startsWith("status:"))).toEqual([]);
+    expect(lines.join("\n")).toMatch(/refused returned/);
     expect(readState(dir, "DGS-1")!.log.at(-1)?.outcome).toBe("refused");
   });
 });
