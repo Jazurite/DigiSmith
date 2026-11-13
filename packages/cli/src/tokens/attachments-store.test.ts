@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -35,6 +35,11 @@ describe("attachments-store", () => {
     const good = { name: "a.md", sha256: "a", id: "1", attached_at: "t" };
     writeFileSync(join(dir, "DGS-5.attachments.json"), JSON.stringify([good, null, 7, "x", { name: "b" }, { ...good, id: 2 }]));
     expect(readAttached("DGS-5")).toEqual([good]);
+  });
+  it("removes the temp file when the rename fails", () => {
+    mkdirSync(join(dir, "DGS-6.attachments.json"));
+    expect(() => recordAttached("DGS-6", { name: "a.md", sha256: "a", id: "1", attached_at: "t" })).toThrow();
+    expect(readdirSync(dir)).toEqual(["DGS-6.attachments.json"]);
   });
   it("rejects a bad ticket key", () => { expect(() => readAttached("../x")).toThrow(/invalid ticket key/); });
 });

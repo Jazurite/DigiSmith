@@ -17,6 +17,10 @@ describe("decideAttach", () => {
     expect(d).toMatchObject({ action: "upload" });
     expect((d as { warn?: string }).warn).toMatch(/unknown to the depot/);
   });
+  it("warns when the recorded copy is gone but a same-titled one is on the task", () => {
+    expect(decideAttach({ name: "plan.md", sha256: "a", recorded: [rec("a", "1")], onTask: [{ id: "7", title: "plan.md" }] }))
+      .toEqual({ action: "upload", warn: "a same-titled attachment is already on the task" });
+  });
   it("uploads a new name", () => {
     expect(decideAttach({ name: "spec.md", sha256: "a", recorded: [], onTask: [] })).toEqual({ action: "upload" });
   });

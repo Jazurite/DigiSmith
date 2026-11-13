@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { TICKET_PATTERN, depotRegistryDir } from "./registry.ts";
 
@@ -30,6 +30,11 @@ export function recordAttached(ticket: string, rec: AttachedRecord): void {
   const next = [...readAttached(ticket).filter((r) => r.name !== rec.name), rec];
   mkdirSync(depotRegistryDir(), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(next, null, 2));
-  renameSync(tmp, file);
+  try {
+    writeFileSync(tmp, JSON.stringify(next, null, 2));
+    renameSync(tmp, file);
+  } catch (e) {
+    rmSync(tmp, { force: true });
+    throw e;
+  }
 }
