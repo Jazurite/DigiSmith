@@ -29,13 +29,18 @@ describe("attach-record hook wiring", () => {
   it("the reviews and summary go before the workspace is deleted", () => {
     const t = skill("subagent-driven-development");
     const del = t.indexOf("rm -rf <workspace>");
-    expect(t.indexOf("--kind reviews")).toBeLessThan(del);
-    expect(t.indexOf("--kind ledger-summary")).toBeLessThan(del);
+    const reviews = t.indexOf("--kind reviews");
+    const summary = t.indexOf("--kind ledger-summary");
+    expect(del).toBeGreaterThan(-1);
+    expect(reviews).toBeGreaterThan(-1);
+    expect(summary).toBeGreaterThan(-1);
+    expect(reviews).toBeLessThan(del);
+    expect(summary).toBeLessThan(del);
   });
   it("brainstorming states the key rule before the attach block and the attachment name", () => {
     const t = skill("brainstorming");
     const at = t.indexOf("attach-record --task");
-    expect(t.slice(0, at)).toMatch(/\^\(\[A-Za-z\]\+-\[0-9\]\+\)\(__\|-\|\$\)[\s\S]*$/);
+    expect(t.slice(0, at)).toMatch(/\^\(\[A-Za-z\]\+-\[0-9\]\+\)\(__\|-\|\$\)/);
     expect(t).toContain("the attachment takes its file's name; a `design.html` spec attaches as `design.html`");
   });
   it("finishing names the snapshot file per case", () => {
@@ -45,7 +50,11 @@ describe("attach-record hook wiring", () => {
   });
   it("report-implementation attaches report.html after Step 4a", () => {
     const t = skill("report-implementation");
-    expect(t.indexOf("attach-record --task <Key> --file <target folder>/report.html")).toBeGreaterThan(t.indexOf("### Step 4a"));
+    const attach = t.indexOf("attach-record --task <Key> --file <target folder>/report.html");
+    const step4a = t.indexOf("### Step 4a");
+    expect(attach).toBeGreaterThan(-1);
+    expect(step4a).toBeGreaterThan(-1);
+    expect(attach).toBeGreaterThan(step4a);
   });
   it("no skill points at DGS-488 for the status flow", () => {
     for (const n of new Set(hooks.map((h) => h[0]))) expect(skill(n)).not.toMatch(/DGS-488/);
