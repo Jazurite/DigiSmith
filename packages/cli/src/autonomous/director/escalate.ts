@@ -70,7 +70,7 @@ export async function escalate(d: RecordDeps & { status: StatusPort }, a: Escala
   if (hasOpen && !a.viaRelease && (await d.tracker.getStatus(a.taskId)) === "concept") return { outcome: "already-open" };
 
   if (!a.viaRelease) {
-    // DGS-739: the Steward is the only status writer; `returned` is its event for refinement or discovery back to concept
+    // DGS-739: the Steward is the only status writer; `returned` is its event for refinement, discovery or to do back to concept
     const moved = await d.status.send(a.ticket, { event: "returned", by: "director" });
     if (!moved.ok) throw new Error(`the Steward did not move ${a.ticket} to concept: ${moved.text}`);
     const back = await d.tracker.getStatus(a.taskId);

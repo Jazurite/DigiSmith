@@ -47,7 +47,7 @@ describe("escalate", () => {
 
   it("DGS-739: a refusal by the Steward throws, and writes no escalation line, no comment and no decision", async () => {
     const d = deps();
-    (d.status as ReturnType<typeof fakeStatus>).refuse = "steward: refused returned: DGS-1 returned is valid from refinement or discovery; the ticket is in to do";
+    (d.status as ReturnType<typeof fakeStatus>).refuse = "steward: refused returned: DGS-1 returned is valid from refinement or discovery or to do; the ticket is in in progress";
     await expect(escalate(d, args())).rejects.toThrow(/the Steward did not move DGS-1 to concept/);
     expect(() => readFileSync(join(dir, "escalations.jsonl"))).toThrow();
     expect(tracker.comments).toEqual([]);
