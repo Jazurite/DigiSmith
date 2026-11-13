@@ -22,6 +22,7 @@ let execCalls: { file: string; args: string[]; env?: Record<string, string> }[];
 let outCalls: string[][];
 let execCode: number;
 let log: ReturnType<typeof vi.spyOn>;
+let savedDepot: string | undefined;
 
 const withDirector = (): void => {
   writeFileSync(join(root, "conductors.json"), JSON.stringify({
@@ -54,13 +55,19 @@ beforeEach(() => {
   ordersDir = join(root, "orders");
   mkdirSync(join(root, "repo"), { recursive: true });
   writeFileSync(join(root, "token"), "tok\n");
+  // DGS-665: the scan counts run records for the worker limits; keep it off the live depot (an empty one has no runs)
+  savedDepot = process.env.DIGISMITH_DEPOT_DIR;
+  process.env.DIGISMITH_DEPOT_DIR = join(root, "depot");
   tracker = new FakeTracker();
   tracker.statuses.add("concept"); tracker.statuses.add("refinement");
   execCalls = []; outCalls = []; execCode = 0;
   log = vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => { vi.restoreAllMocks(); process.exitCode = 0; rmSync(root, { recursive: true, force: true }); });
+afterEach(() => {
+  vi.restoreAllMocks(); process.exitCode = 0; rmSync(root, { recursive: true, force: true });
+  if (savedDepot === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = savedDepot;
+});
 
 describe("dg autonomous scan with and without a Director in the registry", () => {
   it("with no Director in the registry nothing changes: the claim prompts the factory conductor as before, no refine claim, no wake", async () => {
