@@ -12,14 +12,14 @@ import { readAttached, recordAttached } from "../tokens/attachments-store.ts";
 
 const CLICKUP_KEY = /^DGS-\d+$/;
 
-export interface AttachResult { lines: string[]; failed: boolean }
+export interface AttachResult { lines: string[]; errorLines: string[]; failed: boolean }
 
 export async function attachFile(client: ClickUpClient, key: string, file: string): Promise<AttachResult> {
   const name = basename(file);
   const sha256 = createHash("sha256").update(readFileSync(file)).digest("hex");
   const task = (await client.getTaskByRef(key)) as unknown as { id: string; attachments?: { id: string; title: string }[] };
   const d = decideAttach({ name, sha256, recorded: readAttached(key), onTask: task.attachments ?? [] });
-  if (d.action === "skip") return { lines: [`skipped ${name}: ${d.reason}`], failed: false };
+  if (d.action === "skip") return { lines: [`skipped ${name}: ${d.reason}`], errorLines: [], failed: false };
   const att = (await client.uploadAttachment(task.id, file)) as unknown as { id: string };
   const extra: string[] = [];
   if (d.supersedes) extra.push(`superseded: ${d.supersedes}`);
@@ -27,14 +27,15 @@ export async function attachFile(client: ClickUpClient, key: string, file: strin
   try {
     recordAttached(key, { name, sha256, id: att.id, attached_at: new Date().toISOString() });
   } catch {
-    return { lines: [...extra, `warn: attached ${name} (${att.id}) but the depot record failed; a rerun adds a copy`], failed: true };
+    return { lines: extra, errorLines: [`warn: attached ${name} (${att.id}) but the depot record failed; a rerun adds a copy`], failed: true };
   }
-  return { lines: [`attached ${name} (${att.id})`, ...extra], failed: false };
+  return { lines: [`attached ${name} (${att.id})`, ...extra], errorLines: [], failed: false };
 }
 
 async function attachAndPrint(client: ClickUpClient, key: string, file: string): Promise<void> {
-  const { lines, failed } = await attachFile(client, key, file);
-  for (const line of lines) (failed && line.includes("depot record failed") ? console.error : console.log)(line);
+  const { lines, errorLines, failed } = await attachFile(client, key, file);
+  for (const line of lines) console.log(line);
+  for (const line of errorLines) console.error(line);
   if (failed) process.exitCode = 1;
 }
 

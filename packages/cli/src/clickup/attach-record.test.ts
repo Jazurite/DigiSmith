@@ -121,18 +121,20 @@ describe("attach-record", () => {
     const r = await attachFile({ getTaskByRef, uploadAttachment: vi.fn().mockResolvedValue({ id: "a2" }) } as never, "DGS-9", file);
     expect(r.failed).toBe(true);
     expect(r.lines).toContain("superseded: a1");
-    expect(r.lines.some((l) => l.includes("depot record failed"))).toBe(true);
+    expect(r.errorLines.some((l) => l.includes("depot record failed"))).toBe(true);
+    expect(r.lines.some((l) => l.includes("depot record failed"))).toBe(false);
   });
   it("keeps the decision warn when the record write fails", async () => {
     failingWrite();
     const r = await attachFile({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [{ id: "decoy", title: "plan.md" }] }), uploadAttachment: vi.fn().mockResolvedValue({ id: "a3" }) } as never, "DGS-9", file);
     expect(r.failed).toBe(true);
     expect(r.lines.some((l) => l.startsWith("warn: same-named attachment"))).toBe(true);
-    expect(r.lines.some((l) => l.includes("depot record failed"))).toBe(true);
+    expect(r.errorLines).toHaveLength(1);
+    expect(r.lines.some((l) => l.includes("depot record failed"))).toBe(false);
   });
   it("returns failed false on a clean upload and on a skip", async () => {
     const ok = await attachFile({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [] }), uploadAttachment: vi.fn().mockResolvedValue({ id: "a1" }) } as never, "DGS-9", file);
-    expect(ok).toEqual({ lines: ["attached plan.md (a1)"], failed: false });
+    expect(ok).toEqual({ lines: ["attached plan.md (a1)"], errorLines: [], failed: false });
     const skip = await attachFile({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [{ id: "a1", title: "plan.md" }] }), uploadAttachment: vi.fn() } as never, "DGS-9", file);
     expect(skip.failed).toBe(false);
   });
