@@ -63,6 +63,21 @@ describe("shaped (DGS-674)", () => {
   });
 });
 
+describe("returned (DGS-739: the Director sends a ticket back to concept to wait for Jack)", () => {
+  it("needs no quote and is not a gate", () => {
+    expect(GATE_EVENTS).not.toContain("returned");
+  });
+  it.each(["refinement", "discovery"])("moves %s to concept", (from) => {
+    expect(to(evaluate(ev("returned"), view(from), OFF))).toBe("concept");
+  });
+  it("is a no-op on a ticket already in concept", () => {
+    expect(evaluate(ev("returned"), view("concept"), OFF)).toEqual({ kind: "noop" });
+  });
+  it.each(["backlog", "to do", "claimed", "in progress", "review", "done"])("is refused from %s", (from) => {
+    expect(to(evaluate(ev("returned"), view(from), OFF))).toBe("refuse");
+  });
+});
+
 describe("dates", () => {
   it("started sets the start date, done sets the due date", () => {
     expect(evaluate(ev("started"), view("to do"), OFF)).toMatchObject({ startDate: true });
@@ -164,7 +179,8 @@ describe("the gates", () => {
   });
   it("nothing but approved moves a ticket out of refinement toward to do; only merged enters acceptance", () => {
     for (const { input, v, r } of every()) {
-      if (v.status === "refinement" && r.kind === "move" && r.to !== "discarded" && r.to !== "Closed") expect(input.event).toBe("approved");
+      // returned (DGS-739) moves it back to concept, away from to do
+      if (v.status === "refinement" && r.kind === "move" && r.to !== "discarded" && r.to !== "Closed" && !(input.event === "returned" && r.to === "concept")) expect(input.event).toBe("approved");
       if (r.kind === "move" && r.to === "acceptance") expect(input.event).toBe("merged");
     }
   });

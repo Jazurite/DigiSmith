@@ -19,7 +19,7 @@ export const HOOK_ROWS: { file: string; line: string }[] = [
   { file: "skills/report-implementation/SKILL.md", line: "dg steward event documented --ticket <Key> --hook --by report" },
 ];
 
-const GATES = ["shaped", "approved", "accepted", "completed", "discard", "close", "filed", "discovery-started", "release-started", "released"];
+const GATES = ["shaped", "approved", "accepted", "completed", "discard", "close", "filed", "discovery-started", "release-started", "released", "returned"];
 
 describe("hook wiring (spec 3)", () => {
   for (const row of HOOK_ROWS) {

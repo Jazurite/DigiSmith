@@ -10,6 +10,8 @@ const ENTRY: Partial<Record<EventName, Entry>> = {
   shaped: { from: ["backlog"], to: "concept" },
   "discovery-started": { from: ["concept"], to: "discovery" },
   "refinement-started": { from: ["concept", "discovery"], to: "refinement" },
+  /** DGS-739: the Director sends a ticket back to concept while it waits for Jack's answer. Sent by its code only, never by a hook. */
+  returned: { from: ["refinement", "discovery"], to: "concept" },
   started: { from: ["to do", "claimed"], to: "in progress" },
   "review-started": { from: ["in progress"], to: "review" },
   released: { from: ["release"], to: "done" },

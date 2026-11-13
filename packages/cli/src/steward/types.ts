@@ -7,7 +7,7 @@ export type Status = (typeof STATUSES)[number];
 export const EVENTS = [
   "filed", "shaped", "discovery-started", "refinement-started", "approved", "started",
   "review-started", "merged", "verified", "accepted", "release-started", "released", "documented",
-  "discard", "close", "completed",
+  "discard", "close", "completed", "returned",
 ] as const;
 export type EventName = (typeof EVENTS)[number];
 

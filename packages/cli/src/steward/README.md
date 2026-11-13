@@ -14,6 +14,7 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 | `discovery-started` | concept | discovery |
 | `refinement-started` | concept, discovery | refinement |
 | `approved` (gate, needs `--quote`; `--into to do\|scheduled`, default to do) | refinement | to do or scheduled |
+| `returned` | refinement, discovery | concept (DGS-739; no quote; the Director's code sends it when a question waits for Jack; from concept it does nothing) |
 | `started` | to do, claimed | in progress (start date; a start later than today is replaced) |
 | `review-started` | in progress | review |
 | `merged` | review | Sign-off Auto: done. Jack: acceptance. Unmarked: stays, records the merge |
@@ -41,6 +42,7 @@ The status flow is the SOP DGS-731. Every send is `dg steward event <event> --ti
 | `merged` | finishing, Option 1 | after the push; Option 2: whoever merges the PR |
 | `documented` | report-implementation, finishing | after `report.html` is committed. The report's send is refused before the merge (the ticket is in review); finishing's send after the merge applies |
 | `shaped`, `approved`, `accepted`, `completed`, `discard`, `close` | the Maestro, never a hook | see the Maestro rule |
+| `returned` | the Director's code (`autonomous/director/escalate.ts`), never a skill hook | an escalation moves the ticket back to concept. The Director's refine gate also sends `approved --into to do` with its own approval line as the quote |
 
 Not hooked: `claimed` (the factory's lock, `autonomous/scan.ts`), the claim rollback, `scheduled` to `to do` (`schedule-release`). `status-writers.test.ts` keeps this list honest.
 
