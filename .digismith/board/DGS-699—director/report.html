@@ -7,7 +7,7 @@
 <h2>Summary</h2>
 <p>The Director keeps the Workbox factory running: a refine lane in the scan, capacity and seat rank, an unblock table, escalation to concept, a decision record, the Director card and a wake-up. It decides inside a written authority list and asks Jack only outside it. The merge needs the Maestro on Jack's written word.</p>
 </section>
-<p>Ticket: DGS-699. Branch DGS-699__director, last code commit 043643db. Express lane: DGS-700, not built. Read &quot;Suite&quot; in spec.md and plan.md as &quot;Castle&quot;.</p>
+<p>Ticket: DGS-699. Branch DGS-699__director, fix wave DGS-739 on origin/main 20b72915, last code commit a7b61af3. Express lane: DGS-700, not built. Read &quot;Suite&quot; in spec.md and plan.md as &quot;Castle&quot;.</p>
 <h2>What changed</h2>
 <ul>
 <li><strong>Authority list (<code>director/authority.ts</code>):</strong> 11 within and 11 Jack-only ids, the authority paths, the approval line <code>Authority change approved by Jack: &lt;date&gt;: &lt;paths&gt;</code>, coverage by token, and the merge-time path rules.</li>
@@ -20,20 +20,35 @@
 <li><strong>Card, briefs, docs:</strong> <code>skills/director/SKILL.md</code>, <code>brief.md</code>, <code>refine-brief.md</code>, <code>docs/director.md</code>, a &quot;Director&quot; section in <code>WATCHDOG.md</code>.</li>
 <li><strong>Protection:</strong> <code>skills/director/</code> joins <code>DEFAULT_PROTECTED</code> and <code>protected_paths</code>; the merge gate refuses a branch that touches an authority path without Jack&#x27;s approval record (code <code>authority-path</code>).</li>
 </ul>
+<h2>Fix wave DGS-739 (after the rebase onto main 20b72915)</h2>
+<ul>
+<li><strong>One status path:</strong> main allows only the Steward to write a ticket status. An escalation now sends the new Steward event <code>returned</code> (refinement, discovery or to do, to concept); the refinement gate sends <code>approved</code> (into to do) with the Director's own decision text as the quote. New <code>director/status.ts</code>. A Steward refusal throws in <code>escalate</code> before any comment, line or decision, returns exit 2 from <code>refine-release --result ready</code> (the lock stays), and is a <code>refine-failed</code> event in the scan lane.</li>
+<li><strong>Claim flow:</strong> no wiring change. <code>index-director.test.ts</code> read the live depot, where a live role run filled the role limit; it now uses an empty temp depot.</li>
+<li><strong>Two type errors</strong> found by <code>tsc</code> (not by the strip-types test runs) made <code>index.e2e.test.ts</code> fail on &quot;Failed to build&quot;. Fixed; <code>tsc</code> exits 0 on origin/main and on the branch.</li>
+<li>The status-port test fake follows the real Steward rules. <code>docs/director.md</code> has one line on the clickup-profile need.</li>
+</ul>
+<h2>Deviations for the Maestro</h2>
+<ul>
+<li><strong>A new Steward event <code>returned</code></strong> (refinement, discovery or to do, to concept; no quote; sent only by the Director's code, never by a skill hook; approved by the conductor). The status flow SOP DGS-731 needs a line for it (to do -&gt; concept via <code>returned</code>); the Dock session decides the SOP text.</li>
+<li><strong><code>approved --into &quot;to do&quot;</code> needs a quote:</strong> the Director sends its own decision text (&quot;Director refinement gate for &lt;KEY&gt;: the plan Reviewer report is clean and the readiness check passed&quot;).</li>
+<li><strong><code>tracker: none</code> profile:</strong> every Director escalation then fails with &quot;no ClickUp tracker&quot;. The Workbox profile is clickup; noted in <code>docs/director.md</code>.</li>
+<li><code>packages/cli/src/steward/</code> is not in <code>DEFAULT_PROTECTED</code>; the Maestro may still want to look at it.</li>
+</ul>
 <h2>Protected and authority paths touched (the merge needs the Maestro)</h2>
 <ul>
 <li><code>.digismith/config.yml</code>: ONE line added to <code>nightwatch.protected_paths</code>, <code>skills/director/</code> (commit 43156618). Protected and an authority path.</li>
-<li><code>packages/cli/src/autonomous/</code> (protected): existing files <code>scan.ts</code>, <code>watch.ts</code>, <code>types.ts</code>, <code>index.ts</code>, <code>merge-gate.ts</code> (authority), <code>protected-paths.ts</code> (authority), <code>WATCHDOG.md</code>, tests <code>merge-gate.test.ts</code>, <code>protected-paths.test.ts</code>; new: the whole <code>director/</code> folder (authority paths), <code>scan-refine.test.ts</code>, <code>watch-wake.test.ts</code>, <code>index-director.test.ts</code>.</li>
+<li><code>packages/cli/src/autonomous/</code> (protected): existing files <code>scan.ts</code>, <code>watch.ts</code>, <code>types.ts</code>, <code>index.ts</code>, <code>merge-gate.ts</code> (authority), <code>protected-paths.ts</code> (authority), <code>WATCHDOG.md</code>, tests <code>merge-gate.test.ts</code>, <code>protected-paths.test.ts</code>; new: the whole <code>director/</code> folder (authority paths, now with <code>status.ts</code>, <code>status.test-util.ts</code>, <code>status.test.ts</code>), <code>scan-refine.test.ts</code>, <code>watch-wake.test.ts</code>, <code>index-director.test.ts</code>.</li>
 <li><code>skills/director/</code> (authority; protected from this merge on).</li>
-<li>Not protected: <code>packages/cli/src/index.ts</code> (registers <code>dg director</code>), <code>docs/director.md</code>.</li>
+<li>Not protected: <code>packages/cli/src/index.ts</code> (registers <code>dg director</code>), <code>docs/director.md</code>, <code>packages/cli/src/steward/</code> (the <code>returned</code> event: types, rules, README, three tests).</li>
 <li>Not touched: hooks/, skills/reviewer, skills/finishing-*, packages/cli/src/reviewer/, scripts/nexus-api/src/scheduler/, .digismith/mandate.yml, .digismith/profiles/.</li>
 </ul>
 <h2>This branch cannot pass its own merge gate</h2>
 <p>It touches authority paths and no approval record exists (<code>&lt;autonomous dir&gt;/director/authority-approvals/DGS-699.json</code>), so <code>dg autonomous merge-gate</code> refuses it as <code>authority-path</code>. The Maestro merges by hand on Jack&#x27;s written word (spec 4.4 states this limit).</p>
 <h2>Tests</h2>
-<p>Whole suite (forks 2) over <code>packages/cli/src/autonomous</code>, <code>packages/cli/src/run</code>, <code>packages/cli/src/index.test.ts</code>, <code>packages/cli/src/strip-types.smoke.test.ts</code>: 75 files, 1503 tests, 1500 pass, 3 fail. The 3 are the known base failures and also fail on origin/main 1b64225d (same files run on a <code>git archive</code> copy: <code>guardrails.test.ts</code> scan_every_minutes, <code>autonomous/index.test.ts</code> busy hand builder, <code>run/index.test.ts</code> 7-day list).</p>
+<p>Full <code>packages/cli</code> suite (forks 2, load 4): 208 files, 3429 tests, 3428 pass, 1 fails: <code>autonomous/guardrails.test.ts</code> &quot;sets scan_every_minutes to 15 and reads clean&quot; (<code>{builder: 2, reviewer: 2, role: 1}</code> vs <code>{builder: 2, reviewer: 1, role: 1}</code>, DGS-720). It also fails on origin/main 20b72915: the same file on a <code>git archive</code> copy, 52 tests, 1 failed, the same message. <code>index.e2e.test.ts</code>, <code>strip-types.smoke</code> and the nightwatch tests pass. <code>tsc --noEmit</code> exits 0, also on origin/main.</p>
+<p>nexus-web: <code>grid.test.ts</code> and <code>build-www.test.ts</code> pass on the branch (29 tests); the branch changes nothing under <code>scripts/</code>. They could not run on the main copy (the Nuxt test utils need a real install), so they are no failure of the branch.</p>
 <h2>Review</h2>
-<p>Every task reviewed to clean (T1 to T4 and T5 with fix rounds, T6 clean at r1, Part 2 r1 and r2); whole branch ticket-final r1 with fixes (2 Important, 2 Minor), r2 (1 Important, 1 Minor new), r3 clean. See findings.md.</p>
+<p>Every task reviewed to clean (T1 to T4 and T5 with fix rounds, T6 clean at r1, Part 2 r1 and r2); whole branch ticket-final r1 with fixes (2 Important, 2 Minor), r2 (1 Important, 1 Minor new), r3 clean. Fix wave DGS-739: whole-branch review r1 with one Important (<code>returned</code> did not cover a to do ticket), fixed; r2 clean. See findings.md.</p>
 <h2>Notes for the Maestro (after the merge)</h2>
 <ul>
 <li><code>start-again</code> and <code>reprompt</code> to <code>self</code> are not run by <code>dg director do</code>: the Director does them itself in its session and records them with <code>dg director decide --id restart-run|reprompt-run --run &lt;run&gt;</code>; a stuck refine run is stopped by the Director (<code>dg run event &lt;run-id&gt; lost</code>) and recorded. The card says so.</li>
