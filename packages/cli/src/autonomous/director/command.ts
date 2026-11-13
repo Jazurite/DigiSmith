@@ -9,6 +9,7 @@ import { realExec } from "../conductor.ts";
 import { fmtUtc7 } from "../clock.ts";
 import { readJournal } from "../journal.ts";
 import { MAIN_CHECKOUT } from "../observers-real.ts";
+import { defaultDeps } from "../../steward/index.ts";
 import { findRunDir } from "../../run/paths.ts";
 import { readRun } from "../../run/record.ts";
 import type { ReadyCtx } from "../ready.ts";
@@ -23,6 +24,7 @@ import { readDecisions, recordDecision, retryPendingComments } from "./record.ts
 import { readRefineLock, refineRelease, refineRound, type RefineLock } from "./refine.ts";
 import { rankSeats, type SeatReading } from "./seat.ts";
 import { promptDriver } from "./target.ts";
+import { stewardStatus, type StatusPort } from "./status.ts";
 import type { Move } from "./unblock.ts";
 
 export interface DirectorDeps {
@@ -30,6 +32,8 @@ export interface DirectorDeps {
   now: () => Date;
   tracker: () => Tracker;
   effects: Effects;
+  /** DGS-739: every status move goes through the Steward */
+  status: StatusPort;
   /** the role of a run from its run record; null when unknown */
   roleOf: (run: string) => string | null;
   boardDir: (ticket: string) => string | null;
@@ -130,7 +134,7 @@ export function createDirectorCommand(depsFactory: () => DirectorDeps = defaultD
           describe: "run one move of the plan and record it (record first, then the effect)",
           builder: (e) => e.positional("move-id", { type: "string", demandOption: true }),
           handler: (argv) => guarded(depsFactory, async (d) => {
-            const r = await doMove({ dir: d.dir, now: d.now, tracker: d.tracker(), effects: d.effects }, readWorld(d), argv.moveId as string);
+            const r = await doMove({ dir: d.dir, now: d.now, tracker: d.tracker(), status: d.status, effects: d.effects }, readWorld(d), argv.moveId as string);
             return { lines: [r.text], code: r.code };
           }),
         })
@@ -161,7 +165,7 @@ export function createDirectorCommand(depsFactory: () => DirectorDeps = defaultD
           handler: (argv) => guarded(depsFactory, async (d) => {
             const ticket = argv.ticket as string;
             const viaRelease = argv.viaRelease as boolean;
-            const r = await escalate({ dir: d.dir, now: d.now, tracker: d.tracker() }, {
+            const r = await escalate({ dir: d.dir, now: d.now, tracker: d.tracker(), status: d.status }, {
               ticket, taskId: viaRelease ? "" : await d.taskIdOf(ticket), id: argv.id as string, question: argv.question as string, viaRelease,
             });
             if (r.outcome === "refused") return { lines: [r.text], code: 1 };
@@ -190,7 +194,7 @@ export function createDirectorCommand(depsFactory: () => DirectorDeps = defaultD
             .option("cause", { type: "string", requiresArg: true }),
           handler: (argv) => guarded(depsFactory, async (d) => {
             const r = await refineRelease({
-              dir: d.dir, now: d.now, tracker: d.tracker(), checkReadyCtx: d.checkReadyCtx, boardDir: d.boardDir, readDescription: d.readDescription,
+              dir: d.dir, now: d.now, tracker: d.tracker(), status: d.status, checkReadyCtx: d.checkReadyCtx, boardDir: d.boardDir, readDescription: d.readDescription,
             }, {
               ticket: argv.ticket as string, result: argv.result as "ready" | "escalated" | "failed",
               report: argv.report as string | undefined, question: argv.question as string | undefined, cause: argv.cause as string | undefined,
@@ -257,6 +261,7 @@ export function defaultDirectorDeps(): DirectorDeps {
     dir,
     now: () => new Date(),
     tracker: t,
+    status: stewardStatus(() => defaultDeps({ quiet: true, cwd: MAIN_CHECKOUT })),
     roleOf: roleOfRun,
     boardDir: (ticket) => boardDirIn(MAIN_CHECKOUT, ticket),
     checkReadyCtx: { repo: MAIN_CHECKOUT, fileExists: existsSync },
@@ -267,7 +272,7 @@ export function defaultDirectorDeps(): DirectorDeps {
       promptSelf: notWired("prompting the refine worker"),
       startRefine: notWired("starting the refine worker"),
       releaseBuild: (ticket, reason) => runSelf(["autonomous", "release", "--ticket", ticket, "--result", "stopped", "--reason", reason]),
-      refineRelease: async (a) => refineRelease({ dir, now: deps.now, tracker: t(), checkReadyCtx: deps.checkReadyCtx, boardDir: deps.boardDir, readDescription: deps.readDescription }, { ticket: a.ticket, result: a.result, question: a.question, cause: a.cause }),
+      refineRelease: async (a) => refineRelease({ dir, now: deps.now, tracker: t(), status: deps.status, checkReadyCtx: deps.checkReadyCtx, boardDir: deps.boardDir, readDescription: deps.readDescription }, { ticket: a.ticket, result: a.result, question: a.question, cause: a.cause }),
     },
   };
   return deps;

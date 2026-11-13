@@ -19,6 +19,7 @@ import { runBack } from "./switch.ts";
 import type { TickResult } from "./tick.ts";
 import { recordDecision } from "./director/record.ts";
 import { runRefineLane } from "./director/refine-lane.ts";
+import type { StatusPort } from "./director/status.ts";
 import type { LoTask, Tracker } from "./types.ts";
 
 export interface ScanDeps {
@@ -32,7 +33,7 @@ export interface ScanDeps {
   /** DGS-665: null = a builder slot is free; a string = the refusal text. Optional so older tests keep passing; production always passes it. */
   builderFull?: () => string | null;
   /** DGS-699: the refine lane. Absent: the lane is off and the scan behaves as before. */
-  refine?: { prompt: (msg: string) => Promise<void>; roleFull: () => string | null; ordersDir?: string };
+  refine?: { prompt: (msg: string) => Promise<void>; roleFull: () => string | null; status: StatusPort; ordersDir?: string };
   /** DGS-699: wakes the Director when there is something to do. Called once at the end of every scan; its failure changes nothing. */
   wake?: () => Promise<void>;
   /** DGS-699 Part 2: the ticket's driver. Set when a Director exists: a build claim names this conductor as driver and prompts it, never the Director. */

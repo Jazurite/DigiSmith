@@ -7,6 +7,7 @@ import { recordRelease } from "./breaker.ts";
 import type { Exec } from "./conductor.ts";
 import { escalate } from "./director/escalate.ts";
 import { readDecisions } from "./director/record.ts";
+import { fakeStatus } from "./director/status.test-util.ts";
 import { DONE_WHEN_QUESTION, readRefineLock, acquireRefineLock } from "./director/refine.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { runScan, type ScanDeps } from "./scan.ts";
@@ -27,7 +28,7 @@ const exec: Exec = async () => ({ code: 0, stderr: "" });
 const mk = (over: Partial<ScanDeps> = {}): ScanDeps => ({
   tracker, dir, ordersDir, conductorsJson, repo: "/repo", now: () => now, scanId: "scan-1", exec, fileExists: () => false, dryRun: false,
   nexus: { baseUrl: "http://fake", tokenFile: join(root, "token"), fetch: (async () => new Response("{}", { status: 202 })) as unknown as typeof fetch },
-  refine: { prompt: async (m) => { if (promptFails) throw new Error("prompt down"); prompts.push(m); }, roleFull: () => roleFullText },
+  refine: { prompt: async (m) => { if (promptFails) throw new Error("prompt down"); prompts.push(m); }, roleFull: () => roleFullText, status: fakeStatus(tracker) },
   ...over,
 });
 const events = () => readEvents(dir, now.getTime() - 48 * 3600_000, now.getTime() + 1000);
@@ -143,9 +144,20 @@ describe("the refine lane: Done when", () => {
     expect(items[0]).toMatchObject({ run: "DGS-1/escalation", kind: "unknown" });
   });
 
+  it("DGS-739: a Steward refusal of the done-when move to concept is an event, never an error out of the scan", async () => {
+    addRefine("t1", { text: "no condition here" });
+    const status = fakeStatus(tracker);
+    status.refuse = "steward: refused returned";
+    const r = await runScan(mk({ refine: { prompt: async () => {}, roleFull: () => null, status } }));
+    expect(r.outcome).toBe("none");
+    expect(readRefineLock(dir)).toBeNull();
+    expect(events().find((e) => e.kind === "refine-failed")).toMatchObject({ ticket: "DGS-1" });
+    expect(tracker.comments).toEqual([]);
+  });
+
   it("a ticket that returned from concept puts Jack's text in the order", async () => {
     addRefine("t1", { text: "Done when: ok\nJack says: call it Forge" });
-    await escalate({ dir, now: () => now, tracker }, { ticket: "DGS-1", taskId: "t1", id: "product-taste-names-scope", question: "Name?", viaRelease: false });
+    await escalate({ dir, now: () => now, tracker, status: fakeStatus(tracker) }, { ticket: "DGS-1", taskId: "t1", id: "product-taste-names-scope", question: "Name?", viaRelease: false });
     tracker.tasks.get("t1")!.status = "refinement";
     await runScan(mk());
     expect(readRefineLock(dir)).toMatchObject({ ticket: "DGS-1" });
@@ -229,7 +241,7 @@ describe("the refine lane: when it runs", () => {
   it("F1: a lock kept after a refused gate is cleared when the ticket comes back from concept, and the lane claims again", async () => {
     addRefine("t1");
     acquireRefineLock(dir, { ticket: "DGS-1", taskId: "t1", claimedAt: now.toISOString(), claimedAtUtc7: "x", order: "o", scanId: "s", attempt: 1, round: 1 });
-    await escalate({ dir, now: () => now, tracker }, { ticket: "DGS-1", taskId: "t1", id: "change-authority", question: "Approve director/x.ts?", viaRelease: false });
+    await escalate({ dir, now: () => now, tracker, status: fakeStatus(tracker) }, { ticket: "DGS-1", taskId: "t1", id: "change-authority", question: "Approve director/x.ts?", viaRelease: false });
     tracker.tasks.get("t1")!.status = "refinement";   // Jack answered and moved it back before the next scan
     await runScan(mk());
     expect(readRefineLock(dir)).toMatchObject({ ticket: "DGS-1", scanId: "scan-1" });

@@ -4,7 +4,9 @@ import type { Exec } from "../conductor.ts";
 import { realExecOut, type ExecOut } from "../observers-real.ts";
 import type { ScanDeps } from "../scan.ts";
 import { readWorld, roleOfRun } from "./command.ts";
+import { defaultDeps } from "../../steward/index.ts";
 import { planLoop } from "./plan.ts";
+import { stewardStatus } from "./status.ts";
 import { directorTarget, projectConductorName, promptDirector, promptDriver } from "./target.ts";
 import { wakeDirector } from "./wake.ts";
 
@@ -31,6 +33,7 @@ export function directorWiring(d: WiringInput): DirectorWiring | null {
     refine: {
       prompt: (m) => promptDirector(d.exec, d.conductorsJson, m),
       roleFull: () => refusal(currentCount(d.limitEnv, d.mainRepo, d.now().getTime()).count, "role"),
+      status: stewardStatus(() => defaultDeps({ quiet: true, cwd: d.mainRepo })),
     },
     wake: async () => {
       const plan = planLoop(readWorld({ dir: d.dir, now: d.now, roleOf: roleOfRun }));

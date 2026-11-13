@@ -7,6 +7,7 @@ import type { LoTask } from "../types.ts";
 import { approvalCovers, namesAuthorityPath, parseApproval } from "./authority.ts";
 import { escalate, hasReturned } from "./escalate.ts";
 import { readDecisions, recordDecision, type RecordDeps } from "./record.ts";
+import type { StatusPort } from "./status.ts";
 
 export const REFINE_STATUS = "refinement";
 export const REFINE_LOCK_MAX_AGE_MINUTES = 360;
@@ -116,7 +117,7 @@ export function countRefineFailures(dir: string, ticket: string): number {
   return mine.slice(from).filter((x) => x.run === "refine-failed" && x.id === "release-stopped").length;
 }
 
-export interface RefineReleaseDeps extends RecordDeps { checkReadyCtx: ReadyCtx; boardDir: (ticket: string) => string | null; readDescription: (ticket: string) => Promise<string> }
+export interface RefineReleaseDeps extends RecordDeps { status: StatusPort; checkReadyCtx: ReadyCtx; boardDir: (ticket: string) => string | null; readDescription: (ticket: string) => Promise<string> }
 
 export function refineRound(dir: string): void {
   const l = readRefineLock(dir);
@@ -199,7 +200,10 @@ export async function refineRelease(
     const line = `Authority change approved by Jack: ${approval.date}: ${approval.paths.join(", ")}`;
     writeFileSync(join(dirApprovals, `${a.ticket}.json`), JSON.stringify({ ticket: a.ticket, paths: approval.paths, line, at: d.now().toISOString() }));
   }
-  await d.tracker.setStatus(lock.taskId, "to do");
+  // DGS-739: refinement -> to do is the Steward event `approved` (a gate event: it needs a quote). The Director's own decision text is the quote.
+  const quote = `Director refinement gate for ${a.ticket}: the plan Reviewer report is clean and the readiness check passed`;
+  const sent = await d.status.send(a.ticket, { event: "approved", by: "director", quote });
+  if (!sent.ok) return refuse(`the Steward did not move ${a.ticket} to to do: ${sent.text}; the lock is kept, run the release again`);
   const back = await d.tracker.getStatus(lock.taskId);
   if (back !== "to do") throw new Error(`status read back "${back}", expected "to do"`);
   clearRefineLock(d.dir);

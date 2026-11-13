@@ -4,6 +4,7 @@ import { checkAuthority, type AuthorityCheck } from "./authority.ts";
 import { escalate } from "./escalate.ts";
 import { planLoop, type PlanWorld } from "./plan.ts";
 import { readDecisions, recordDecision, type RecordDeps } from "./record.ts";
+import type { StatusPort } from "./status.ts";
 import { retryRunKey, type Move } from "./unblock.ts";
 
 export interface Effects {
@@ -16,7 +17,7 @@ export interface Effects {
   startRefine(ticket: string): Promise<void>;
   promptSelf(run: string, text: string): Promise<void>;
 }
-export type DoDeps = RecordDeps & { effects: Effects; check?: (id: string) => AuthorityCheck };
+export type DoDeps = RecordDeps & { status: StatusPort; effects: Effects; check?: (id: string) => AuthorityCheck };
 
 /** The authority id a move is decided under (spec 4.1). */
 export function authorityIdOf(m: Move): string | null {

@@ -10,6 +10,7 @@ import {
   refineOrderPath, refineRelease, refineRound, renderRefineOrder, type RefineLock, type RefineReleaseDeps,
 } from "./refine.ts";
 import { hasDecision, readDecisions } from "./record.ts";
+import { fakeStatus } from "./status.test-util.ts";
 import type { LoTask } from "../types.ts";
 
 let dir: string;
@@ -23,7 +24,7 @@ const DIRTY = "# Report\n\n```json findings\n[{\"id\":\"F1\",\"severity\":\"Impo
 
 const lock = (over: Partial<RefineLock> = {}): RefineLock => ({ ticket: "DGS-1", taskId: "t1", claimedAt: NOW.toISOString(), claimedAtUtc7: "2026-11-03 10:00:00", order: "o.md", scanId: "s", attempt: 1, round: 1, ...over });
 const deps = (): RefineReleaseDeps => ({
-  dir, now: () => NOW, tracker, checkReadyCtx: { repo: "/r", fileExists: () => false },
+  dir, now: () => NOW, tracker, status: fakeStatus(tracker), checkReadyCtx: { repo: "/r", fileExists: () => false },
   boardDir: () => boardDirResult, readDescription: async () => description,
 });
 const report = (text: string): string => { const p = join(dir, "report.md"); writeFileSync(p, text); return p; };
@@ -111,6 +112,26 @@ describe("refineRelease ready", () => {
     expect(readRefineLock(dir)).toBeNull();
     expect(hasDecision(dir, "DGS-1", null, "apply-refinement-gate")).not.toBeNull();
     expect(existsSync(join(dir, "director", "authority-approvals", "DGS-1.json"))).toBe(false);
+  });
+
+  it("DGS-739: the move to to do is the Steward event approved, sent by the director with its own decision text as the quote", async () => {
+    const status = fakeStatus(tracker);
+    const r = await refineRelease({ ...deps(), status }, { ticket: "DGS-1", result: "ready", report: report(CLEAN) });
+    expect(r.code).toBe(0);
+    expect(status.sent).toEqual([{ ticket: "DGS-1", event: "approved", quote: expect.stringContaining("plan Reviewer report is clean") }]);
+  });
+
+  it("DGS-739: a refusal by the Steward is reported (exit 2), keeps the lock and records no gate pass; run again after the cause is fixed", async () => {
+    const status = fakeStatus(tracker);
+    status.refuse = "steward: refused approved: DGS-1 approved is valid from refinement; the ticket is in concept";
+    const r = await refineRelease({ ...deps(), status }, { ticket: "DGS-1", result: "ready", report: report(CLEAN) });
+    expect(r.code).toBe(2);
+    expect(r.text).toContain("the Steward did not move DGS-1 to to do");
+    expect(readRefineLock(dir)).not.toBeNull();
+    expect(hasDecision(dir, "DGS-1", null, "apply-refinement-gate")).toBeNull();
+    expect(tracker.tasks.get("t1")?.status).toBe("refinement");
+    status.refuse = null;
+    expect((await refineRelease({ ...deps(), status }, { ticket: "DGS-1", result: "ready", report: report(CLEAN) })).code).toBe(0);
   });
 
   it.each(AUTHORITY_PATHS.map((p) => [p]))("is REFUSED and escalated when the plan names %s", async (p) => {

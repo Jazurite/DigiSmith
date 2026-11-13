@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { appendAttention } from "../attention-write.ts";
 import { fmtUtc7 } from "../clock.ts";
 import { recordDecision, sendOrQueue, type RecordDeps } from "./record.ts";
+import type { StatusPort } from "./status.ts";
 
 export interface EscalateArgs { ticket: string; taskId: string; id: string; question: string; viaRelease: boolean }
 export type EscalateResult = { outcome: "asked" | "already-open" } | { outcome: "refused"; text: string };
@@ -56,7 +57,7 @@ function refuse(d: RecordDeps, a: EscalateArgs, text: string): EscalateResult {
   return { outcome: "refused", text };
 }
 
-export async function escalate(d: RecordDeps, a: EscalateArgs): Promise<EscalateResult> {
+export async function escalate(d: RecordDeps & { status: StatusPort }, a: EscalateArgs): Promise<EscalateResult> {
   const now = d.now();
   const key = questionKey(a.ticket, a.id, a.question);
   const all = current(d.dir);
@@ -69,7 +70,9 @@ export async function escalate(d: RecordDeps, a: EscalateArgs): Promise<Escalate
   if (hasOpen && !a.viaRelease && (await d.tracker.getStatus(a.taskId)) === "concept") return { outcome: "already-open" };
 
   if (!a.viaRelease) {
-    await d.tracker.setStatus(a.taskId, "concept");
+    // DGS-739: the Steward is the only status writer; `returned` is its event for refinement or discovery back to concept
+    const moved = await d.status.send(a.ticket, { event: "returned", by: "director" });
+    if (!moved.ok) throw new Error(`the Steward did not move ${a.ticket} to concept: ${moved.text}`);
     const back = await d.tracker.getStatus(a.taskId);
     if (back !== "concept") throw new Error(`status read-back of ${a.ticket} is "${back}", expected "concept"`);
   }

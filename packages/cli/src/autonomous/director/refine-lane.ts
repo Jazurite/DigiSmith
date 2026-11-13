@@ -22,7 +22,7 @@ const STATUS_CAUSE = "refine-status-missing";
 export async function runRefineLane(d: ScanDeps): Promise<{ key: string; reasons: string[] }[]> {
   const refine = d.refine!;
   const now = d.now();
-  const rd = { dir: d.dir, now: d.now, tracker: d.tracker };
+  const rd = { dir: d.dir, now: d.now, tracker: d.tracker, status: refine.status };
 
   if (d.dryRun) {
     const rows: { key: string; reasons: string[] }[] = [];
@@ -66,7 +66,10 @@ export async function runRefineLane(d: ScanDeps): Promise<{ key: string; reasons
       const reasons = checkRefineReady(t);
       if (reasons.length > 0) {
         if (reasons.length === 1 && reasons[0] === REFINE_REASON.doneWhen) {
-          await escalate(rd, { ticket: key, taskId: t.id, id: "product-taste-names-scope", question: DONE_WHEN_QUESTION, viaRelease: false });
+          // a refused or failed move to concept (the Steward said no) is reported as an event and never stops the scan
+          try { await escalate(rd, { ticket: key, taskId: t.id, id: "product-taste-names-scope", question: DONE_WHEN_QUESTION, viaRelease: false }); } catch (e) {
+            appendEvent(d.dir, now, "refine-failed", { ticket: key, error: errText(e).replace(/\s+/g, " ").slice(0, 200) });
+          }
           continue;
         }
         const nk = `refine:${key}`;

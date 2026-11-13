@@ -7,6 +7,7 @@ import { FakeTracker } from "../fake-tracker.test-util.ts";
 import { authorityIdOf, doMove, type DoDeps, type Effects } from "./do.ts";
 import { planLoop, type PlanWorld } from "./plan.ts";
 import { hasDecision, readDecisions } from "./record.ts";
+import { fakeStatus } from "./status.test-util.ts";
 import { retryRunKey, type Move } from "./unblock.ts";
 
 let dir: string;
@@ -24,7 +25,7 @@ const effects = (): Effects => ({
   startRefine: async (t) => { if (failNext === "start") { failNext = null; throw new Error("limit: role 1 of 1 in use"); } calls.push(`start ${t}`); },
   promptSelf: async (r) => { calls.push(`self ${r}`); },
 });
-const deps = (over: Partial<DoDeps> = {}): DoDeps => ({ dir, now: () => now, tracker, effects: effects(), ...over });
+const deps = (over: Partial<DoDeps> = {}): DoDeps => ({ dir, now: () => now, tracker, status: fakeStatus(tracker), effects: effects(), ...over });
 const item = (over: Partial<OpenItem> = {}): OpenItem => ({ id: "r1.stalled.0", ts: ago(50), ticket: "DGS-1", run: "r1", kind: "stalled", cause: "silent-working-180-min", since: ago(50), ...over });
 const world = (items: OpenItem[], over: Partial<PlanWorld> = {}): PlanWorld => ({
   items, history: { decisions: readDecisions(dir), journal: [] }, lockTicket: "DGS-1", refineLock: null, pendingComments: 0, now,

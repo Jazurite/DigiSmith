@@ -8,6 +8,7 @@ import { appendAttention } from "../attention-write.ts";
 import { readOpen } from "../attention.ts";
 import { FakeTracker } from "../fake-tracker.test-util.ts";
 import { createDirectorCommand, type DirectorDeps } from "./command.ts";
+import { fakeStatus } from "./status.test-util.ts";
 import { readDecisions } from "./record.ts";
 import { acquireRefineLock, readRefineLock } from "./refine.ts";
 
@@ -21,7 +22,7 @@ let errLog: ReturnType<typeof vi.spyOn>;
 const out = () => log.mock.calls.flat().join("\n");
 
 const deps = (): DirectorDeps => ({
-  dir, now: () => NOW, tracker: () => tracker,
+  dir, now: () => NOW, tracker: () => tracker, status: fakeStatus(tracker),
   effects: {
     promptDriver: async (t, x) => { calls.push(`driver ${t} ${x}`); }, releaseBuild: async (t) => { calls.push(`release ${t}`); },
     refineRelease: async () => ({ code: 0, text: "ok" }), startRefine: async () => {}, promptSelf: async () => {},

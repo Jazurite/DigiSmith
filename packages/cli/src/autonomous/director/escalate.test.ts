@@ -6,12 +6,14 @@ import { readOpen } from "../attention.ts";
 import { FakeTracker } from "../fake-tracker.test-util.ts";
 import { escalate, markReturned, questionKey, type EscalateArgs } from "./escalate.ts";
 import { readDecisions, type RecordDeps } from "./record.ts";
+import type { StatusPort } from "./status.ts";
+import { fakeStatus } from "./status.test-util.ts";
 
 let dir: string;
 let tracker: FakeTracker;
 let now: Date;
 const NOW = new Date("2026-11-03T03:00:00.000Z"); // 10:00 UTC+7
-const deps = (): RecordDeps => ({ dir, now: () => now, tracker });
+const deps = (): RecordDeps & { status: StatusPort } => ({ dir, now: () => now, tracker, status: fakeStatus(tracker) });
 const args = (over: Partial<EscalateArgs> = {}): EscalateArgs => ({ ticket: "DGS-1", taskId: "t1", id: "product-taste-names-scope", question: "Which name?", viaRelease: false, ...over });
 const lines = (): Record<string, unknown>[] => readFileSync(join(dir, "escalations.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
 const writes = (): string[] => tracker.calls.filter((c) => c.startsWith("setStatus"));
@@ -35,6 +37,21 @@ describe("escalate", () => {
     expect(lines()).toHaveLength(1);
     expect(lines()[0]).toMatchObject({ ticket: "DGS-1", id: "product-taste-names-scope", question: "Which name?", state: "open", askedAt: NOW.toISOString(), askedAtUtc7: "2026-11-03 10:00:00" });
     expect(readDecisions(dir)).toMatchObject([{ ticket: "DGS-1", id: "escalate-concept", side: "escalated" }]);
+  });
+
+  it("DGS-739: the move to concept is the Steward event returned, sent by the director", async () => {
+    const d = deps();
+    await escalate(d, args());
+    expect((d.status as ReturnType<typeof fakeStatus>).sent).toEqual([{ ticket: "DGS-1", event: "returned" }]);
+  });
+
+  it("DGS-739: a refusal by the Steward throws, and writes no escalation line, no comment and no decision", async () => {
+    const d = deps();
+    (d.status as ReturnType<typeof fakeStatus>).refuse = "steward: refused returned: DGS-1 returned is valid from refinement or discovery; the ticket is in to do";
+    await expect(escalate(d, args())).rejects.toThrow(/the Steward did not move DGS-1 to concept/);
+    expect(() => readFileSync(join(dir, "escalations.jsonl"))).toThrow();
+    expect(tracker.comments).toEqual([]);
+    expect(readDecisions(dir)).toEqual([]);
   });
 
   it("the same question again is refused with 'already asked' and opens an attention item once", async () => {
