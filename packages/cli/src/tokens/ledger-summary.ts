@@ -14,7 +14,7 @@ export function renderLedgerSummary(progress: string): string {
       const reviewed = /^reviewed \((.*)\)$/.exec(m[2]);
       if (complete) t.delivered = complete[1];
       else if (reviewed) t.reviews.push(reviewed[1]);
-      else if (/^parked|^deferred/.test(m[2])) t.notes.push(m[2]);
+      else if (/^parked|^deferred|^minor \(deferred\)/.test(m[2])) t.notes.push(m[2]);
       continue;
     }
     if (/^(Final review|Scoped re-review)/.test(l)) whole.push(l);
