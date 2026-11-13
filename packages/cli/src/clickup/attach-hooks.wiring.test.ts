@@ -26,6 +26,21 @@ describe("attach-record hook wiring", () => {
   it("every skill that attaches says a failure never blocks", () => {
     for (const n of new Set(hooks.map((h) => h[0]))) expect(skill(n)).toMatch(/Attach record: failed/);
   });
+  it("every hook block triggers the failure ledger line on a printed warn: line", () => {
+    const sentence = "When the command prints a line that starts with `warn:`, append `Attach record: failed (<that line>)` to the ledger when one exists, and go on.";
+    const perFile: Record<string, number> = { "brainstorming": 1, "writing-plans": 1, "subagent-driven-development": 1, "report-implementation": 1, "executing-plans": 1, "finishing-a-development-branch": 2 };
+    for (const [n, count] of Object.entries(perFile)) {
+      const t = skill(n);
+      expect(t.split(sentence).length - 1).toBe(count);
+      expect(t).not.toMatch(/A non-zero exit prints a warning, appends/);
+      expect(t).not.toContain("Attach record: failed (<first stderr line>)");
+    }
+  });
+  it("findings.md is attached only in an executing-plans build; SDD attaches reviews.md only", () => {
+    const rep = skill("report-implementation");
+    expect(rep).toContain("Attach `findings.md` only in an `executing-plans` build (no SDD workspace); an SDD build attaches `reviews.md` only (the same table).");
+    expect(skill("subagent-driven-development")).toContain("`findings.md` is attached only in an `executing-plans` build (no SDD workspace); an SDD build attaches `reviews.md` only (the same table).");
+  });
   it("the reviews and summary go before the workspace is deleted", () => {
     const t = skill("subagent-driven-development");
     const del = t.indexOf("rm -rf <workspace>");

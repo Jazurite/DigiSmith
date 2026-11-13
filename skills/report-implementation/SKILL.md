@@ -667,7 +667,7 @@ so build the table now. Let `<workspace>` be the directory
     block, a missing ledger): stop and report the message to the human partner.
     Do not write the report as if the reviews were complete. The Builder fixes the
     ledger lines, then runs this step again.
-- Attach `findings.md` to the ClickUp ticket (same key rule; no key or a Jira key: skip silently):
+- Attach `findings.md` only in an `executing-plans` build (no SDD workspace); an SDD build attaches `reviews.md` only (the same table). In that build, attach it to the ClickUp ticket (same key rule; no key or a Jira key: skip silently):
 
   ```bash
   dg clickup attach-record --task <Key> --file <target folder>/findings.md || true
@@ -684,7 +684,7 @@ dg clickup attach-record --task <Key> --file <target folder>/report.html || true
 
 The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
-Same key rule as above. A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+Same key rule as above. When the command prints a line that starts with `warn:`, append `Attach record: failed (<that line>)` to the ledger when one exists, and go on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
 
 ### Step 5: Hand Back
 

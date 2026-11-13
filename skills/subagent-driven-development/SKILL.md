@@ -713,7 +713,9 @@ dg clickup attach-record --task <Key> --kind ledger-summary --workspace <workspa
 
 The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
-Same key rule as above. A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+Same key rule as above. When the command prints a line that starts with `warn:`, append `Attach record: failed (<that line>)` to the ledger when one exists, and go on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+
+`findings.md` is attached only in an `executing-plans` build (no SDD workspace); an SDD build attaches `reviews.md` only (the same table).
 
 Then take the token snapshot:
 
