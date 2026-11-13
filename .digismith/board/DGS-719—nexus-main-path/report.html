@@ -2,6 +2,10 @@
 <h1>DGS-719 One main-checkout path for the Nexus API — Implementation Report</h1>
 <div class="meta"><span>Ticket: <strong>DGS-719</strong></span><span>Date: 2026-11-13</span></div>
 <p>Ticket DGS-719 (Urgent, Mode Manual). Branch DGS-719__nexus-main-path from origin/main b9ccd97f (not moved). Head 87b9467e.</p>
+<section id="summary">
+<h2>Summary</h2>
+<p>The Nexus API now reads one main-checkout path from one module, with the DIGISMITH_MAIN_CHECKOUT override. A missing CLI there is logged once at start and shown as a warning on the jobs list. The scan, the conductor boot and the Maestro catch-up use the same Engineering default.</p>
+</section>
 <h2>What changed</h2>
 <ul>
 <li><b>One module</b> <code>scripts/nexus-api/src/main-checkout.ts</code>: <code>MAIN_CHECKOUT</code> (env <code>DIGISMITH_MAIN_CHECKOUT</code>, else <code>~/Workspace/Engineering/Jazurite/DigiSmith</code>), <code>MAIN_CLI</code>, <code>checkMainCheckout()</code>, <code>missingCliMessage()</code>.</li>
