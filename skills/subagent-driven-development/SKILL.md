@@ -702,7 +702,20 @@ Same key rule and failure rule as the task stamp above: warn, append `Task stamp
 ## Finish
 
 When the final whole-branch review is clean and its fixes are merged,
-run, after digismith:report-implementation and before the deletion:
+run the next two blocks after digismith:report-implementation and before the deletion.
+
+First send the review reports and the ledger summary to the ClickUp ticket. They live in the workspace, which the deletion below removes, so this must come first. No key or a Jira key: skip silently:
+
+```bash
+dg clickup attach-record --task <Key> --kind reviews --workspace <workspace> || true
+dg clickup attach-record --task <Key> --kind ledger-summary --workspace <workspace> || true
+```
+
+The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
+
+Same key rule as above. A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+
+Then take the token snapshot:
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --ledger <workspace>/progress.md --write

@@ -639,6 +639,16 @@ rendered empty.
 
      The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
+     Send `report.html` to the ClickUp ticket (same key rule; no key or a Jira key: skip silently):
+
+     ```bash
+     dg clickup attach-record --task <Key> --file <target folder>/report.html || true
+     ```
+
+     The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
+
+     Same key rule as above. A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+
 ### Step 4a: Findings table (role mode only)
 
 The review reports live in the plan's workspace, which the Finish step deletes,
@@ -667,9 +677,14 @@ so build the table now. Let `<workspace>` be the directory
     block, a missing ledger): stop and report the message to the human partner.
     Do not write the report as if the reviews were complete. The Builder fixes the
     ledger lines, then runs this step again.
-- Attaching `findings.md` to the ClickUp ticket is the conductor's job
-  (`dg clickup upload-attachment`). A worker has no ClickUp write. Mention the
-  file path in the hand-back (Step 5).
+- Attach `findings.md` to the ClickUp ticket (same key rule; no key or a Jira key: skip silently):
+
+  ```bash
+  dg clickup attach-record --task <Key> --file <target folder>/findings.md || true
+  ```
+
+  The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on. If the worker may not write to ClickUp, or the classifier blocks the command, the conductor attaches the file
+  instead (`dg clickup attach-record`). Mention the file path in the hand-back (Step 5).
 
 ### Step 5: Hand Back
 

@@ -91,6 +91,16 @@ are verified, before this sync:
 dg clickup checklist sync --task <Key> --plan PLAN_FILE --ledger <workspace>/progress.md --yes
 ```
 
+Then send the ledger summary to the ClickUp ticket (an inline ledger has no reviews, so there is no reviews attachment). No key or a Jira key: skip silently:
+
+```bash
+dg clickup attach-record --task <Key> --kind ledger-summary --workspace <workspace> || true
+```
+
+The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
+
+Same key rule as above. A non-zero exit prints a warning, appends `Attach record: failed (<first stderr line>)` to the ledger when one exists, and the flow goes on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+
 After all tasks complete and verified:
 - Announce: "I'm using the report-implementation skill to generate this feature's implementation report."
 - **REQUIRED SUB-SKILL:** Use digismith:report-implementation, once, right here — after the last task's self-check and before the hand-off below
