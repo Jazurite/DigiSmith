@@ -119,14 +119,14 @@ export class FrontdoorClient {
     }
   }
 
-  private async send<T>(method: "GET" | "POST" | "PUT", url: string, data?: unknown): Promise<T> {
+  private async send<T>(method: "GET" | "POST" | "PUT" | "DELETE", url: string, data?: unknown): Promise<T> {
     // The header is set per call only after a renewal, so a client that never renews sends exactly what axios.create got.
     const headers = this.auth === this.initialAuth ? undefined : { Authorization: this.auth };
     const res = await this.http.request<T>({ method, url, data, ...(headers ? { headers } : {}) });
     return res.data;
   }
 
-  private async request<T>(method: "GET" | "POST" | "PUT", url: string, data?: unknown): Promise<T> {
+  private async request<T>(method: "GET" | "POST" | "PUT" | "DELETE", url: string, data?: unknown): Promise<T> {
     await this.limiter.acquire();
     if (this.canRenew() && isDue(this.auth, Math.floor(this.now() / 1000))) {
       try {
@@ -263,6 +263,16 @@ export class FrontdoorClient {
     const folder = await this.request<{ content?: string | null }>("GET", `/hierarchy/v1/category/${folderId}`);
     if (folder?.content === undefined) throw new Error(`folder ${folderId} answered with no content field`);
     return folder.content === null ? "" : folderDescriptionText(folder.content);
+  }
+
+  /** Deletes a Folder WITH its nested folders, lists and tasks (the web app's delete; the public API refuses a non-empty folder). No body; ClickUp answers 200 JSON. */
+  async deleteFolderWithContents(folderId: string): Promise<void> {
+    await this.request("DELETE", `/hierarchy/v1/category/${folderId}`);
+  }
+
+  /** Deletes a List WITH its tasks (the web app's delete). No body; ClickUp answers 202 JSON. */
+  async deleteListWithContents(listId: string): Promise<void> {
+    await this.request("DELETE", `/hierarchy/v1/subcategory/${listId}`);
   }
 
   /** Restores a deleted List from the Trash, with its tasks (the web app's undo of a delete). ClickUp answers {}. */

@@ -229,6 +229,20 @@ describe("FrontdoorClient", () => {
     expect(folderDescriptionText(content)).toBe("x\n");
   });
 
+  it("deleteFolderWithContents DELETEs the category path with no body", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+    await client.deleteFolderWithContents("1301150000004752");
+    expect(request).toHaveBeenCalledWith({ method: "DELETE", url: "/hierarchy/v1/category/1301150000004752", data: undefined });
+  });
+
+  it("deleteListWithContents DELETEs the subcategory path with no body", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+    await client.deleteListWithContents("1301150000006219");
+    expect(request).toHaveBeenCalledWith({ method: "DELETE", url: "/hierarchy/v1/subcategory/1301150000006219", data: undefined });
+  });
+
   it("restoreList PUTs the subcategory undo path with the captured body", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });

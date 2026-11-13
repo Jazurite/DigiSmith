@@ -1,25 +1,33 @@
 import type { CommandModule } from "yargs";
-import type { ClickUpClient } from "@digismith/clickup-client";
-import { createClient } from "./lib.ts";
+import type { ClickUpClient, FrontdoorClient } from "@digismith/clickup-client";
+import { createClient, createFrontdoorClient } from "./lib.ts";
+import { deleteListWithContents } from "./delete-with-contents.ts";
 import { printCall } from "./task-type-write.ts";
 
 const ID = /^\d+$/;
 const SHOWN = 5;
 
 export function createDeleteListCommand(
-  clientFactory: () => ClickUpClient = createClient
+  clientFactory: () => ClickUpClient = createClient,
+  frontdoorFactory: () => FrontdoorClient = createFrontdoorClient
 ): CommandModule {
   return {
     command: "delete-list",
-    describe: "delete an EMPTY list; a dry run unless --yes; refuses when the list holds any task",
+    describe: "delete an EMPTY list; a dry run unless --yes; refuses when the list holds any task. --with-contents deletes the list with its tasks (Frontdoor)",
     builder: (y) =>
       y
         .option("list", { type: "string", requiresArg: true, demandOption: true, describe: "id of the list to delete" })
-        .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only check and print it)" }),
+        .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only check and print it)" })
+        .option("with-contents", { type: "boolean", default: false, describe: "delete the list WITH its tasks (Frontdoor); the dry run counts what would go" }),
     handler: async (argv) => {
       try {
         const list = String(argv.list ?? "");
         if (!ID.test(list)) throw new Error("--list must be a list id (digits only)");
+        if (argv["with-contents"]) {
+          await deleteListWithContents({ id: list, yes: Boolean(argv.yes), reader: clientFactory, frontdoor: frontdoorFactory });
+          process.exitCode = process.exitCode === 1 ? 1 : 0;
+          return;
+        }
         const client = clientFactory();
         // archived=true returns ONLY archived tasks (DGS-83 incident), so read both and merge by id.
         const base = { include_closed: true, subtasks: true };
