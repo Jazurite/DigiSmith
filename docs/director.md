@@ -9,6 +9,8 @@ The Director keeps the Workbox factory running and nothing else: flow, capacity,
 
 The lanes are independent. A refine claim never writes a ClickUp status.
 
+The Director never writes a ticket status itself. Its two status moves are Steward events: an escalation sends `returned` (refinement, discovery or to do, back to concept) and the refinement gate sends `approved` (refinement to to do). They need a profile whose tracker is `clickup`: with `tracker: none` every Director escalation fails with "no ClickUp tracker".
+
 ## The files it keeps in `~/.digismith-depot/autonomous/`
 
 | File | Holds |

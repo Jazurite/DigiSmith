@@ -54,6 +54,19 @@ describe("escalate", () => {
     expect(readDecisions(dir)).toEqual([]);
   });
 
+  it("DGS-739 F1: escalating a to do ticket moves it to concept (spec 4.1: refinement or to do)", async () => {
+    tracker.tasks.get("t1")!.status = "to do";
+    expect(await escalate(deps(), args())).toEqual({ outcome: "asked" });
+    expect(tracker.tasks.get("t1")?.status).toBe("concept");
+  });
+
+  it("DGS-739 F1: a ticket in a status the Steward does not move to concept (in progress) is refused: the question is not sent", async () => {
+    tracker.tasks.get("t1")!.status = "in progress";
+    await expect(escalate(deps(), args())).rejects.toThrow(/the Steward did not move DGS-1 to concept: .*returned is valid from/);
+    expect(tracker.tasks.get("t1")?.status).toBe("in progress");
+    expect(tracker.comments).toEqual([]);
+  });
+
   it("the same question again is refused with 'already asked' and opens an attention item once", async () => {
     await escalate(deps(), args());
     const r = await escalate(deps(), args());
