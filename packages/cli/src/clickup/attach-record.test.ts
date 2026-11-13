@@ -64,6 +64,15 @@ describe("attach-record", () => {
     expect(err).toHaveBeenCalledWith("warn: boom");
     expect(process.exitCode).toBe(1);
   });
+  it("warns and sets exit 1 when the state file cannot be read", async () => {
+    mkdirSync(join(dir, "DGS-9.attachments.json"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const uploadAttachment = vi.fn();
+    await run({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [] }), uploadAttachment } as never, { task: "DGS-9", file });
+    expect(err).toHaveBeenCalledWith(expect.stringMatching(/^warn: EISDIR/));
+    expect(process.exitCode).toBe(1);
+    expect(uploadAttachment).not.toHaveBeenCalled();
+  });
   const watched = (base: Record<string, unknown>) => {
     const deletes: string[] = [];
     const client = new Proxy(base, { get: (t, k) => (k in t ? t[k as string] : /delete/i.test(String(k)) ? (...a: unknown[]) => { deletes.push(String(k)); return a; } : undefined) });

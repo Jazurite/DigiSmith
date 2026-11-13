@@ -17,11 +17,21 @@ function isRecord(r: unknown): r is AttachedRecord {
 
 export function readAttached(ticket: string): AttachedRecord[] {
   const file = fileFor(ticket);
+  let raw: string;
   try {
-    const v = JSON.parse(readFileSync(file, "utf8"));
+    raw = readFileSync(file, "utf8");
+  } catch (e) {
+    // ENOTDIR: a parent of the state path is a file, so no state file can exist
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return [];
+    throw e;
+  }
+  try {
+    const v = JSON.parse(raw);
     return Array.isArray(v) ? v.filter(isRecord) : [];
-  } catch {
-    return [];
+  } catch (e) {
+    if (e instanceof SyntaxError) return [];
+    throw e;
   }
 }
 
