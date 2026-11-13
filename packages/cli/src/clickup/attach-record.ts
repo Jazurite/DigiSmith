@@ -9,23 +9,24 @@ import { readAttached, recordAttached } from "../tokens/attachments-store.ts";
 
 const CLICKUP_KEY = /^DGS-\d+$/;
 
-export async function attachFile(client: ClickUpClient, key: string, file: string): Promise<string[]> {
+export interface AttachResult { lines: string[]; failed: boolean }
+
+export async function attachFile(client: ClickUpClient, key: string, file: string): Promise<AttachResult> {
   const name = basename(file);
   const sha256 = createHash("sha256").update(readFileSync(file)).digest("hex");
   const task = (await client.getTaskByRef(key)) as unknown as { id: string; attachments?: { id: string; title: string }[] };
   const d = decideAttach({ name, sha256, recorded: readAttached(key), onTask: task.attachments ?? [] });
-  if (d.action === "skip") return [`skipped ${name}: ${d.reason}`];
-  const out: string[] = [];
+  if (d.action === "skip") return { lines: [`skipped ${name}: ${d.reason}`], failed: false };
   const att = (await client.uploadAttachment(task.id, file)) as unknown as { id: string };
+  const extra: string[] = [];
+  if (d.supersedes) extra.push(`superseded: ${d.supersedes}`);
+  if (d.warn) extra.push(`warn: ${d.warn}`);
   try {
     recordAttached(key, { name, sha256, id: att.id, attached_at: new Date().toISOString() });
   } catch {
-    return [`warn: attached ${name} (${att.id}) but the depot record failed; a rerun adds a copy`];
+    return { lines: [...extra, `warn: attached ${name} (${att.id}) but the depot record failed; a rerun adds a copy`], failed: true };
   }
-  out.push(`attached ${name} (${att.id})`);
-  if (d.supersedes) out.push(`superseded: ${d.supersedes}`);
-  if (d.warn) out.push(`warn: ${d.warn}`);
-  return out;
+  return { lines: [`attached ${name} (${att.id})`, ...extra], failed: false };
 }
 
 export function createAttachRecordCommand(clientFactory: () => ClickUpClient = createClient): CommandModule {
@@ -44,8 +45,9 @@ export function createAttachRecordCommand(clientFactory: () => ClickUpClient = c
         const file = String(argv.file ?? "");
         if (!file) { console.log("skipped: no --file given"); return; }
         if (!existsSync(file)) { console.log(`skipped ${file}: not found`); return; }
-        const lines = await attachFile(clientFactory(), key, file); for (const line of lines) console.log(line);
-        if (lines.some((l) => l.startsWith("warn: attached") && l.includes("record failed"))) process.exitCode = 1;
+        const { lines, failed } = await attachFile(clientFactory(), key, file);
+        for (const line of lines) (failed && line.includes("depot record failed") ? console.error : console.log)(line);
+        if (failed) process.exitCode = 1;
       } catch (err) {
         console.error(`warn: ${(err as Error).message.split("\n")[0]}`);
         process.exitCode = 1;

@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClickUpClient } from "@digismith/clickup-client";
-import { createAttachRecordCommand } from "./attach-record.ts";
+import { attachFile, createAttachRecordCommand } from "./attach-record.ts";
 import { handlerOf } from "./handler-of.test-util.ts";
 
 let dir: string; let file: string;
@@ -100,9 +100,35 @@ describe("attach-record", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     process.env.DIGISMITH_TOKEN_REGISTRY_DIR = join(file, "not-a-dir");
     await run({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [] }), uploadAttachment: vi.fn().mockResolvedValue({ id: "a5" }) } as never, { task: "DGS-9", file });
-    const out = [...err.mock.calls, ...log.mock.calls].map((c) => String(c[0]));
-    expect(out).toContain("warn: attached plan.md (a5) but the depot record failed; a rerun adds a copy");
+    const msg = "warn: attached plan.md (a5) but the depot record failed; a rerun adds a copy";
+    expect(err.mock.calls.map((c) => String(c[0]))).toContain(msg);
+    expect(log.mock.calls.map((c) => String(c[0]))).not.toContain(msg);
     expect(process.exitCode).toBe(1);
+  });
+  const failingWrite = () => { mkdirSync(join(dir, `DGS-9.attachments.json.${process.pid}.tmp`)); };
+  it("keeps the superseded line when the record write fails", async () => {
+    const getTaskByRef = vi.fn().mockResolvedValueOnce({ id: "t1", attachments: [] }).mockResolvedValue({ id: "t1", attachments: [{ id: "a1", title: "plan.md" }] });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run({ getTaskByRef, uploadAttachment: vi.fn().mockResolvedValue({ id: "a1" }) } as never, { task: "DGS-9", file });
+    writeFileSync(file, "v2");
+    failingWrite();
+    const r = await attachFile({ getTaskByRef, uploadAttachment: vi.fn().mockResolvedValue({ id: "a2" }) } as never, "DGS-9", file);
+    expect(r.failed).toBe(true);
+    expect(r.lines).toContain("superseded: a1");
+    expect(r.lines.some((l) => l.includes("depot record failed"))).toBe(true);
+  });
+  it("keeps the decision warn when the record write fails", async () => {
+    failingWrite();
+    const r = await attachFile({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [{ id: "decoy", title: "plan.md" }] }), uploadAttachment: vi.fn().mockResolvedValue({ id: "a3" }) } as never, "DGS-9", file);
+    expect(r.failed).toBe(true);
+    expect(r.lines.some((l) => l.startsWith("warn: same-named attachment"))).toBe(true);
+    expect(r.lines.some((l) => l.includes("depot record failed"))).toBe(true);
+  });
+  it("returns failed false on a clean upload and on a skip", async () => {
+    const ok = await attachFile({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [] }), uploadAttachment: vi.fn().mockResolvedValue({ id: "a1" }) } as never, "DGS-9", file);
+    expect(ok).toEqual({ lines: ["attached plan.md (a1)"], failed: false });
+    const skip = await attachFile({ getTaskByRef: vi.fn().mockResolvedValue({ id: "t1", attachments: [{ id: "a1", title: "plan.md" }] }), uploadAttachment: vi.fn() } as never, "DGS-9", file);
+    expect(skip.failed).toBe(false);
   });
   it("says so when no --file is given", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
