@@ -13,7 +13,7 @@ echo "\${HERDR_SOCKET_PATH-unset}" >> "$FAKE_LOG.env"
 S="$2"; shift 2
 case "$1 $2" in
   "agent list") echo '{"result":{"agents":[{"name":"dgs-1","pane_id":"w2:p1","workspace_id":"w2"},{"name":"dgs-2","pane_id":"w3:p1","workspace_id":"w3"},{"name":"dgs-683-b","pane_id":"w3:p2","workspace_id":"w3"},{"name":"tc-dgs-9","pane_id":"w7:p2","workspace_id":"w7"},{"name":"digismith-conductor","pane_id":"w7:p1","workspace_id":"w7"},{"name":"tc-dgs-8","pane_id":"w7:p6","workspace_id":"w7"},{"name":"scout-a","pane_id":"w3:p3","workspace_id":"w3"}]}}' ;;
-  "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b|scout-a) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
+  "agent get") case "$3" in dgs-1) W=w2;; dgs-2) W=w3;; dgs-683-b|scout-a|ocl-105) W=w3;; tc-dgs-9|digismith-conductor) W=w7;; esac; echo "{\\"result\\":{\\"agent\\":{\\"name\\":\\"$3\\",\\"workspace_id\\":\\"$W\\"}}}" ;;
   "tab get") if [ "$3" = "w7:t9" ]; then echo "not json"; exit 0; fi; case "$3" in w7:t2) L=tc-dgs-9;; w7:t3) L=nw-5;; *) L=digismith-conductor;; esac; echo "{\\"result\\":{\\"tab\\":{\\"tab_id\\":\\"$3\\",\\"label\\":\\"$L\\"}}}" ;;
   "tab list") echo "{\\"id\\":\\"cli:tab:list\\",\\"result\\":{\\"tabs\\":[{\\"tab_id\\":\\"$4:t1\\",\\"workspace_id\\":\\"$4\\"}]}}" ;;
   *) echo '{"result":{}}' ;;
@@ -309,6 +309,12 @@ describe("herdr-ws cross-project audit log (T12)", () => {
   it("a target agent named with a ticket key writes drivers/<KEY>.log", () => {
     run(base(), ["agent", "prompt", "dgs-683-b", "hi"])
     expect(lines("DGS-683.log")[0]).toMatchObject({ target: "dgs-683-b", workspace: "w3", verb: "agent prompt" })
+    expect(fs.existsSync(logFile("_unmapped.log"))).toBe(false)
+  })
+
+  it("an OCL agent name writes drivers/OCL-105.log", () => {
+    run(base(), ["agent", "prompt", "ocl-105", "hi"])
+    expect(lines("OCL-105.log")[0]).toMatchObject({ target: "ocl-105", workspace: "w3", verb: "agent prompt" })
     expect(fs.existsSync(logFile("_unmapped.log"))).toBe(false)
   })
 
