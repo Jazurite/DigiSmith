@@ -34,16 +34,21 @@ describe("resolveGuide", () => {
     expect(r).toEqual({ kind: "ambiguous", matches: ["close-a-ticket", "close-an-epic"] });
   });
 
-  it("returns closest guesses for an unknown name, at most 3", () => {
-    const r = resolveGuide(guides, "star");
-    expect(r.kind).toBe("found");
-    const u = resolveGuide(guides, "a-ticket");
-    expect(u).toEqual({ kind: "unknown", closest: ["close-a-ticket"] });
-    const many = resolveGuide(
-      [entry("aa1", "K-1"), entry("aa2", "K-2"), entry("aa3", "K-3"), entry("aa4", "K-4")],
-      "zz",
-    );
-    expect(many).toEqual({ kind: "unknown", closest: [] });
+  it("suggests a substring match when no slug starts with the input", () => {
+    expect(resolveGuide(guides, "a-ticket")).toEqual({ kind: "unknown", closest: ["close-a-ticket"] });
+  });
+
+  it("returns no closest when nothing matches", () => {
+    expect(resolveGuide(guides, "zz")).toEqual({ kind: "unknown", closest: [] });
+  });
+
+  it("does not suggest guides that share only one leading character", () => {
+    expect(resolveGuide(guides, "cat")).toEqual({ kind: "unknown", closest: [] });
+  });
+
+  it("caps closest at exactly 3 when more guides match", () => {
+    const list = ["a-foo", "b-foo", "c-foo", "d-foo"].map((s, i) => entry(s, `K-${i}`));
+    expect(resolveGuide(list, "-foo")).toEqual({ kind: "unknown", closest: ["a-foo", "b-foo", "c-foo"] });
   });
 
   it("caps closest at 3, prefix matches first then substring", () => {
@@ -53,7 +58,7 @@ describe("resolveGuide", () => {
       entry("foo-a", "K-3"),
       entry("y-foo", "K-4"),
     ];
-    // "foo" is a unique prefix? no: two prefix matches -> ambiguous
+    // two slugs start with "foo", so the input is ambiguous
     expect(resolveGuide(list, "foo")).toEqual({ kind: "ambiguous", matches: ["foo-b", "foo-a"] });
     const u = resolveGuide(list, "oo-");
     expect(u).toEqual({ kind: "unknown", closest: ["foo-b", "foo-a"] });

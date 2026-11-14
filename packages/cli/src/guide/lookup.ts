@@ -6,6 +6,7 @@ export type GuideLookup =
   | { kind: "unknown"; closest: string[] };
 
 const MAX_CLOSEST = 3;
+const MIN_SHARED_PREFIX = 2;
 
 function sharedPrefixLength(a: string, b: string): number {
   let i = 0;
@@ -33,7 +34,7 @@ export function resolveGuide(guides: GuideIndexEntry[], name: string): GuideLook
 
   const sharing = guides
     .map((g, index) => ({ g, index, shared: sharedPrefixLength(g.slug.toLowerCase(), q) }))
-    .filter((x) => x.shared > 0)
+    .filter((x) => x.shared >= MIN_SHARED_PREFIX)
     .sort((a, b) => b.shared - a.shared || a.index - b.index)
     .map((x) => x.g.slug);
   const substring = guides.filter((g) => g.slug.toLowerCase().includes(q)).map((g) => g.slug);
