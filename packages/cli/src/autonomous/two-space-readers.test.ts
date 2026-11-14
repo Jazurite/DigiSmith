@@ -53,7 +53,10 @@ describe("readers over the merged tracker", () => {
     const git = (() => "") as never;
     const facts = await gatherDrift({ tracker, git, repo: "/nope" }, [{ ticket: "OCL-106", taskId: "o1" }]);
     expect(facts.get("OCL-106")?.status).toBe("scheduled");
-    expect(driftLines([{ ticket: "OCL-106", taskId: "o1" }], facts).join("\n")).not.toContain("DGS");
+    const drifted = new Map([["OCL-106", { ...facts.get("OCL-106")!, mergedSha: "abc1234" }]]);
+    const out = driftLines([{ ticket: "OCL-106", taskId: "o1" }], drifted).join("\n");
+    expect(out).toContain("OCL-106: scheduled in ClickUp, merged on main (abc1234)");
+    expect(out).not.toContain("DGS");
   });
   it("the watchdog's ticket key rule accepts an OCL key", () => {
     expect(TICKET_RE.test("OCL-106")).toBe(true);
