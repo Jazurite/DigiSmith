@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The factory reads both ClickUp spaces (OCL-105)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  section { margin-bottom: 2.2rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <h1>The factory reads both ClickUp spaces — Implementation Report</h1>
+  <div class="meta">
+    <span>Ticket: <strong>OCL-105</strong></span>
+    <span>Date: 2026-11-14</span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The autonomous scan, the Director and the Steward now read both ClickUp spaces, DigiSmith (DGS) and Oculus (OCL), through one space list (<code>packages/cli/src/clickup/spaces.ts</code>); a ticket key resolves to its space by prefix, every key tool and conductor script accepts an OCL key, and the new command <code>dg clickup create-factory-fields</code> creates the <code>Mode</code> and <code>Sign-off</code> fields in the Oculus space (dry run by default, idempotent, no live write in this build).</p>
+</section>
+
+<section id="changes">
+  <h2>What changed</h2>
+  <ul>
+    <li><strong>Space list:</strong> <code>SPACES</code>, <code>ALL_SPACE_IDS</code>, <code>KEY_PREFIXES</code>, <code>spaceForKey</code>, <code>isTicketKey</code>. <code>DIGISMITH_SPACE_ID</code> keeps its value and export.</li>
+    <li><strong>Trackers:</strong> <code>ClickUpLoTracker</code> (scan, Director) and the Steward's <code>ClickUpTracker</code> take a list of space ids, merge their reads, and throw on an empty list. A failed read of one space fails the whole read.</li>
+    <li><strong>Key checks:</strong> the four <code>^DGS-\d+$</code> checks in attach-record, ticket-total, merge-comment and task-stamp, and the conductor scripts (ticket-status, markers, refresh, flux in-flight guard, state merged-today list) use the shared prefix set. The herdr audit log accepts <code>dgs</code> or <code>ocl</code> panes.</li>
+    <li><strong>New command:</strong> <code>dg clickup create-factory-fields --space &lt;id&gt; [--yes]</code>. Prints <code>created without location: &lt;id&gt; &lt;name&gt;</code> and exits 1 when a field is created but its location call fails.</li>
+    <li><strong>Pins (tests only):</strong> schedule-release, the report drift check, the run-role rule, board path, lock and claims, Steward event chain, Director refine pass, an end-to-end scan over the two-space tracker, and the claimed-status path (see the Dock addition).</li>
+  </ul>
+</section>
+
+<section id="protected">
+  <h2>Protected paths touched (the Dock approves the merge)</h2>
+  <ul>
+    <li><code>packages/cli/src/autonomous/</code>: <code>tracker-clickup.ts</code>, <code>index.ts</code>, <code>director/command.ts</code>, tests, <code>WATCHDOG.md</code>.</li>
+    <li><code>packages/cli/src/steward/</code>: <code>clickup-tracker.ts</code>, <code>index.ts</code>, tests, <code>README.md</code>.</li>
+    <li><code>scripts/nexus-api/src/scheduler/</code>: not touched. The grep found one hit, <code>notify.ts:19</code>, a default comment-target ticket <code>DGS-436</code>; it does no key parsing, so no change.</li>
+  </ul>
+</section>
+
+<section id="verification">
+  <h2>Verification</h2>
+  <ul>
+    <li>Full <code>packages/cli</code> suite, once, fork pool of 2, after the rebase onto origin/main 58cc05ae: 221 files, 3598 tests, 3597 passed, 1 failed. The one failure is the known guardrails pin (<code>src/autonomous/guardrails.test.ts:139</code>, limits <code>reviewer</code> 1 expected, 2 received; OCL-106, was DGS-720).</li>
+    <li><code>tsc -p tsconfig.build.json --noEmit</code> in <code>packages/cli</code>: exit 0.</li>
+    <li><code>scripts/conductor</code>, <code>scripts/opencode-boot</code>, <code>scripts/board-path.test.ts</code>: 20 files, 451 tests, all passed.</li>
+    <li><code>scripts/nexus-api</code> tests not run: the scheduler was not touched.</li>
+    <li>Load note: the full suite started at load 3.11 (under 4) and ended at 4.98; the scripts run started at about 4.9. The first run, before the rebase, started at 4.59 (216 files, 3525 tests, 3524 passed, same single failure). No run failed from timing.</li>
+    <li>Rebase: <code>OCL-105__factory-reads-both-spaces</code> was rebased onto origin/main 58cc05ae with no conflicts; 0 behind, 30 ahead. <code>pnpm install --frozen-lockfile</code> and the clickup-client dist rebuild were run; <code>tsc</code> exit 0. The plugin version was not touched.</li>
+    <li>No live ClickUp write came from the tests. Every tracker and command test uses a mock client and a temp depot.</li>
+  </ul>
+</section>
+
+<section id="reviews">
+  <h2>Reviews</h2>
+  <ul>
+    <li>Tasks 1 to 8: each reviewed once, no Critical or Important finding; the Minor findings were fixed in separate <code>fix(keys)</code> commits in the next task's window, no re-review (Dock decisions).</li>
+    <li>Task 9: no task-level review (Dock order); the whole-branch review covers it.</li>
+    <li>Whole-branch round 1 (opus): with fixes, 1 Important and 4 Minor. Round 2 (opus, scoped): clean, F1 to F4 addressed; one Minor accepted with a comment (<code>herdr-ws</code>).</li>
+  </ul>
+</section>
+
+<section id="findings">
+  <h2>Findings table</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Finding</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>F1 one space id in the scan, Director and Steward trackers</td><td>Fixed (Tasks 1 to 4)</td></tr>
+      <tr><td>F2 <code>^DGS-\d+$</code> in four ClickUp record commands</td><td>Fixed (Task 5)</td></tr>
+      <tr><td>F3 DGS-only key checks in <code>scripts/conductor</code></td><td>Fixed (Task 6, plus the title boundary and flux/state fixes)</td></tr>
+      <tr><td>F4 no <code>Mode</code> and <code>Sign-off</code> in the Oculus space</td><td>Command built (Task 7); first <code>--yes</code> is the conductor's after the merge</td></tr>
+      <tr><td>F5 hand-typed <code>create-field</code> options can be mistyped</td><td>Fixed by the pinned constant in <code>FACTORY_FIELDS</code></td></tr>
+      <tr><td>Whole-branch F1 (Important): flux in-flight guard saw only DGS keys</td><td>Fixed, <code>1fb6ffaf</code></td></tr>
+      <tr><td>Whole-branch F2 to F4 (Minor): merged-today list, herdr audit regex, end-to-end scan over the two-space tracker</td><td>Fixed, <code>7aea2de1</code>, <code>d05242c4</code>, <code>f0d0e911</code></td></tr>
+      <tr><td>Whole-branch round 2 Minor: <code>herdr-ws</code> hard-codes <code>dgs|ocl</code></td><td>Accepted with a comment pointing to <code>spaces.ts</code> (<code>07485586</code>)</td></tr>
+      <tr><td>Board-path slug mismatch: <code>board-path.ts --action path --title</code> gives <code>factory-reads-both-clickup-spaces</code>, the branch uses <code>factory-reads-both-spaces</code></td><td><strong>Report only</strong> (Dock order). No fix in this build.</td></tr>
+      <tr><td>The Oculus space has no <code>Scheduled at</code> field</td><td><strong>Follow-up ticket</strong>: <code>schedule-release</code> cannot schedule an OCL ticket until the field exists. Not in this build.</td></tr>
+      <tr><td>Task 3 F2: no cross-space de-duplication in <code>findCandidates</code></td><td>Accepted (a task lives in one space)</td></tr>
+      <tr><td>Task 7 F3: a list-level <code>Mode</code> field in another list gives a false mismatch error</td><td>Accepted (narrow edge; the error text says what to fix)</td></tr>
+      <tr><td>Steward <code>started</code> hook did not refuse OCL-105</td><td>It wrote the start date 2026-11-14 on OCL-105 (a live write before the merge) and created <code>~/.digismith-depot/steward/OCL-105.json</code>. This contradicts "Steward refuses OCL keys": the Steward works with an OCL key. No further Steward event was sent. The warn text: <code>steward: OCL-105: start date missing -&gt; 2026-11-14</code> (not a refusal).</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="dock-addition">
+  <h2>Dock addition</h2>
+  <p>Tests pin that the scan's claim writes status <code>claimed</code> on the OCL ticket in the Oculus space (the <code>FakeTracker</code> call log, and <code>updateTask(o1, {status: "claimed"})</code> through the two-space <code>ClickUpLoTracker</code>, found only in space S2), and that the Steward <code>started</code> event moves <code>claimed</code> and <code>to do</code> to <code>in progress</code> for <code>OCL-105</code>, with the real <code>ClickUpTracker(["S1","S2"])</code> over a mock client (<code>getTaskByRef("OCL-105")</code>, no space id). Commit <code>a036824c</code>. No production change was needed.</p>
+</section>
+
+<section id="deviations">
+  <h2>Deviations</h2>
+  <ul>
+    <li>Steward <code>started</code> event ran at setup and wrote a start date (see the findings table). <code>review-started</code> was not sent.</li>
+    <li>No <code>checklist sync</code>, <code>attach-record</code> or <code>task-stamp</code> (live ClickUp writes, forbidden before the merge). The plan and the reviews are not attached to the ticket yet; the conductor does that.</li>
+    <li>The empty-space-list check (Task 3 F1) went into both trackers, not only the Steward one.</li>
+    <li>Task 7: the implementer wrote the test and the code together and checked the red step afterwards.</li>
+    <li>Task 8: a <code>sed</code> slip in the implementer's own command chain let one commit run with a failing test; it amended the commit before finishing.</li>
+    <li>The <code>herdr-ws</code> comment line was written by the controller, not an implementer (Dock-specified one line, no test).</li>
+    <li>The spec is <code>spec.md</code>, not <code>design.html</code> (the brief's format).</li>
+    <li>Full suite load: see Verification.</li>
+  </ul>
+</section>
+
+<section id="after-merge">
+  <h2>After the merge (the conductor)</h2>
+  <ol>
+    <li><code>dg clickup create-factory-fields --space 1301150000003197</code> (dry run), then <code>--yes</code>. Read back with <code>dg clickup list-fields --list 1301150000006382</code>. If the command prints <code>created without location:</code>, set the location by hand; do not run it twice.</li>
+    <li>Move OCL-106 to <code>to do</code> with Mode Autonomous (the Dock approved this at this point, not before).</li>
+    <li>One scan tick claims OCL-106; check the status moves and the merge write-back in the Oculus space.</li>
+  </ol>
+</section>
+
+<footer>DigiSmith · .digismith/board/OCL-105—factory-reads-both-spaces/report.html</footer>
+
+</body>
+</html>
