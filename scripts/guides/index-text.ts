@@ -27,6 +27,7 @@ interface Entry {
 }
 
 export interface SpawnedChild {
+  on(event: string, listener: (...args: unknown[]) => void): unknown;
   unref(): void;
 }
 export type SpawnFn = (command: string, args: string[], options: { detached: boolean; stdio: "ignore" }) => SpawnedChild;
@@ -51,13 +52,15 @@ function cutBytes(s: string, max: number): string {
   return out;
 }
 
-function line(e: Entry, budget: number): string {
+/** The line, or undefined when even the whole slug does not fit (a slug is never cut). */
+function line(e: Entry, budget: number): string | undefined {
   const max = budget - 1; // the newline
   const when = e.when.replace(/\s+/g, " ").trim();
-  if (when === "") return cutBytes(e.slug, max);
+  const slugOnly = bytes(e.slug) <= max ? e.slug : undefined;
+  if (when === "") return slugOnly;
   const prefix = `${e.slug} — `;
   const room = max - bytes(prefix);
-  if (room < 4) return cutBytes(e.slug, max);
+  if (room < 4) return slugOnly;
   if (bytes(when) <= room) return prefix + when;
   let cut = cutBytes(when, room - bytes("…"));
   const rest = when.slice(cut.length);
@@ -66,7 +69,7 @@ function line(e: Entry, budget: number): string {
     if (sp > 0) cut = cut.slice(0, sp);
   }
   cut = cut.replace(/[\s,;:.\-—]+$/, "");
-  return cut === "" ? cutBytes(e.slug, max) : `${prefix}${cut}…`;
+  return cut === "" ? slugOnly : `${prefix}${cut}…`;
 }
 
 function parse(cacheJson: string | undefined): { fetchedAt: number; entries: Entry[] } | undefined {
@@ -111,7 +114,8 @@ export function buildGuideIndex(cacheJson: string | undefined, now: number): str
     const fixed = bytes(header) + (trailer === undefined ? 0 : bytes(trailer) + 1);
     const budget = keep === 0 ? MIN_LINE : Math.min(MAX_LINE, Math.max(MIN_LINE, Math.floor((CAP - fixed) / keep)));
     const lines = ordered.slice(0, keep).map((e) => line(e, budget));
-    const out = [header, ...lines, ...(trailer === undefined ? [] : [trailer])].join("\n");
+    if (lines.some((l) => l === undefined)) continue;
+    const out = [header, ...(lines as string[]), ...(trailer === undefined ? [] : [trailer])].join("\n");
     if (bytes(out) <= CAP) return out;
   }
   return header;
@@ -135,6 +139,8 @@ export function maybeRefresh({ now, env, spawn }: RefreshDeps): void {
     if (fresh) return;
     if (lockIsLive(path.join(dir, "refresh.lock"), now)) return;
     const child = spawn("dg", ["guide", "refresh", "--quiet"], { detached: true, stdio: "ignore" });
+    // A missing dg binary emits 'error'; with no listener that would crash the hook.
+    child.on("error", () => {});
     child.unref();
   } catch {
     // a missing dg binary or an unreadable folder must never break the session start
@@ -157,7 +163,11 @@ export function readGuideIndexBlock(
 ): string | undefined {
   try {
     const cacheJson = readIfExists(path.join(depotDir(env), "guides", "index.json"));
-    maybeRefresh({ now, env, spawn: deps.spawn });
+    try {
+      maybeRefresh({ now, env, spawn: deps.spawn });
+    } catch {
+      // never let the refresh path reach the hook
+    }
     return buildGuideIndex(cacheJson, now);
   } catch {
     return undefined;

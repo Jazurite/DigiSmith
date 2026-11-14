@@ -110,6 +110,18 @@ describe("buildGuideIndex", () => {
     expect(words(200).split(" ")).toContain(lastWord);
   });
 
+  it("never cuts a slug: a line that does not fit is dropped whole and the trailer is exact", () => {
+    const guides = Array.from({ length: 150 }, (_, i) => ({ ...entry(i, "guide", words(20)), slug: `a-rather-long-guide-slug-that-cannot-fit-${i}` }));
+    const block = buildGuideIndex(cache(guides), NOW);
+    const lines = block.split("\n");
+    const m = /^\((\d+) more: dg guide list\)$/.exec(lines[lines.length - 1]!)!;
+    const listed = lines.slice(1, -1);
+    expect(m).not.toBeNull();
+    expect(listed.length + Number(m[1])).toBe(150);
+    listed.forEach((l, i) => expect(l.startsWith(`a-rather-long-guide-slug-that-cannot-fit-${i}`)).toBe(true));
+    expect(bytes(block)).toBeLessThanOrEqual(3000);
+  });
+
   it("prints the slug alone for an empty when", () => {
     const block = buildGuideIndex(cache([entry(1, "guide", "")]), NOW);
     expect(block.split("\n")[1]).toBe("guide-1");
@@ -138,8 +150,9 @@ describe("maybeRefresh", () => {
     if (fetchedAgoMin !== undefined) fs.writeFileSync(path.join(dir, "guides", "index.json"), cache([], NOW - fetchedAgoMin * MIN));
     if (lockAgoMin !== undefined) fs.writeFileSync(path.join(dir, "guides", "refresh.lock"), String(NOW - lockAgoMin * MIN));
     const unref = vi.fn();
-    const spawn = vi.fn(() => ({ unref }));
-    return { env, spawn, unref };
+    const on = vi.fn();
+    const spawn = vi.fn(() => ({ unref, on }));
+    return { env, spawn, unref, on };
   }
 
   it.each([undefined, 16])("spawns a detached refresh once for cache age %s", (age) => {
@@ -148,6 +161,20 @@ describe("maybeRefresh", () => {
     expect(spawn).toHaveBeenCalledTimes(1);
     expect(spawn).toHaveBeenCalledWith("dg", ["guide", "refresh", "--quiet"], { detached: true, stdio: "ignore" });
     expect(unref).toHaveBeenCalledTimes(1);
+  });
+
+  it("registers an error listener before unref, and an error event does not throw", () => {
+    const { env, spawn, unref, on } = setup(undefined);
+    maybeRefresh({ now: NOW, env, spawn });
+    expect(on).toHaveBeenCalledWith("error", expect.any(Function));
+    expect(on.mock.invocationCallOrder[0]!).toBeLessThan(unref.mock.invocationCallOrder[0]!);
+    const listener = on.mock.calls[0]![1] as (e: Error) => void;
+    expect(() => listener(new Error("spawn dg ENOENT"))).not.toThrow();
+  });
+
+  it("swallows a throwing on() or unref()", () => {
+    const { env } = setup(undefined);
+    expect(() => maybeRefresh({ now: NOW, env, spawn: () => ({ unref: () => { throw new Error("x"); }, on: () => { throw new Error("y"); } }) })).not.toThrow();
   });
 
   it("does not spawn for a 14-minute-old cache", () => {
@@ -185,7 +212,7 @@ describe("maybeRefresh", () => {
 describe("readGuideIndexBlock", () => {
   it("does not throw for a missing depot and returns the not-cached line", () => {
     const env = { DIGISMITH_DEPOT_DIR: path.join(os.tmpdir(), "guide-index-missing-" + process.pid) };
-    const spawn = vi.fn(() => ({ unref: vi.fn() }));
+    const spawn = vi.fn(() => ({ unref: vi.fn(), on: vi.fn() }));
     expect(readGuideIndexBlock(env, NOW, { spawn })).toBe("Guide index: not cached yet. Run dg guide list.");
     expect(spawn).toHaveBeenCalledTimes(1);
   });
@@ -193,6 +220,7 @@ describe("readGuideIndexBlock", () => {
   it("does not throw when guides is a file, not a folder", () => {
     const { env, dir } = tempEnv();
     fs.writeFileSync(path.join(dir, "guides"), "x");
-    expect(() => readGuideIndexBlock(env, NOW, { spawn: vi.fn(() => ({ unref: vi.fn() })) })).not.toThrow();
+    const block = readGuideIndexBlock(env, NOW, { spawn: vi.fn(() => ({ unref: vi.fn(), on: vi.fn() })) });
+    expect(block).toBe("Guide index: not cached yet. Run dg guide list.");
   });
 });
