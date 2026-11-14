@@ -8,8 +8,8 @@ import { createDepotRegistry } from "../tokens/registry.ts";
 import { priceOf, taskUsage, windowBounds } from "../tokens/stamp.ts";
 import { readStamps } from "../tokens/stamps-store.ts";
 import { addCounts, emptyCounts, type Counts } from "../tokens/types.ts";
-
 import { isTicketKey } from "./spaces.ts";
+
 const failure = (msg: string) => `warn: ${msg.replace(/\s*\n\s*/g, " ")}`;
 const taskOrder = (a: string, b: string) => (a === "final" ? 1 : b === "final" ? -1 : Number(a) - Number(b) || a.localeCompare(b));
 

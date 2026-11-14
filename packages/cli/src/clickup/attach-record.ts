@@ -9,7 +9,6 @@ import { decideAttach } from "./attach-decision.ts";
 import { renderLedgerSummary } from "../tokens/ledger-summary.ts";
 import { runTable } from "../reviewer/table.ts";
 import { readAttached, recordAttached } from "../tokens/attachments-store.ts";
-
 import { isTicketKey } from "./spaces.ts";
 
 export interface AttachResult { lines: string[]; errorLines: string[]; failed: boolean }

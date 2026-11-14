@@ -9,6 +9,7 @@ import { createDepotRegistry } from "../tokens/registry.ts";
 import { reviewData } from "../tokens/review-data.ts";
 import { renderStamp, taskUsage, type TaskUsage } from "../tokens/stamp.ts";
 import { appendStamp, stampOf, type StampLine } from "../tokens/stamps-store.ts";
+import { isTicketKey } from "./spaces.ts";
 
 export interface TaskStampArgv {
   task?: string;
@@ -28,7 +29,6 @@ export interface TaskStampRequest {
   yes: boolean;
 }
 
-import { isTicketKey } from "./spaces.ts";
 const PLAN_TASK = /^(final|\d+)$/;
 
 /** Checks the flags, with no network call and no file read. */

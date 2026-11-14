@@ -10,8 +10,8 @@ import { readPosted, recordPosted } from "../tokens/comments-store.ts";
 import { readAttached } from "../tokens/attachments-store.ts";
 import { commentBody } from "@digismith/clickup-client";
 import { printCall } from "./task-type-write.ts";
-
 import { isTicketKey } from "./spaces.ts";
+
 const SHA = /^[0-9a-f]{7,40}$/;
 
 function git(repo: string, args: string[]): string {
