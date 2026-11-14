@@ -833,10 +833,10 @@ git commit -m "test(scan): schedule release, report and labeller see OCL tickets
 ```ts
 it("path, parse and find work with an OCL key", () => {
   expect(boardRelPathForSlug("OCL-105", "factory-reads-both-spaces")).toBe(".digismith/board/OCL-105—factory-reads-both-spaces");
-  expect(parseBoardName("OCL-105—factory-reads-both-spaces")).toEqual(["OCL-105", "factory-reads-both-spaces"]);
+  expect(parseFolderName("OCL-105—factory-reads-both-spaces")).toEqual({ key: "OCL-105", slug: "factory-reads-both-spaces" });
 });
 ```
-Use the real export names: run `grep -n "^export" scripts/board-path.ts` first and match them (the names above stand for `boardRelPathForSlug` and the parse function). Expected: PASS. A FAIL is a finding.
+The exports are `boardRelPathForSlug` and `parseFolderName` (import them from `./board-path.ts`). Expected: PASS. A FAIL is a finding.
 
 - [ ] **Step 3: Steward pins.** With `steward/fake-tracker.test-util.ts`, add a test that applies the whole event chain to `OCL-105` (`refinement-started`, `spec-approved`... use the event names in `steward/types.ts` `EVENTS`, in the order the README table lists) with a temp `dir` and asserts: every event is accepted (no refusal line), the final status is the one the same chain gives `DGS-105`, and the state files are `OCL-105.json` and `DGS-105.json` (two different files after running both). Copy the harness from `steward/event.test.ts`.
 
