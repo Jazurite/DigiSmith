@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 const ROOT = join(__dirname, '../..')
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
 const CHECKLIST = 'tests/a11y/voiceover-checklist.md'
+// a lived percentage is private; a plain '200%' (zoom) is fine
+const PERCENT_LIVED = /\d+(\.\d+)?\s*%\s*(lived|of life)/i
 
 describe('the VoiceOver checklist', () => {
   it('exists with its three parts and the sign-off line', () => {
@@ -71,6 +73,11 @@ describe('the VoiceOver checklist', () => {
     expect(t).not.toMatch(/\bAge \d/)
     expect(t).not.toMatch(/\d{1,3}(,\d{3})+/)
     expect(t.toLowerCase()).not.toMatch(/\d[\d,.]* weeks (lived|left)/)
-    expect(t).not.toMatch(/\d+(\.\d+)?\s*%/)
+    expect(t).not.toMatch(PERCENT_LIVED)
+  })
+
+  it('the percent check hits a lived percentage but not a plain one', () => {
+    expect('200%').not.toMatch(PERCENT_LIVED)
+    expect('52.3% lived').toMatch(PERCENT_LIVED)
   })
 })
