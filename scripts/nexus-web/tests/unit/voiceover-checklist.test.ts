@@ -44,10 +44,13 @@ describe('the VoiceOver checklist', () => {
     ["current: 'this week'", 'app/utils/grid-label.ts'],
     ['weeks lived', 'app/components/StatsBar.vue'],
     ['weeks left', 'app/components/StatsBar.vue'],
+    ['ErrorPanel', 'app/components/StatePanel.stories.ts'],
+    ['RetryingPanel', 'app/components/StatePanel.stories.ts'],
+    ['ahead', 'app/utils/grid-label.ts'],
   ])('quotes "%s", which is still in %s', (text, file) => {
     expect(read(file)).toContain(text)
     // the checklist quotes the human text, not the code form
-    const human = text.replace('week ${b + 1} of ${BOXES}', 'week W of 52').replace("current: 'this week'", 'this week').replace("role: 'alert'", 'alert').replace('Use the arrow keys to move between weeks', 'use the arrow keys')
+    const human = text.replace('week ${b + 1} of ${BOXES}', 'week W of 52').replace("current: 'this week'", 'this week').replace("role: 'alert'", 'alert').replace('Use the arrow keys to move between weeks', 'use the arrow keys').replace('ErrorPanel', 'Error Panel').replace('RetryingPanel', 'Retrying Panel')
     expect(read(CHECKLIST)).toContain(human)
   })
 
