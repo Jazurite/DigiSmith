@@ -84,11 +84,16 @@ The Steward reads the ticket by key, so it should work. This build proves it wit
 
 `director/target.ts` and `director/command.ts` only need the tracker wiring (D2). Test: a Director refine pass over a mixed list (one DGS, one OCL ticket in `refinement`) picks both.
 
-### D8. Out of scope
+### D8. Other readers of the shared tracker (Dock change 1)
+
+`schedule-release` (scheduled to `to do`), `autonomous watch` and the report all read tickets through `ClickUpLoTracker`. Tests only: each sees an OCL ticket through the merged two-space tracker. A failing test becomes a finding and a fix task in the plan.
+
+### D9. Out of scope
 
 - Extracting the engine into the Oculus repo (separate ticket).
 - Per-space statuses or per-space config. The Oculus space shares today's status set; the scan reads the status by name.
 - The monorepo chain (DGS-745, DGS-749 to DGS-757): starts after this merge.
+- The board-path slug mismatch: `board-path.ts --action path --title 'Factory reads both ClickUp spaces'` gives `factory-reads-both-clickup-spaces`, the branch uses `factory-reads-both-spaces`. Dock decision: NOT fixed here; listed as a finding in the report.
 - Moving the Imperium list or the milestone lookup. Milestones link across spaces by task id, so an OCL ticket still finds its DGS milestone.
 
 ## Protected paths this touches
@@ -107,14 +112,15 @@ The merge needs the Dock's approval (guardrails):
 4. Each F2 command accepts `OCL-123` and still refuses `ABC-1` and `12`.
 5. `refresh.ts` and `markers.ts` with OCL keys.
 6. `create-factory-fields`: dry run prints two calls; `--yes` creates only the missing field; existing right field skipped; wrong options errors; the constant equals the DigiSmith options (pinned).
-7. End to end with fakes: an OCL ticket in `to do`, Mode Autonomous, is claimed by `scan` (fake tracker holding both spaces); statuses go back through the OCL tracker.
+7. `schedule-release`, `autonomous watch` and the report with an OCL ticket through the merged tracker (D8).
+8. End to end with fakes: an OCL ticket in `to do`, Mode Autonomous, is claimed by `scan` (fake tracker holding both spaces); statuses go back through the OCL tracker.
 
 ## Taste questions for Jack
 
 None. Technical decisions above are the Builder's, with reasons. One note for the Dock: the first live `create-factory-fields --yes` on the Oculus space is the conductor's step after the merge.
 
-## Done check (after merge, by the conductor)
+## Done check (after merge, by the conductor; Dock-approved order)
 
 1. `dg clickup create-factory-fields --space 1301150000003197` (dry run), then `--yes`.
-2. A test ticket in Product > Backlog, `to do`, Mode Autonomous.
-3. One scan tick claims it; the Steward and merge write-back statuses show in the Oculus space.
+2. Move OCL-106 (the guardrails test pin, ex DGS-720) to `to do` with Mode Autonomous. The Dock approved this move at this point and not before.
+3. OCL-106 is the first OCL ticket the factory claims. One scan tick claims it; the Steward and merge write-back statuses show in the Oculus space.
