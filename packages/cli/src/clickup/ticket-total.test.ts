@@ -329,7 +329,9 @@ describe("ticket-total", () => {
 
   it("still skips an unknown prefix", async () => {
     const f = fake({});
-    await run(f, { task: "ABC-1", yes: true });
+    await run(f, { task: "OCLX-1", yes: true });
+    expect(out(console.log as never)).toContain("not a ClickUp key, skipped");
+    await run(f, { task: "ocl-1", yes: true });
     expect(out(console.log as never)).toContain("not a ClickUp key, skipped");
     expect(f.getTaskByRef).not.toHaveBeenCalled();
   });
