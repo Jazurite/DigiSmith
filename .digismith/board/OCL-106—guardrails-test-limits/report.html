@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardrails test stops pinning the worker limits (OCL-106)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  section { margin-bottom: 2.2rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <h1>Guardrails test stops pinning the worker limits — Implementation Report</h1>
+  <div class="meta">
+    <span>Ticket: <strong>OCL-106</strong></span>
+    <span>Date: 2026-11-14</span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The <code>packages/cli</code> suite no longer fails when Jack changes the worker limits in <code>.digismith/config.yml</code>. The real-file test in <code>guardrails.test.ts</code> checks the shape of the limits and proves the day (2/2/1) and night (1/1/1) sets on in-memory text; the scan tests and the <code>dg run</code> tests read their limits from an empty temp checkout. Tests only: no product code and no change to the config file.</p>
+</section>
+
+<section id="changes">
+  <h2>What changed</h2>
+  <ul>
+    <li><strong>fc04ca18</strong> <code>guardrails.test.ts</code>: the two pins (<code>limits</code> equals 2/1/1, <code>staleAfterMinutes</code> 120) became a shape check (integer 0 to 9, stale 1 to 1440). A new <code>it.each</code> proves the day and night sets clean. Every other purpose line stays (scan every 15, scheduler path protected, no limit problems).</li>
+    <li><strong>2c99c445</strong> <code>autonomous/index.test.ts</code>: five scan tests use a <code>parseScan</code> helper with an empty <code>mainRepo</code>. The line 288 tick test and <code>deps()</code> are untouched.</li>
+    <li><strong>7835c77d</strong> <code>run/index.test.ts</code> and <code>run/start-other.test.ts</code>: <code>process.cwd()</code> is pinned to the temp depot dir (re-pinned after <code>restoreAllMocks()</code> in <code>capture()</code>, so the DGS-665 describe keeps its own pin).</li>
+    <li><strong>Task 4:</strong> no other limit pin in the repo. <code>merge-gate.test.ts</code> and <code>director/config-protected.test.ts</code> read the real file only for problems and protected paths.</li>
+  </ul>
+</section>
+
+<section id="protected">
+  <h2>Protected paths touched (the Dock approves the merge)</h2>
+  <ul>
+    <li><code>packages/cli/src/autonomous/</code>: <code>guardrails.test.ts</code> and <code>index.test.ts</code>. Test files only.</li>
+    <li><code>packages/cli/src/run/</code>: two test files; not a protected path.</li>
+    <li><code>.digismith/config.yml</code>: read, never edited. The worker limits are unchanged.</li>
+  </ul>
+</section>
+
+<section id="verification">
+  <h2>Verification</h2>
+  <ul>
+    <li>Reds (copy with other limits): 1/1/1 gave 1 failure in <code>autonomous/index.test.ts</code>, 1 in the run files; <code>builder: 0</code> gave 4 and 7; <code>role: 0</code> gave 4 in <code>start-other.test.ts</code> (round-3 note F8). Real file before Task 1: reviewer expected 1, got 2.</li>
+    <li>Greens: every changed file passes with the real config, 1/1/1, 2/2/1 and <code>builder: 0</code> (<code>role: 0</code> too for the run files).</li>
+    <li>Full <code>packages/cli</code> suite, repo config 2/2/1, fork pool of 2, at 7835c77d: 221 files, 3600 tests, all passed. The old guardrails pin no longer fails.</li>
+    <li>Night proof: git-initialised copy with 1/1/1 (<code>dg run limit</code> printed <code>builder x/1</code>, <code>reviewer x/1</code>, <code>role x/1</code>): 221 files, 3600 tests, all passed.</li>
+    <li><code>scripts/own-repo-config.test.ts</code> and <code>scripts/config*.test.ts</code>: 4 files, 171 tests passed.</li>
+    <li><code>tsc -p tsconfig.build.json --noEmit</code> in <code>packages/cli</code>: exit 0.</li>
+    <li>Branch: 0 behind origin/main (132e40d4), 3 commits ahead, no rebase needed.</li>
+  </ul>
+</section>
+
+<section id="reviews">
+  <h2>Reviews</h2>
+  <ul>
+    <li>Tasks 1 to 3: each reviewed once, clean. Task 4 and 5: no review (no code).</li>
+    <li>Whole-branch round 1 (opus): ready to merge, no findings.</li>
+  </ul>
+</section>
+
+<section id="findings">
+  <h2>Findings table</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Finding</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>F1 real-file test pins limits 2/1/1 and stale 120</td><td>Fixed (Task 1)</td></tr>
+      <tr><td>F2 no proof that the parser reads the day and night limits</td><td>Fixed (Task 1, <code>it.each</code>)</td></tr>
+      <tr><td>F3 scan tests read the real checkout's limits</td><td>Fixed (Task 2)</td></tr>
+      <tr><td>F4 <code>dg run start</code> tests read limits through <code>process.cwd()</code></td><td>Fixed (Task 3, with the <code>role: 0</code> run of F8)</td></tr>
+      <tr><td>Whole-branch review round 1</td><td>No findings</td></tr>
+      <tr><td>Steward <code>started</code> on the OCL key (first factory build on an OCL key)</td><td>Printed <code>steward: OCL-106: claimed -&gt; in progress (start 2026-11-14)</code>. No refusal, no warn. It is a live write on OCL-106 before the merge (start date).</td></tr>
+      <tr><td>Steward <code>review-started</code> on the OCL key</td><td>Printed <code>steward: OCL-106: in progress -&gt; review</code>. No refusal, no warn.</td></tr>
+      <tr><td><strong>Open question for Jack:</strong> a limit of 0</td><td>With <code>builder: 0</code> (or <code>reviewer</code>, <code>role</code>) the kind is blocked, so the scan claims nothing. The tests now pass under 0 and the parser accepts 0 (shape check allows 0 to 9). Whether a limit of 0 should stay valid, or be a parser problem, is Jack's call. Not changed here.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="deviations">
+  <h2>Deviations</h2>
+  <ul>
+    <li>Load was 4.4 to 6.9 during several runs (plan: under 4); every run used a fork pool of 2.</li>
+    <li>The first night run failed only <code>src/index.e2e.test.ts</code>: pnpm refused the symlinked <code>node_modules</code> in the copy. The copy got a cloned <code>node_modules</code> and the rerun was clean.</li>
+    <li><code>mainCheckout()</code> ignores <code>DIGISMITH_MAIN_CHECKOUT</code>; the copy's own <code>git init</code> makes it the main checkout, so the env var does nothing there.</li>
+    <li>Task 4 was done by the controller (a read-only grep, no code).</li>
+    <li>No <code>task-stamp</code> or checklist sync (OCL key, not DGS) and no <code>attach-record</code> (live writes before the merge). The conductor attaches the plan and reviews.</li>
+    <li>The ticket pack used <code>spec.md</code> for <code>--ticket-file</code> (no <code>ticket.md</code> for this key).</li>
+  </ul>
+</section>
+
+<footer>OCL-106 &middot; branch OCL-106__guardrails-test-limits &middot; 3 commits on 132e40d4</footer>
+
+</body>
+</html>
