@@ -56,9 +56,10 @@ function cutBytes(s: string, max: number): string {
 function line(e: Entry, budget: number): string | undefined {
   const max = budget - 1; // the newline
   const when = e.when.replace(/\s+/g, " ").trim();
-  const slugOnly = bytes(e.slug) <= max ? e.slug : undefined;
+  const head = `- ${e.slug}`;
+  const slugOnly = bytes(head) <= max ? head : undefined;
   if (when === "") return slugOnly;
-  const prefix = `${e.slug} — `;
+  const prefix = `${head}: `;
   const room = max - bytes(prefix);
   if (room < 4) return slugOnly;
   if (bytes(when) <= room) return prefix + when;

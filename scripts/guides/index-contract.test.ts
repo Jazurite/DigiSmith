@@ -23,9 +23,9 @@ const client = {
   getTaskByRef: async (ref: string) => ({ ...tasks.find((t) => t.custom_id === ref)!, markdown_description: pages[ref] }),
 } as unknown as RefreshClient;
 
-// A guide line is `slug — when` (SEP from index-text.ts); the separator after the slug stops a longer slug matching.
-const SEP = " — ";
-const lineFor = (lines: string[], slug: string): string | undefined => lines.find((l) => l.startsWith(slug + SEP));
+// A guide line is `- slug: when` (spec D5); the separator after the slug stops a longer slug matching.
+const bullet = (slug: string): string => `- ${slug}: `;
+const lineFor = (lines: string[], slug: string): string | undefined => lines.find((l) => l.startsWith(bullet(slug)));
 
 let depot: string;
 beforeEach(() => {
@@ -53,7 +53,7 @@ describe("index.json contract: dg guide writes, the hook reads", () => {
   });
 
   it("the line matcher takes the exact slug, not a longer one", () => {
-    expect(lineFor(["close-a-ticket-x — other"], "close-a-ticket")).toBeUndefined();
-    expect(lineFor(["close-a-ticket-x — other", "close-a-ticket — real"], "close-a-ticket")).toBe("close-a-ticket — real");
+    expect(lineFor(["- close-a-ticket-x: other"], "close-a-ticket")).toBeUndefined();
+    expect(lineFor(["- close-a-ticket-x: other", "- close-a-ticket: real"], "close-a-ticket")).toBe("- close-a-ticket: real");
   });
 });

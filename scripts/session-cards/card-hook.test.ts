@@ -255,7 +255,7 @@ describe("startHook identity branch (DGS-411)", () => {
       expect(lines.slice(0, 3).join("\n")).toMatch(/^\[digismith identity\] .*\nNo other open session of this identity\.\nAny session of this identity/);
       expect(lines[3]).toBe(HEADER);
       expect(lines.slice(3).join("\n")).toBe(buildGuideIndex(cache, NOW));
-      expect(lines[lines.length - 1]).toBe("merge-a-ticket — when merging a ticket");
+      expect(lines[lines.length - 1]).toBe("- merge-a-ticket: when merging a ticket");
     });
     it("a known block is appended after the identity lines, nothing after it", () => {
       writeIdentity(record(), bare());

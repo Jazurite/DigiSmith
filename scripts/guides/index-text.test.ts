@@ -36,7 +36,7 @@ describe("buildGuideIndex", () => {
   it("starts with the exact header", () => {
     const block = buildGuideIndex(cache([entry(1, "guide", "to do x")]), NOW);
     expect(block.split("\n")[0]).toBe(HEADER);
-    expect(block).toContain("guide-1");
+    expect(block.split("\n")[1]).toBe("- guide-1: to do x");
   });
 
   it("never holds page bodies", () => {
@@ -70,14 +70,14 @@ describe("buildGuideIndex", () => {
     ];
     const block = buildGuideIndex(cache(guides), NOW);
     const lines = block.split("\n");
-    const listed = lines.filter((l) => /^(guide|manual)-\d+/.test(l));
+    const listed = lines.filter((l) => /^- (guide|manual)-\d+/.test(l));
     const m = /^\((\d+) more: dg guide list\)$/.exec(lines[lines.length - 1]!);
     expect(m).not.toBeNull();
     expect(listed.length + Number(m![1])).toBe(150);
     expect(Number(m![1])).toBeGreaterThan(50);
-    expect(block).not.toContain("manual-0 ");
-    expect(listed[0]!.startsWith("guide-0")).toBe(true);
-    listed.forEach((l, i) => expect(l.startsWith(`guide-${i}`)).toBe(true));
+    expect(block).not.toContain("- manual-0: ");
+    expect(listed[0]!.startsWith("- guide-0")).toBe(true);
+    listed.forEach((l, i) => expect(l.startsWith(`- guide-${i}`)).toBe(true));
     expect(bytes(block)).toBeLessThanOrEqual(3000);
   });
 
@@ -88,8 +88,8 @@ describe("buildGuideIndex", () => {
     ];
     const block = buildGuideIndex(cache(guides), NOW);
     const lines = block.split("\n");
-    expect(lines.filter((l) => l.startsWith("guide-")).length).toBe(20);
-    const kept = lines.filter((l) => l.startsWith("manual-")).length;
+    expect(lines.filter((l) => l.startsWith("- guide-")).length).toBe(20);
+    const kept = lines.filter((l) => l.startsWith("- manual-")).length;
     expect(kept).toBeLessThan(60);
     expect(lines[lines.length - 1]).toBe(`(${60 - kept} more: dg guide list)`);
   });
@@ -119,13 +119,13 @@ describe("buildGuideIndex", () => {
     expect(m).not.toBeNull();
     expect(listed.length).toBeGreaterThan(0);
     expect(listed.length + Number(m[1])).toBe(150);
-    listed.forEach((l, i) => expect(l.startsWith(`a-rather-long-guide-slug-that-cannot-fit-${i}`)).toBe(true));
+    listed.forEach((l, i) => expect(l.startsWith(`- a-rather-long-guide-slug-that-cannot-fit-${i}`)).toBe(true));
     expect(bytes(block)).toBeLessThanOrEqual(3000);
   });
 
   it("prints the slug alone for an empty when", () => {
     const block = buildGuideIndex(cache([entry(1, "guide", "")]), NOW);
-    expect(block.split("\n")[1]).toBe("guide-1");
+    expect(block.split("\n")[1]).toBe("- guide-1");
   });
 
   it("gives one line for a missing or corrupt cache", () => {

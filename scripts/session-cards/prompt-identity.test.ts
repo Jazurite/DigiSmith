@@ -61,7 +61,7 @@ describe("identityPromptHandler", () => {
     fs.writeFileSync(path.join(depot, "guides", "index.json"), JSON.stringify({ version: 1, fetched_at: new Date().toISOString(), guides: [{ slug: "merge-a-ticket", kind: "guide", when: "when merging" }] }));
     const out = identityPromptHandler(ev({ prompt: "hello" }), bare())!;
     expect(out).toContain("User manual (DigiSmith)");
-    expect(out).toContain("merge-a-ticket — when merging");
+    expect(out).toContain("- merge-a-ticket: when merging");
     expect(identityPromptHandler(ev({ prompt: "again" }), bare())).toBeUndefined();
   });
   it("idempotent: a second prompt writes no second card and prints nothing", () => {
