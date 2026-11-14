@@ -10,6 +10,8 @@
 
 **Spec:** `.digismith/board/DGS-745—monorepo-per-aspect/spec.md` (approved, commit 5a603c05). This plan is a master plan. Each Task becomes one ClickUp ticket (the conductor files them) and gets its own detailed plan from its builder if the steps below are not enough.
 
+> **Amendment 2026-11-14 (Jack, via the Oculus Dock session):** the Nexus moves whole into the Oculus aspect, to `aspects/oculus/nexus/{api,web,shared}`. No split, no rename, no `apps/` folder. Task 8 is rewritten and now needs Task 7.
+
 ## Plan findings that amend the spec
 
 Checked on 2026-11-14 against commit 5a603c05 with a prototype boundary checker (kept in the scratchpad, not in the repo). Spec section numbers in brackets.
@@ -24,8 +26,8 @@ Checked on 2026-11-14 against commit 5a603c05 with a prototype boundary checker 
 
 - One pnpm workspace; pnpm only, never npm or yarn.
 - Names: `@digismith/scripture` (`aspects/scripture`), `@digismith/oculus` (`aspects/oculus`), `@digismith/clickup-client` (`libs/clickup-client`), `@digismith/jira-client` (`libs/jira-client`). Retired name: `@digismith/cli`.
-- Workspace globs: `aspects/*`, `libs/*`, `apps/*`.
-- Direction: `libs` import no aspect; Scripture imports only `libs`; Oculus imports `libs` and Scripture (only through Scripture's `exports`); Nexus apps import no package from `aspects/*`.
+- Workspace globs: `aspects/*`, `libs/*`, `aspects/oculus/nexus/*`. Nothing needs `apps/`, so there is no `apps/*` glob.
+- Direction: `libs` import no aspect; Scripture imports only `libs`; Oculus imports `libs` and Scripture (only through Scripture's `exports`); the Nexus packages (`aspects/oculus/nexus/*`, their own `app` zone) import no package from `aspects/*`.
 - Scripture calls Oculus only through the `dg` command line (JSON on stdout) and versioned files under `~/.digismith-depot/`. Forward prefixes: `autonomous`, `director`, `oculus`, `conductor`, `salvage`, `run start`, `run limit`.
 - Plugin version equals `aspects/scripture/package.json` version. `plugin.json` and `marketplace.json` are written only by the sync script (Task 5).
 - Baselines: `@digismith/scripture` 1.82.0 (the plugin version on 2026-11-14); `@digismith/oculus` 0.1.0, `"private": true`.
@@ -47,8 +49,8 @@ aspects/scripture/            @digismith/scripture  (bins: dg, digismith)
 aspects/oculus/               @digismith/oculus  (bin: oculus; private)
   scripts/                    conductor (Oculus part), herdr, opencode-boot
   src/                        autonomous conductor nightwatch oculus salvage dispatch
+  nexus/                      api  web  shared   (@digismith/nexus-*, private; own app zone)
 libs/clickup-client  libs/jira-client
-apps/nexus-api  apps/nexus-web  apps/nexus-shared
 .claude-plugin/marketplace.json   (repo root; source ./aspects/scripture)
 .changeset/   .digismith/   docs/   toolchain.yml   CLAUDE.md
 ```
@@ -61,7 +63,7 @@ apps/nexus-api  apps/nexus-web  apps/nexus-shared
 - Create: `scripts/boundaries/boundaries.ts`, `scripts/boundaries/boundaries.test.ts`
 - Create: `aspects/scripture/package.json`, `aspects/oculus/package.json` (shells, no code)
 - Modify: `pnpm-workspace.yaml` (globs), `tsconfig.json` (include)
-- Depot (outside the repo, **[conductor/Jack]**): `git -C ~/.digismith-depot/repo sparse-checkout set packages aspects libs apps`
+- Depot (outside the repo, **[conductor/Jack]**): `git -C ~/.digismith-depot/repo sparse-checkout set packages aspects libs`
 
 **Interfaces:**
 - Produces: `zoneOf(rel: string): Zone`, `findViolations(root: string): Violation[]`, `keyOf(v: Violation): string`, `SCRIPTURE_EXPORTS: string[]`, `KNOWN` ratchet list in the test. Later Tasks edit `KNOWN`, `OCULUS_SRC_DIRS`, `SCRIPTURE_CONDUCTOR_FILES` and `SCRIPTURE_EXPORTS`.
@@ -100,8 +102,8 @@ const ALLOWED: Record<Zone, Zone[]> = {
 /** The zone of a repo-relative posix path. */
 export function zoneOf(rel: string): Zone {
   if (rel.startsWith("libs/") || rel.startsWith("packages/clickup-client/") || rel.startsWith("packages/jira-client/")) return "lib";
+  if (rel.startsWith("aspects/oculus/nexus/") || /^scripts\/nexus-(api|web|shared)\//.test(rel)) return "app";
   if (rel.startsWith("aspects/oculus/")) return "oculus";
-  if (rel.startsWith("apps/") || /^scripts\/nexus-(api|web|shared)\//.test(rel)) return "app";
   if (SRC_ROOT.test(rel)) {
     const parts = rel.replace(SRC_ROOT, "").split("/");
     if (OCULUS_SRC_DIRS.includes(parts[0])) return "oculus";
@@ -197,6 +199,7 @@ describe("zoneOf", () => {
     expect(zoneOf("scripts/conductor/idle-check.ts")).toBe("scripture");
     expect(zoneOf("scripts/conductor/flux.ts")).toBe("oculus");
     expect(zoneOf("scripts/nexus-api/src/app.ts")).toBe("app");
+    expect(zoneOf("aspects/oculus/nexus/api/src/app.ts")).toBe("app");
     expect(zoneOf("packages/clickup-client/src/index.ts")).toBe("lib");
     expect(zoneOf("aspects/oculus/src/autonomous/state.ts")).toBe("oculus");
   });
@@ -218,9 +221,9 @@ describe("boundary", () => {
 
 - [ ] **Step 3: Run it.** `pnpm vitest run scripts/boundaries/boundaries.test.ts`. Expected: PASS with the 8 listed entries. If a count differs, the tree moved since 5a603c05: update `KNOWN` to the printed diff only after reading each line.
 - [ ] **Step 4: Prove the ratchet fails.** Temporarily delete one `KNOWN` line, run the test, confirm FAIL, restore the line.
-- [ ] **Step 5: Add the shells and globs.** `aspects/scripture/package.json`: `{"name":"@digismith/scripture","version":"1.82.0","private":true,"type":"module"}`. `aspects/oculus/package.json`: `{"name":"@digismith/oculus","version":"0.1.0","private":true,"type":"module"}`. In `pnpm-workspace.yaml` add `"aspects/*"`, `"libs/*"`, `"apps/*"` to `packages:` (keep every current entry). In `tsconfig.json` `include` add `"aspects/**/*.ts"`, `"libs/**/*.ts"`, `"apps/**/*.ts"`.
+- [ ] **Step 5: Add the shells and globs.** `aspects/scripture/package.json`: `{"name":"@digismith/scripture","version":"1.82.0","private":true,"type":"module"}`. `aspects/oculus/package.json`: `{"name":"@digismith/oculus","version":"0.1.0","private":true,"type":"module"}`. In `pnpm-workspace.yaml` add `"aspects/*"`, `"libs/*"`, `"aspects/oculus/nexus/*"` to `packages:` (keep every current entry). In `tsconfig.json` `include` add `"aspects/**/*.ts"`, `"libs/**/*.ts"`.
 - [ ] **Step 6: Install and test.** `pnpm install` then `pnpm test`. Expected: all green, lockfile gains two importers only. Scripture shell is `private: true` until Task 3 sets its final fields.
-- [ ] **Step 7: Depot sparse set [conductor/Jack].** Run the `sparse-checkout set` line from Files, then `git -C ~/.digismith-depot/repo sparse-checkout list`. Expected: `packages`, `aspects`, `libs`, `apps`.
+- [ ] **Step 7: Depot sparse set [conductor/Jack].** Run the `sparse-checkout set` line from Files, then `git -C ~/.digismith-depot/repo sparse-checkout list`. Expected: `packages`, `aspects`, `libs`.
 - [ ] **Step 8: Commit.** `git add scripts/boundaries aspects pnpm-workspace.yaml tsconfig.json pnpm-lock.yaml && git commit -m "feat: add workspace skeleton and boundary test (DGS-745)"`.
 
 ---
@@ -568,25 +571,25 @@ Run: PASS.
 
 ---
 
-### Task 8: Move the Nexus to `apps/`
+### Task 8: Move the Nexus whole into `aspects/oculus/nexus/`
 
-Scope pending Jack's Nexus decision (2026-11-14); do not start before the Maestro confirms.
+Scope (Jack, 2026-11-14, via the Oculus Dock session): the whole Nexus moves into the Oculus aspect. No split by owner (Workbox health and the life calendar stay inside it; splitting them out is a later ticket). No rename: the server and the `@digismith/nexus-*` package names stay. Folder reason: `nexus/` sits beside `src/` and `scripts/` inside `aspects/oculus` because it is a deployable server with its own packages, not a script and not part of the `oculus` bin.
 
 **Files:**
-- Move (git mv): `scripts/nexus-api` to `apps/nexus-api`, `scripts/nexus-web` to `apps/nexus-web`, `scripts/nexus-shared` to `apps/nexus-shared`; `scripts/caddy` to `apps/nexus-api/caddy` only if Step 1 says it fronts the Nexus
-- Modify: `pnpm-workspace.yaml` (remove the three `scripts/nexus-*` entries), `.gitignore` (the `scripts/nexus-web/...` lines), `vitest.config.ts` (exclude `**/apps/nexus-web/**`), install scripts and plist templates, relative imports in the Nexus contract tests, `scripts/boundaries/boundaries.ts` (`app` prefix: drop the `scripts/nexus-*` regex)
+- Move (git mv): `scripts/nexus-api` to `aspects/oculus/nexus/api`, `scripts/nexus-web` to `aspects/oculus/nexus/web`, `scripts/nexus-shared` to `aspects/oculus/nexus/shared`; `scripts/caddy` to `aspects/oculus/nexus/api/caddy` only if Step 1 says it fronts the Nexus
+- Modify: `pnpm-workspace.yaml` (remove the three `scripts/nexus-*` entries; the `aspects/oculus/nexus/*` glob is already there from Task 1), `.gitignore` (the `scripts/nexus-web/...` lines), `vitest.config.ts` (exclude `**/aspects/oculus/nexus/web/**`), `aspects/oculus/tsconfig.build.json` (exclude `nexus/**`), install scripts and plist templates, relative imports in the Nexus contract tests, `scripts/boundaries/boundaries.ts` (`app` zone prefix: drop the `scripts/nexus-*` regex, keep `aspects/oculus/nexus/`)
 
 **Interfaces:**
-- Consumes: Task 1 workspace globs. Needs only Task 1 (can run beside Tasks 5-7).
-- Produces: `apps/nexus-*` with the same package names.
+- Consumes: Task 1 workspace globs and `app` zone; Task 7 (the `aspects/oculus` package must exist and be final first).
+- Produces: `aspects/oculus/nexus/{api,web,shared}` with the same package names `@digismith/nexus-api`, `@digismith/nexus-web`, `@digismith/nexus-shared`.
 
-- [ ] **Step 1: Read the Caddyfile.** `grep -n "reverse_proxy\|nexus" scripts/caddy/Caddyfile scripts/caddy/caddy-run.sh`. If it proxies the Nexus API, move it with the API; if not, leave `scripts/caddy` where it is (it goes to Scripture's scripts in Task 6's list only if it is generic: report which in the PR).
-- [ ] **Step 2: Failing test.** Add to the boundary test: no file under `scripts/` matches `nexus-`. Run: FAIL.
-- [ ] **Step 3: Move** with `git mv`. Edit the workspace file, `.gitignore`, `vitest.config.ts`, and the `install.sh` and `*.plist.tmpl` paths (the files only; do not run the installers).
-- [ ] **Step 4: Fix contract tests.** The tests import `../../../packages/cli/src/...` (or `aspects/...` after Task 3): rewrite relative depths for the new location. They remain allowed to import Oculus fixtures (finding 4).
-- [ ] **Step 5: Verify.** `pnpm install && pnpm --filter @digismith/nexus-api test && pnpm test`. Expected: green.
-- [ ] **Step 6: Commit** by pathspec: `git commit -m "refactor: move the Nexus to apps (DGS-745)"`.
-- [ ] **Step 7: Reinstall [conductor/Jack].** The installed Nexus copy in `~/.digismith-depot/nexus-api` is refreshed by Jack with the existing `install.sh` from `apps/nexus-api`. No LaunchAgent, Caddy or DNS change is made by a builder.
+- [ ] **Step 1: Read the Caddyfile.** `grep -n "reverse_proxy\|nexus" scripts/caddy/Caddyfile scripts/caddy/caddy-run.sh`. If it proxies the Nexus API, move it with the API; if not, leave `scripts/caddy` where it is (it is a Scripture script only if it is generic: report which in the PR).
+- [ ] **Step 2: Failing test.** Add to the boundary test: no file under `scripts/` matches `nexus-`, and `zoneOf("aspects/oculus/nexus/api/src/app.ts")` is `app` while `zoneOf("aspects/oculus/src/index.ts")` is `oculus`. Run: FAIL on the first.
+- [ ] **Step 3: Move** with `git mv`. Edit the workspace file, `.gitignore`, `vitest.config.ts`, `tsconfig.build.json`, and the `install.sh` and `*.plist.tmpl` paths (the files only; do not run the installers).
+- [ ] **Step 4: Fix contract tests.** The tests import `../../../packages/cli/src/...` (or `aspects/...` after Tasks 3 and 7): rewrite relative depths for the new location. They remain allowed to import Oculus fixtures (finding 4).
+- [ ] **Step 5: Verify.** `pnpm install && pnpm --filter @digismith/nexus-api test && pnpm --filter @digismith/oculus build && pnpm test`. Expected: green, and the lockfile importers show the three Nexus packages at the new paths.
+- [ ] **Step 6: Commit** by pathspec: `git commit -m "refactor: move the Nexus into aspects/oculus (DGS-745)"`.
+- [ ] **Step 7: Reinstall [conductor/Jack].** The installed Nexus copy in `~/.digismith-depot/nexus-api` is refreshed by Jack with the existing `install.sh` from `aspects/oculus/nexus/api`. No LaunchAgent, Caddy or DNS change is made by a builder.
 
 ---
 

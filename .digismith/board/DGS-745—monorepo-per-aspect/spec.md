@@ -4,6 +4,7 @@ Ticket: DGS-745 (parent DGS-740 Development Procedures). Sign-off Auto, Mode Man
 Written 2026-11-14 by the refine worker dgs-745-refine. Refinement only: no code moves in this ticket.
 
 > **Amendment 2026-11-14 (Maestro, plan amendment 2):** `src/conductor-registry/` and the note layer of `scripts/conductor/` (registry, safe-name, idle-check, idle-stamp, state-block, markers, catch-up-window, new note-path.ts) go to Scripture; the rest of `scripts/conductor/` is Oculus. Sections 3 and 4 are corrected. The plan's other findings (8 import edges, forward table `autonomous, director, oculus, conductor, salvage, run start, run limit` with no `nightwatch`, tests outside the boundary rule, `exports` grown by need) are in `plan.md`; where they differ from section 5 below, `plan.md` rules.
+> **Amendment 2026-11-14 (Jack, via the Oculus Dock session):** the Nexus moves whole into the Oculus aspect, to `aspects/oculus/nexus/`. No split by owner, no rename. This replaces the `apps/` target everywhere below; there is no `apps/` folder.
 Facts below come from the main checkout on 2026-11-14 (commit 32ecb0c6). Items I did not verify are marked **Unverified**.
 
 ## 1. Settled by Jack (not reopened)
@@ -26,16 +27,16 @@ aspects/scripture/        @digismith/scripture   plugin + dg CLI (public candida
 aspects/oculus/           @digismith/oculus      the factory engine (private)
   src/                    (Oculus part of packages/cli/src)
   scripts/                (Oculus-owned scripts, section 4)
+  nexus/api|web|shared/   (the Nexus, whole; packages @digismith/nexus-api|web|shared, private; section 4)
 libs/clickup-client/      @digismith/clickup-client
 libs/jira-client/         @digismith/jira-client
-apps/nexus-api|nexus-web|nexus-shared/           (section 4, one taste flag in section 11)
 .claude-plugin/marketplace.json    stays at the repo root, source -> ./aspects/scripture
 .changeset/               Changesets config and pending change files
 .digismith/               board, hooks, config: repo-level, stays at the root
 docs/ toolchain.yml CLAUDE.md pnpm-workspace.yaml
 ```
 
-Workspace globs: `aspects/*`, `libs/*`, `apps/*`.
+Workspace globs: `aspects/*`, `libs/*`, `aspects/oculus/nexus/*`. The Nexus packages sit inside the Oculus folder but stay their own packages; `apps/*` is not a glob.
 
 ## 3. Decision 1: where `packages/cli/src` goes
 
@@ -78,10 +79,10 @@ Scripts are split by who owns the behaviour, not by where they sit today.
 
 **Scripture, from `scripts/conductor/`** (amended 2026-11-14): the note layer `registry`, `safe-name`, `idle-check`, `idle-stamp`, `state-block`, `markers`, `catch-up-window`, and a new `note-path.ts` (`resolveNotePath` extracted from `state.ts`). They go under `aspects/scripture/scripts/conductor/`.
 
-**Nexus** (`scripts/nexus-api`, `nexus-web`, `nexus-shared`): moves to `apps/nexus-api`, `apps/nexus-web`, `apps/nexus-shared`. Reasons:
-1. Nexus is the Public Edition pillar (DGS-406: the CLI and Nexus ship publicly). It is not the Software Factory.
+**Nexus** (`scripts/nexus-api`, `nexus-web`, `nexus-shared`): amended 2026-11-14 (Jack, via the Oculus Dock session): moves whole into the Oculus aspect, to `aspects/oculus/nexus/api`, `aspects/oculus/nexus/web`, `aspects/oculus/nexus/shared`. The server keeps the name Nexus and the package names `@digismith/nexus-*`. Workbox health and the life calendar stay inside it; splitting them out is a later ticket. Folder choice: `nexus/` is a sibling of `src/` and `scripts/` inside the Oculus folder, not under `scripts/` (it is a deployable server with its own packages, not a script) and not inside `src/` (it is not part of the `oculus` bin). The short names `api|web|shared` drop the repeated prefix; package names do not change. Reasons it can stay a separate package set:
+1. The Nexus is the console of the Oculus factory (Oculus Dock ruling), so it lives with it. (The earlier Public Edition reading is open again: see section 8.)
 2. It has **no code import** from `packages/cli`. `nexus-api` reads Oculus data by running `dg oculus view` and `dg nightwatch view` and parsing JSON (`nightwatch-reader.ts`, `oculus-reader.ts`). That is already the process contract of section 5.
-3. Its package names `@digismith/nexus-*` already exist and are `private: true`, so they need no new version until Nexus has its own epic.
+3. Its package names `@digismith/nexus-*` already exist and are `private: true`, so they need no new version until Nexus has its own epic. The workspace glob `aspects/oculus/nexus/*` keeps them separate packages, and `@digismith/oculus` excludes `nexus/` from its build.
 Install files (`*.plist.tmpl`, `install.sh`) move with it. `scripts/caddy/` follows the Nexus if it fronts the Nexus API. **Unverified:** I did not read the Caddyfile. Ticket 8 checks it first.
 
 Three files outside `scripts/` reference conductor or herdr scripts (`catch-up` skill, `CLAUDE.md`, one doc). Ticket 7 rewrites them to call `dg conductor ...`, never a path into Oculus.
@@ -92,13 +93,13 @@ Three files outside `scripts/` reference conductor or herdr scripts (`catch-up` 
 
 ```
 libs  <-  scripture  <-  oculus
-apps (Nexus) depend on nothing in aspects; they call dg.
+Nexus (inside aspects/oculus/nexus, its own zone) depends on no aspect package; it calls dg.
 ```
 
 - `libs/*` import no aspect.
 - `@digismith/scripture` imports only `libs/*`. It never imports Oculus code.
 - `@digismith/oculus` imports `libs/*` and Scripture, **only through Scripture's declared `exports`**: `./run`, `./tokens`, `./steward`, `./clickup`, `./reviewer`, `./ticket-key`. A deep import into `scripture/src/...` fails the test.
-- Nexus imports no package from `aspects/*`.
+- Nexus imports no package from `aspects/*`, although its folder is inside `aspects/oculus`. The boundary test gives `aspects/oculus/nexus/` its own `app` zone, checked before the Oculus zone.
 
 **How Scripture calls Oculus: the `dg` command line, JSON on stdout. Nothing else.**
 - The `dg` dispatcher lives in Scripture. It holds a **forward table** of command prefixes: `autonomous`, `oculus`, `conductor`, `nightwatch`, `salvage`, `run start`, `run limit`. When one matches, `dg` runs the `oculus` binary (shipped by `@digismith/oculus`) with the same arguments and passes through stdout, stderr and the exit code. If the binary is not installed, `dg` prints one line: `<group> needs @digismith/oculus` and exits 1.
@@ -129,7 +130,7 @@ The version in `plugin.json` and `marketplace.json` is no longer edited by hand 
 Decisions:
 1. Rewrite the paths mechanically in the ticket that moves the package (`packages/cli/src` becomes `aspects/scripture/src`, `packages/jira-client` becomes `libs/jira-client`). Each move ticket carries its own rewrite, so no skill ever points at a missing path.
 2. Add a repo test that fails on any string `packages/cli` or `packages/jira-client` in `skills/`, `hooks/`, `scripts/`, `standards/`, `profiles/`, `CLAUDE.md`, after the move. This catches the next stale reference.
-3. Ticket 1 extends the depot sparse-checkout to `aspects libs apps` while `packages` still exists. That change is harmless before the move and required after it.
+3. Ticket 1 extends the depot sparse-checkout to `aspects libs` while `packages` still exists. That change is harmless before the move and required after it.
 4. Plugin cache and depot clone update separately. A running session on an old plugin version still calls `packages/cli/...` after the move. So ticket 3 leaves **`packages/cli` as a symlink to `aspects/scripture`** for one release cycle, and ticket 9 removes it. Hook 02 (plugin reinstall) gets one added step: `git -C ~/.digismith-depot/repo pull --ff-only`, run before the plugin update.
 
 **The `dg` shim.** `/Users/workbox/Library/pnpm/bin/dg` runs `.../global/v11/<hash>/node_modules/@digismith/cli/dist/index.js`: a **built copy installed by pnpm globally**, not a link to the repo. After the rename it is stale. Decisions:
@@ -140,9 +141,9 @@ Decisions:
 
 ## 8. Decision 7: public fraction (DGS-406) stays separable
 
-DGS-406 is still a concept. It says the public fraction is the plugin (Marketplace pillar) and the CLI and Nexus (Public Edition pillar); the engine stays private. This spec only has to keep that cut possible. Rules:
+DGS-406 is still a concept. It says the public fraction is the plugin (Marketplace pillar) and the CLI and Nexus (Public Edition pillar); the engine stays private. Since 2026-11-14 the Nexus sits inside the private Oculus folder; whether it is public stays DGS-406's call, and its packages are separate so either answer works. This spec only has to keep that cut possible. Rules:
 
-1. Public candidates: `@digismith/scripture` (minus `shopee`), both libs, the Nexus apps. Private: `@digismith/oculus`.
+1. Public candidates: `@digismith/scripture` (minus `shopee`), both libs. The Nexus packages are undecided (DGS-406). Private: `@digismith/oculus`.
 2. The direction rule of section 5 is the separability rule: a public package never imports a private one. The boundary test (ticket 1, red-listed until ticket 4) fails the build on a breach.
 3. `aspects/oculus/package.json` sets `"private": true`. Changesets lists nothing as published for it.
 4. Scripture runs with Oculus absent. Ticket 7 includes a test that runs `dg` with the `oculus` binary missing and checks the one-line message.
@@ -161,7 +162,7 @@ DGS-406 is still a concept. It says the public fraction is the plugin (Marketpla
 
 **Relation to DGS-707** (read only; I do not edit it). DGS-707's version half (patch = task, minor = epic, major = arc, from the ticket type) becomes the rule that picks the `--level` in step 1. Its focus-check half is unchanged. The saga/arc reset rule in DGS-707 was written for one plugin number. With per-package versions it applies to Scripture only, until a suite manifest exists (out of scope here). Whether Oculus gets saga/arc majors is a question for DGS-707. The conductor should note this on DGS-707 so it is retargeted rather than built twice.
 
-**Changesets itself** (ticket 5): `@changesets/cli` as a root devDependency, `.changeset/config.json` with `access: restricted`, `baseBranch: main`, `ignore` for the Nexus apps and any private package that should not version, `updateInternalDependencies: patch`. pnpm only. **Unverified:** the exact `workspace:^` range behaviour of `changeset version` with `@digismith/clickup-client`; ticket 5 includes a dry run on a scratch copy before the hook is switched.
+**Changesets itself** (ticket 5): `@changesets/cli` as a root devDependency, `.changeset/config.json` with `access: restricted`, `baseBranch: main`, `ignore` for the Nexus packages and any private package that should not version, `updateInternalDependencies: patch`. pnpm only. **Unverified:** the exact `workspace:^` range behaviour of `changeset version` with `@digismith/clickup-client`; ticket 5 includes a dry run on a scratch copy before the hook is switched.
 
 ## 10. Decision 8: ordered move tickets
 
@@ -169,23 +170,23 @@ All tickets are separate. **Every one is blocked by DGS-699 (Director) merging**
 
 | # | Ticket | Size | Notes |
 |---|---|---|---|
-| 1 | Workspace skeleton: globs `aspects/* libs/* apps/*`, empty `aspects/scripture` and `aspects/oculus` package shells, depot sparse-checkout extended, boundary test written and listing today's one violation as a known failure | S | No code moves. Tests first. |
+| 1 | Workspace skeleton: globs `aspects/* libs/* aspects/oculus/nexus/*`, empty `aspects/scripture` and `aspects/oculus` package shells, depot sparse-checkout extended, boundary test written and listing today's one violation as a known failure | S | No code moves. Tests first. |
 | 2 | Move `packages/clickup-client` and `packages/jira-client` to `libs/`; fix the vitest alias, the `pnpm --filter` build line, 10 jira paths in skills | S | Needs 1. |
 | 3 | Move `packages/cli` to `aspects/scripture` whole (`git mv`, package renamed `@digismith/scripture`); rewrite the 37 depot paths; leave `packages/cli` as a symlink; stale-path test; global reinstall of `dg`; npm check | M | Needs 2. The reinstall and the npm check are conductor / Jack steps. |
 | 4 | Cut the one Scripture to Oculus edge inside the package: move `run` dispatch (`start`, `limit`, `limit.ts`, `limit-check.ts`) to `src/dispatch/`; boundary test goes green | S | Needs 3. Confirms the `run/index.ts` cut first. |
 | 5 | Changesets: install, config, `dg changeset add`, `report-implementation` step, rewrite hooks 01 and 02 (and the 03 version field), sync script, baselines | M | Needs 4. Dry run on a scratch copy first. Protected path (release flow). |
 | 6 | Plugin root: probe a throwaway marketplace, then move `.claude-plugin/plugin.json`, `skills/`, `hooks/`, `standards/`, `profiles/`, `vendored/`, Scripture `scripts/` under `aspects/scripture`; switch the marketplace `source`; fix `hooks.json`, `CLAUDE.md`, docs | L | Needs 5. The probe and the real plugin update touch `~/.claude`: conductor / Jack. |
 | 7 | Split Oculus: create the package, move `dispatch/`, `autonomous/`, `conductor*`, `nightwatch/`, `oculus/`, `salvage/` and the Oculus scripts; Scripture `exports`; forward table; `oculus` bin and its global install; rewrite the 3 conductor/herdr references; Oculus-absent test; `private: true` | L | Needs 6. Biggest conflict surface, so it goes last of the Aspect moves. |
-| 8 | Move the Nexus to `apps/`; check and move `scripts/caddy`; fix install scripts and plist templates | M | Needs 1 only. Can run beside 5 to 7. LaunchAgent, Caddy and DNS changes are not part of it: file paths only, and the installed copies are reinstalled by Jack. |
+| 8 | Move the Nexus whole to `aspects/oculus/nexus/`; check and move `scripts/caddy`; fix install scripts and plist templates | M | Needs 7 (the Oculus package must exist first). Runs after it, not beside it. LaunchAgent, Caddy and DNS changes are not part of it: file paths only, and the installed copies are reinstalled by Jack. |
 | 9 | Remove the `packages/cli` symlink and the old `packages/` folder | S | Needs 7. **A delete: needs Jack's order for that exact target.** Gate: one night passed since ticket 3 and no live session on a plugin version older than ticket 3. |
 
-Parallel runs: only 8 runs beside the chain. Merges are serial. DGS-744 (factory reads both spaces) is independent. It should land before ticket 7, because ticket 7 moves the scan code it changes; the conductor decides the order.
+Parallel runs: none inside the chain, since 8 needs 7. Merges are serial. DGS-744 (factory reads both spaces) is independent. It should land before ticket 7, because ticket 7 moves the scan code it changes; the conductor decides the order.
 
 Each ticket's "done" evidence: the full test suite green, the stale-path test green, and one real call of each moved entry point (`dg tokens ...`, `dg autonomous ...` through the forward table, a hook firing).
 
 ## 11. For the Maestro: items that need a word
 
-1. **Taste (one):** the new top-level folder name `apps/` for the Nexus. Default if no answer: `apps/`. Jack settled `aspects/` and `libs/` only.
+1. **Taste (resolved 2026-11-14):** the `apps/` folder name for the Nexus is dropped. Jack ruled the Nexus goes whole into the Oculus aspect (`aspects/oculus/nexus/`). Open for Jack only if he dislikes the `nexus/` folder name.
 2. **Approval, not taste:** tickets 3, 5, 6 and 7 touch the plugin install, the release flow or Jack's global installs. Mode Manual covers this. The conductor needs Jack's go for the reinstall and probe steps.
 3. **For DGS-707:** the note in section 9 (version rules per package, saga/arc scope).
 
