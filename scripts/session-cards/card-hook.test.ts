@@ -241,11 +241,20 @@ describe("startHook identity branch (DGS-411)", () => {
       writeIdentity(record(), bare());
       writeCache();
       const cache = fs.readFileSync(path.join(depot, "guides", "index.json"), "utf8");
-      const ctx = startHook({ session_id: "g1", cwd: repo }, bare(), { now: T0 }).context!;
+      // the hook reads Date.now() itself: pin the clock so both sides see one `now`
+      const NOW = Date.now();
+      vi.useFakeTimers();
+      vi.setSystemTime(NOW);
+      let ctx: string;
+      try {
+        ctx = startHook({ session_id: "g1", cwd: repo }, bare(), { now: T0 }).context!;
+      } finally {
+        vi.useRealTimers();
+      }
       const lines = ctx.split("\n");
       expect(lines.slice(0, 3).join("\n")).toMatch(/^\[digismith identity\] .*\nNo other open session of this identity\.\nAny session of this identity/);
       expect(lines[3]).toBe(HEADER);
-      expect(lines.slice(3).join("\n")).toBe(buildGuideIndex(cache, Date.now()));
+      expect(lines.slice(3).join("\n")).toBe(buildGuideIndex(cache, NOW));
       expect(lines[lines.length - 1]).toBe("merge-a-ticket — when merging a ticket");
     });
     it("a known block is appended after the identity lines, nothing after it", () => {

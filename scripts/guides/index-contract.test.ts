@@ -23,6 +23,10 @@ const client = {
   getTaskByRef: async (ref: string) => ({ ...tasks.find((t) => t.custom_id === ref)!, markdown_description: pages[ref] }),
 } as unknown as RefreshClient;
 
+// A guide line is `slug — when` (SEP from index-text.ts); the separator after the slug stops a longer slug matching.
+const SEP = " — ";
+const lineFor = (lines: string[], slug: string): string | undefined => lines.find((l) => l.startsWith(slug + SEP));
+
 let depot: string;
 beforeEach(() => {
   depot = fs.mkdtempSync(path.join(os.tmpdir(), "guide-contract-"));
@@ -38,13 +42,18 @@ describe("index.json contract: dg guide writes, the hook reads", () => {
     const lines = block.split("\n");
 
     expect(lines[0]).toMatch(/^User manual \(DigiSmith\): .*dg guide <slug>\.$/);
-    const close = lines.find((l) => l.startsWith("close-a-ticket"))!;
-    const epic = lines.find((l) => l.startsWith("start-an-epic"))!;
+    const close = lineFor(lines, "close-a-ticket")!;
+    const epic = lineFor(lines, "start-an-epic")!;
     expect(close).toContain("A build ticket is merged and pushed");
     expect(epic).toContain("Jack has an idea for an epic");
     expect(block).not.toContain("## What it is");
     expect(block).not.toContain("Closing a ticket moves it");
     expect(block).not.toContain("not cached yet");
     expect(Buffer.byteLength(block)).toBeLessThanOrEqual(3000);
+  });
+
+  it("the line matcher takes the exact slug, not a longer one", () => {
+    expect(lineFor(["close-a-ticket-x — other"], "close-a-ticket")).toBeUndefined();
+    expect(lineFor(["close-a-ticket-x — other", "close-a-ticket — real"], "close-a-ticket")).toBe("close-a-ticket — real");
   });
 });
