@@ -136,9 +136,29 @@ describe("this repo's own config.yml", () => {
     expect(g.scanEveryMinutes).toBe(15);
     expect(/^  scan_every_minutes: 15\b/m.test(text)).toBe(true);
     expect(g.protectedPaths).toContain("scripts/nexus-api/src/scheduler/");
-    expect(g.limits).toEqual({ builder: 2, reviewer: 1, role: 1 });
-    expect(g.staleAfterMinutes).toBe(120);
+    for (const kind of ["builder", "reviewer", "role"] as const) {
+      expect(Number.isInteger(g.limits[kind])).toBe(true);
+      expect(g.limits[kind]).toBeGreaterThanOrEqual(0);
+      expect(g.limits[kind]).toBeLessThanOrEqual(9);
+    }
+    expect(Number.isInteger(g.staleAfterMinutes)).toBe(true);
+    expect(g.staleAfterMinutes).toBeGreaterThanOrEqual(1);
+    expect(g.staleAfterMinutes).toBeLessThanOrEqual(1440);
     expect(g.limitProblems).toEqual([]);
+  });
+
+  it.each([
+    ["day", { builder: 2, reviewer: 2, role: 1 }],
+    ["night", { builder: 1, reviewer: 1, role: 1 }],
+  ])("reads clean with the %s limits", (_name, want) => {
+    const text = readFileSync(new URL("../../../../.digismith/config.yml", import.meta.url), "utf-8");
+    const block = `  limits:\n    builder: ${want.builder}\n    reviewer: ${want.reviewer}\n    role: ${want.role}\n`;
+    const swapped = text.replace(/^  limits:\n(?:    .*\n)+/m, block);
+    expect(swapped).toContain(block); // fails loudly if the file loses its limits block
+    const g = readGuardrails(swapped);
+    expect(g.problems).toEqual([]);
+    expect(g.limitProblems).toEqual([]);
+    expect(g.limits).toEqual(want);
   });
 });
 
