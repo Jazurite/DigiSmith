@@ -13,7 +13,7 @@ Facts below come from the main checkout on 2026-11-14 (commit 32ecb0c6). Items I
 - `libs/clickup-client` = `@digismith/clickup-client`. `libs/jira-client` = `@digismith/jira-client`.
 - Changesets gives each package its own version and changelog.
 - The suite manifest is out of scope.
-- The separate Oculus repo is dropped. Oculus tracks in the OCU space. Scripture and the roadmap track in DGS.
+- The separate Oculus repo is dropped. Oculus tracks in the OCL space (1301150000003197). Scripture and the roadmap track in DGS.
 
 ## 2. Target layout
 
