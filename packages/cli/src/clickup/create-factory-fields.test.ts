@@ -20,7 +20,7 @@ function front() {
     createField: vi.fn(async (b: { name: string }) => ({ id: `new-${++n}`, name: b.name, type: "drop_down", type_config: { options: [] } })),
     setFieldLocations: vi.fn().mockResolvedValue(undefined),
     getFieldLocations: vi.fn().mockResolvedValue({ locations: [{}] }),
-  } as unknown as FrontdoorClient & { createField: ReturnType<typeof vi.fn>; setFieldLocations: ReturnType<typeof vi.fn> };
+  } as unknown as FrontdoorClient & { createField: ReturnType<typeof vi.fn>; setFieldLocations: ReturnType<typeof vi.fn>; getFieldLocations: ReturnType<typeof vi.fn> };
 }
 const run = (r: unknown, f: unknown, argv: object) =>
   (createCreateFactoryFieldsCommand(() => r as ClickUpClient, () => f as FrontdoorClient).handler as (a: object) => Promise<void>)({ yes: false, ...argv });
@@ -55,6 +55,9 @@ describe("create-factory-fields", () => {
     expect(f.setFieldLocations.mock.calls[0][1]).toEqual([
       { parent: { type: 4, id: OCL }, required: false, required_on_subtasks: false, hide_from_guests: false },
     ]);
+    expect(f.getFieldLocations).toHaveBeenCalledTimes(2);
+    expect(f.getFieldLocations.mock.calls.map((c) => c[0])).toEqual(["new-1", "new-2"]);
+    expect(out()).toContain("locations read back: 1");
     expect(process.exitCode).toBe(0);
   });
   it("--yes creates only the missing field", async () => {
