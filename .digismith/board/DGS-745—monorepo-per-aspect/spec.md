@@ -2,6 +2,8 @@
 
 Ticket: DGS-745 (parent DGS-740 Development Procedures). Sign-off Auto, Mode Manual.
 Written 2026-11-14 by the refine worker dgs-745-refine. Refinement only: no code moves in this ticket.
+
+> **Amendment 2026-11-14 (Maestro, plan amendment 2):** `src/conductor-registry/` and the note layer of `scripts/conductor/` (registry, safe-name, idle-check, idle-stamp, state-block, markers, catch-up-window, new note-path.ts) go to Scripture; the rest of `scripts/conductor/` is Oculus. Sections 3 and 4 are corrected. The plan's other findings (8 import edges, forward table `autonomous, director, oculus, conductor, salvage, run start, run limit` with no `nightwatch`, tests outside the boundary rule, `exports` grown by need) are in `plan.md`; where they differ from section 5 below, `plan.md` rules.
 Facts below come from the main checkout on 2026-11-14 (commit 32ecb0c6). Items I did not verify are marked **Unverified**.
 
 ## 1. Settled by Jack (not reopened)
@@ -56,12 +58,13 @@ Import edges were counted with `grep` over non-test files. Today only **one** Sc
 | `run/` (record layer: `paths`, `events`, `record`, `read`, `schema`, `role`, `seat`, `hook`, `auto`, `label`, `lifecycle`, `identity-folder`, `repo-info`, `run-index`, test helpers) | ~2900 | Scripture | The SessionStart hook writes a run for every session that has the plugin. Oculus reads these files (`run/README.md`: "Oculus and later tickets read these files and nothing else"). Writer = Scripture, reader = Oculus. |
 | `run/` dispatch part (`start` and `limit` commands in `run/index.ts`, `limit.ts`, `limit-check.ts`) | ~550 | Oculus | The concurrency count reads the factory lock and the conductor driver. It is factory policy. First step: move it to `src/dispatch/` inside Scripture (move ticket 4), then out (ticket 7). |
 | `autonomous/` | 12197 | Oculus | The factory loop. |
-| `conductor/`, `conductor-registry/` | 862 + 348 | Oculus | Registry is used by conductor, autonomous and `scripts/conductor`. |
+| `conductor/` | 862 | Oculus | The conductor commands. |
+| `conductor-registry/` | 348 | Scripture | Amended 2026-11-14: a Scripture prompt hook reads it on every prompt through `scripts/conductor/registry.ts`, `idle-check` and `resolveNotePath`; no process hop is allowed there. Oculus imports it through Scripture `exports` (`./conductor-registry`). |
 | `nightwatch/` | 1024 | Oculus | Reads run records. Imports `autonomous` 13 times. |
 | `oculus/` | 1807 | Oculus | The `dg oculus view` command. |
 | `salvage/` | 535 | Oculus | Imports `autonomous`. |
 
-Size: about 16.8k of 46.6k lines (36%) go to Oculus.
+Size: about 16.4k of 46.6k lines (35%) go to Oculus.
 
 `run/index.ts` composes six commands: `start`, `event`, `list`, `limit`, `show`, `tail`. Only `start` and `limit` use `limit-check`. **Unverified:** I did not read `start`'s body in full. Ticket 4 confirms the cut before it moves anything.
 
@@ -71,7 +74,9 @@ Scripts are split by who owns the behaviour, not by where they sit today.
 
 **Scripture** (`aspects/scripture/scripts/`): `session-cards/`, `session-init.ts`, `run-events/`, `workbox-health/` (the four that `hooks/hooks.json` runs through `${CLAUDE_PLUGIN_ROOT}/scripts/`); the loose skill-support files (`board-path`, `catch-up`, `config*`, `identity*`, `notes-*`, `session-*`, `voice*`, `preferences`, `toolchain`, `fill-template`, `check_vendored_skills`, `model_offload`, `lineage-handoff`, `depot-dir`, `cli-args`); `git-hooks/`; `claude-account/`; `agentic-bridge/`, `runners/`, `providers/` (offload-implementer); `token-counter/` (Token Economics, no package yet); `demo/`.
 
-**Oculus** (`aspects/oculus/scripts/`): `conductor/` (catch-up, consult, flux, idle-check, watch), `herdr/`, `opencode-boot/`.
+**Oculus** (`aspects/oculus/scripts/`): the rest of `conductor/` (`cli`, `consult`, `flux*`, `refresh`, `runner`, `state`, `watch`, `catch-up-cli`, `attention-section`, `autonomous-section`, `ticket-status`), `herdr/`, `opencode-boot/`.
+
+**Scripture, from `scripts/conductor/`** (amended 2026-11-14): the note layer `registry`, `safe-name`, `idle-check`, `idle-stamp`, `state-block`, `markers`, `catch-up-window`, and a new `note-path.ts` (`resolveNotePath` extracted from `state.ts`). They go under `aspects/scripture/scripts/conductor/`.
 
 **Nexus** (`scripts/nexus-api`, `nexus-web`, `nexus-shared`): moves to `apps/nexus-api`, `apps/nexus-web`, `apps/nexus-shared`. Reasons:
 1. Nexus is the Public Edition pillar (DGS-406: the CLI and Nexus ship publicly). It is not the Software Factory.
