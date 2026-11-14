@@ -7,7 +7,7 @@ Never write a birth date, an age count or the stat numbers you heard. The page s
 
 Everything here is a step for Jack. No agent runs these steps, and no agent stops or starts the live API.
 
-## Stopping the API (only for the "API off" lines)
+## Stopping the API (only for the optional live checks in the Alert and Retry lines)
 
 The story names come from `app/components/StatePanel.stories.ts`. The safe way to hear the alert is the Storybook stories "Components > State panel > Error Panel" and "Components > State panel > Locked Panel" at `https://pazurite.com/storybook/`. Use them for the alert lines. The live-API stop below is one optional check.
 
