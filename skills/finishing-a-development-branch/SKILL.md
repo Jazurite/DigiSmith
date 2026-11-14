@@ -271,7 +271,7 @@ report the rejection plainly, and investigate — do not force-push
 automatically. Force-push only on your human partner's explicit request
 (see "The push was rejected — force-push will fix it" below).
 
-Send the Steward the merge (DGS-551). `<merge-commit-sha>` is `git rev-parse refs/digismith/post-finish/<feature-branch>/head`. Same key rule as the start block. Sign-off Auto goes to done with its due date, Sign-off Jack goes to acceptance, an unmarked ticket records the merge:
+Send the Steward the merge (DGS-551). `<merge-commit-sha>` is `git rev-parse refs/digismith/post-finish/<feature-branch>/head`. Read `<pre-merge-sha>` now too: `git rev-parse refs/digismith/post-finish/<feature-branch>/base`. Keep both values: the cleanup (Step 6) deletes the pins, and the merge comment below needs them. Same key rule as the start block. Sign-off Auto goes to done with its due date, Sign-off Jack goes to acceptance, an unmarked ticket records the merge:
 
 ```bash
 dg steward event merged --ticket <Key> --hook --by finishing --sha <merge-commit-sha> || true
@@ -316,6 +316,14 @@ dg clickup attach-record --task <Key> --file <board folder>/report.html || true
 The command prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. Read the printed line and go on.
 
 Same key rule as above. When the command prints a line that starts with `warn:`, append `Attach record: failed (<that line>)` to the ledger when one exists, and go on. If the classifier blocks the command, tell your conductor; the conductor attaches the file. Status moves follow SOP DGS-731.
+
+Then post the merge comment (DGS-178): one short progress comment on the ClickUp ticket, in a fixed shape the command renders (what merged, tests, decisions, next, split off, a pointer to the attached `report.html`). Same key rule as above; a Jira key or no key: skip silently. Pass four short plain-text fields: `--tests` the one-line test result, `--decisions` up to 3 one-line decisions from the spec that a reader would not assume from the ticket title (one per line), `--next` what is next (`none` when nothing), `--split-off` the tickets split off (`none` when nothing). Add `--part "Part 2 of 3"` only when the plan says this ticket merges in parts.
+
+```bash
+dg clickup merge-comment --task <Key> --base <pre-merge-sha> --head <merge-commit-sha> --board-folder <board folder> --tests "<result>" --decisions "<decision lines>" --next "<next>" --split-off "<tickets or none>" --yes || true
+```
+
+The command skips a head it already posted, so a re-run adds nothing. It prints its own line on a refusal or an error; `|| true` keeps a non-zero exit from blocking. When the command prints a line that starts with `warn:`, append `Merge comment: failed (<that line>)` to the ledger when one exists, and go on. A failed post never blocks finishing. No status change, no file, no token number goes into this comment. If the classifier blocks the command, tell your conductor; the conductor posts it.
 
 When the ticket's `report.html` already exists in its board folder (`.digismith/board/<Key>—*/report.html`), send `documented`. A refusal from any status but done is normal (a Sign-off Jack ticket waits in acceptance; the Maestro sends it after the acceptance):
 
