@@ -117,6 +117,7 @@ describe("buildGuideIndex", () => {
     const m = /^\((\d+) more: dg guide list\)$/.exec(lines[lines.length - 1]!)!;
     const listed = lines.slice(1, -1);
     expect(m).not.toBeNull();
+    expect(listed.length).toBeGreaterThan(0);
     expect(listed.length + Number(m[1])).toBe(150);
     listed.forEach((l, i) => expect(l.startsWith(`a-rather-long-guide-slug-that-cannot-fit-${i}`)).toBe(true));
     expect(bytes(block)).toBeLessThanOrEqual(3000);
