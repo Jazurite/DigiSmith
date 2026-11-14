@@ -145,4 +145,4 @@ Whole-branch review (Claude), fix verified findings, merge locally with post-fin
 
 ## Notes
 
-- Task 0 probe result (list call with `include_markdown_description`): _fill in during the build_.
+- Task 0 probe result (list call with `include_markdown_description`): YES (2026-11-14, read-only probe): `getListTasks(F.9, {params:{include_closed,subtasks,include_markdown_description:true}})` returns `markdown_description` on every task (38 tasks, DGS-758 checked). Task 4 uses it and makes no per-task fetch on the happy path; the per-task fetch (`getTaskByRef(ref, {include_markdown_description:true})`) stays as the fallback when a task lacks `markdown_description`. `getAllListTasks` does not pass the flag, so refresh calls `getListTasks` with it.
