@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -6,6 +6,8 @@ import { runEvent, rebuild, assertUsage, UsageError, todayUtc7, type EventDeps }
 import { readState, writeState } from "./state.ts";
 import { FakeTracker, snapshot } from "./fake-tracker.test-util.ts";
 import type { EventInput } from "./types.ts";
+import { ClickUpTracker } from "./clickup-tracker.ts";
+import type { ClickUpClient } from "@digismith/clickup-client";
 
 let dir: string;
 beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), "stev-")); });
@@ -571,5 +573,42 @@ describe("an OCL key (OCL-105)", () => {
     expect(o.t.ticket.status).toBe("done");
     expect(fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()).toEqual(["DGS-105.json", "OCL-105.json"]);
     expect(readState(dir, "OCL-105")!.log.map((e) => e.outcome)).toEqual(chain.map(() => "applied"));
+  });
+  it("started from claimed (the status a scan claim leaves) moves OCL-105 to in progress", async () => {
+    const t = new FakeTracker(snapshot("claimed", { key: "OCL-105" }));
+    const r = await runEvent(deps(t), "OCL-105", { event: "started", by: "worker" });
+    expect(r.warn).toEqual([]);
+    expect(r.out.join("\n")).toContain("claimed -> in progress");
+    expect(t.calls.filter((c) => c.startsWith("status:"))).toEqual(["status:in progress"]);
+    expect(t.ticket.status).toBe("in progress");
+    expect(readState(dir, "OCL-105")!.log.at(-1)).toMatchObject({ event: "started", outcome: "applied" });
+  });
+  it("started from to do (rules accept both to do and claimed) moves OCL-105 to in progress", async () => {
+    const t = new FakeTracker(snapshot("to do", { key: "OCL-105" }));
+    const r = await runEvent(deps(t), "OCL-105", { event: "started", by: "worker" });
+    expect(r.warn).toEqual([]);
+    expect(r.out.join("\n")).toContain("to do -> in progress");
+    expect(t.calls.filter((c) => c.startsWith("status:"))).toEqual(["status:in progress"]);
+    expect(t.ticket.status).toBe("in progress");
+  });
+  it("the real ClickUpTracker over S1+S2 writes in progress to the OCL task id, reading the key with no space id", async () => {
+    const task = { id: "o1", custom_id: "OCL-105", name: "n", url: "u", status: { status: "claimed" }, start_date: null as string | null, due_date: null, list: { id: "L2", name: "L" }, custom_fields: [] };
+    const client = {
+      getTaskByRef: vi.fn(async () => ({ ...task, status: { ...task.status } })),
+      getList: vi.fn(async () => ({ id: "L2", name: "L", statuses: ["to do", "claimed", "in progress", "review"].map((status) => ({ status })) })),
+      updateTask: vi.fn(async (_id: string, body: { status?: string; start_date?: number }) => {
+        if (body.status) task.status = { status: body.status };
+        if (body.start_date !== undefined) task.start_date = String(body.start_date);
+        return {};
+      }),
+      addTaskComment: vi.fn(async () => ({})),
+    } as unknown as ClickUpClient;
+    const r = await runEvent(deps(new ClickUpTracker(client, ["S1", "S2"])), "OCL-105", { event: "started", by: "worker" });
+    expect(r.warn).toEqual([]);
+    expect(r.out.join("\n")).toContain("claimed -> in progress");
+    expect(client.updateTask).toHaveBeenCalledWith("o1", { status: "in progress" });
+    expect(client.getTaskByRef).toHaveBeenCalledWith("OCL-105");
+    for (const call of (client.getTaskByRef as ReturnType<typeof vi.fn>).mock.calls) expect(call).toEqual(["OCL-105"]);
+    expect(task.status.status).toBe("in progress");
   });
 });

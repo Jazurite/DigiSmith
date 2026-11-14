@@ -831,6 +831,7 @@ describe("runScan: an OCL ticket end to end (OCL-105)", () => {
     const r = await runScan(mk());
     expect(r).toMatchObject({ outcome: "claimed", claimed: "OCL-106", candidates: 1 });
     expect(tracker.tasks.get("t1")?.status).toBe("claimed");
+    expect(tracker.calls.filter((c) => c.startsWith("setStatus "))).toEqual(["setStatus t1 claimed"]);
     const lock = readLock(dir);
     expect(lock?.ticket).toBe("OCL-106");
     const file = join(ordersDir, "order-ao-2026-10-21-0000-OCL-106.md");
@@ -843,6 +844,8 @@ describe("runScan: an OCL ticket end to end (OCL-105)", () => {
   it("one scan over the two-space tracker claims an OCL ticket that sits only in the second space", async () => {
     const state = { status: "to do" };
     const updates: string[] = [];
+    const found: Record<string, number> = { S1: 0, S2: 0 };
+    const updateBodies: Array<[string, { status?: string }]> = [];
     const ticket = () => ({
       id: "o1", custom_id: "OCL-106", custom_item_id: 0, name: "Guardrails pin", text_content: "", description: "",
       status: { status: state.status, type: "custom" }, date_created: "1000", due_date: null, priority: null,
@@ -852,10 +855,12 @@ describe("runScan: an OCL ticket end to end (OCL-105)", () => {
     });
     const client = {
       async searchTeamTasks(space: string, _p: number, status?: string) {
-        return space === "S2" && status?.toLowerCase() === state.status ? [ticket()] : [];
+        const hits = space === "S2" && status?.toLowerCase() === state.status ? [ticket()] : [];
+        found[space] = (found[space] ?? 0) + hits.length;
+        return hits;
       },
       async getTaskByRef(ref: string) { if (ref !== "o1" && ref !== "OCL-106") throw new Error(`no ${ref}`); return ticket(); },
-      async updateTask(id: string, body: { status?: string }) { updates.push(`${id} ${body.status}`); if (body.status) state.status = body.status; return ticket(); },
+      async updateTask(id: string, body: { status?: string }) { updates.push(`${id} ${body.status}`); updateBodies.push([id, body]); if (body.status) state.status = body.status; return ticket(); },
       async addTaskComment() { return { id: 1 }; },
       async getListStatuses() { return ["to do", "claimed"]; },
       async getAllListTasks() { return []; },
@@ -866,5 +871,8 @@ describe("runScan: an OCL ticket end to end (OCL-105)", () => {
     expect(r).toMatchObject({ outcome: "claimed", claimed: "OCL-106", candidates: 1 });
     expect(readLock(dir)?.ticket).toBe("OCL-106");
     expect(updates).toEqual(["o1 claimed"]);
+    expect(updateBodies).toEqual([["o1", { status: "claimed" }]]);   // STARTER in scan.ts, through the tracker built for S1+S2
+    expect(found.S2).toBeGreaterThan(0);   // the ticket lives only in S2
+    expect(found.S1).toBe(0);
   });
 });
