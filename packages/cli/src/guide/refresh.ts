@@ -71,6 +71,9 @@ export async function refreshGuides(client: RefreshClient, opts: RefreshOptions)
         if (prev !== undefined && (prev.slug === s.slug || !newSlugs.has(prev.slug))) guides.push({ ...prev, name: s.name, kind: s.kind });
       }
     }
+    // a kept old entry carries its old slug: sort again so the file is guides first, then manuals, each by slug
+    const rank = (k: GuideIndexEntry["kind"]): number => (k === "guide" ? 0 : 1);
+    guides.sort((a, b) => rank(a.kind) - rank(b.kind) || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
     const index: GuideIndex = { version: 1, fetched_at: new Date(now).toISOString(), list_id: opts.listId, guides };
     writeIndexAtomic(index, env);
     return { changed, failed: failures.length, total: guides.length, failures };

@@ -150,6 +150,17 @@ describe("refreshGuides", () => {
     expect(readIndex(env)!.guides.map((g) => [g.key, g.slug])).toEqual([["DGS-770", "close-a-ticket"]]);
   });
 
+  it("5e: a failed guide whose slug moved keeps its old slug but the index stays guides first, then by slug", async () => {
+    const pagesAll = { "DGS-758": CLOSE, "DGS-759": EPIC, "DGS-760": EPIC };
+    const first = [task("DGS-758", "Guide: Zeta", ADOPTED), task("DGS-759", "Guide: Mid", ADOPTED), task("DGS-760", "Manual: Beta", ADOPTED)];
+    await run(fake(first, { pages: pagesAll }).client);
+    expect(readIndex(env)!.guides.map((g) => g.slug)).toEqual(["mid", "zeta", "manual-beta"]);
+    const second = [task("DGS-758", "Guide: Alpha", ADOPTED, "300"), task("DGS-759", "Guide: Mid", ADOPTED), task("DGS-760", "Manual: Beta", ADOPTED)];
+    const res = await run(fake(second, { failKey: "DGS-758", pages: pagesAll }).client);
+    expect(res).toMatchObject({ failed: 1 });
+    expect(readIndex(env)!.guides.map((g) => g.slug)).toEqual(["mid", "zeta", "manual-beta"]);
+  });
+
   it("6: a fresh lock skips everything; the lock is released after success", async () => {
     expect(takeLock(NOW, env)).toBe(true);
     const f = fake(base());
