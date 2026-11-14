@@ -242,7 +242,7 @@ describe("process end after the limit", () => {
     expect(exit).toHaveBeenCalledWith(0);
   });
 
-  it("show: a hung call with no cached page exits 1; no exit without a timeout", async () => {
+  it("show: a hung call with no cached page exits 1; a fast call never calls exit", async () => {
     vi.useFakeTimers();
     seed([entry("a", "DGS-1")]);
     const exit = vi.fn();
@@ -254,8 +254,8 @@ describe("process end after the limit", () => {
     expect(exit).toHaveBeenCalledWith(1);
     const ok = fake(tasks());
     const exit2 = vi.fn();
-    await handlerOf<RArgv>(createGuideRefreshCommand(() => ok.client))({});
-    await vi.advanceTimersByTimeAsync(1_000);
+    await handlerOf<ShowArgv>(createGuideShowCommand(() => ok.client, exit2))({ name: "a" });
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(exit2).not.toHaveBeenCalled();
   });
 });
