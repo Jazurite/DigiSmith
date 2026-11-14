@@ -77,20 +77,22 @@ export function assignSlugs<T extends GuideTask>(tasks: T[]): SluggedGuide<T>[] 
 
 /** Unescape every line outside a fenced code block. */
 export function cleanPage(markdown: string): string {
-  let fenced = false;
+  let marker: string | undefined;
   return markdown
     .split("\n")
     .map((line) => {
-      if (/^\s*(```|~~~)/.test(line)) {
-        fenced = !fenced;
+      const m = /^\s*(```|~~~)/.exec(line);
+      if (m !== null) {
+        if (marker === undefined) marker = m[1];
+        else if (marker === m[1]) marker = undefined;
         return line;
       }
-      return fenced ? line : unescapeMd(line);
+      return marker !== undefined ? line : unescapeMd(line);
     })
     .join("\n");
 }
 
-const HEADING = /^#{1,6}\s*(.*?)\s*$/;
+const HEADING = /^#{1,6}(?:\s+(.*?))?\s*$/;
 
 function headingText(line: string): string | undefined {
   const m = HEADING.exec(line);
@@ -110,20 +112,26 @@ function cleanItem(text: string): string {
 function sectionItems(lines: string[], title: string): string[] {
   const start = lines.findIndex((l) => headingText(l) === title);
   if (start < 0) return [];
-  const items: string[] = [];
+  const raw: string[] = [];
+  let open = false; // the previous line was an item line, so a plain line continues it
   for (const line of lines.slice(start + 1)) {
     if (HEADING.test(line)) break;
     const trimmed = line.trim();
-    if (trimmed === "" || trimmed.startsWith("|")) continue;
-    const item = cleanItem(trimmed.replace(/^(?:[*-]|\d+\.)\s+/, ""));
-    if (item !== "") items.push(item);
+    if (trimmed === "" || trimmed.startsWith("|")) {
+      open = false;
+      continue;
+    }
+    const bullet = /^(?:[*-]|\d+\.)\s+/.exec(trimmed);
+    if (bullet === null && open) raw[raw.length - 1] += ` ${trimmed}`;
+    else raw.push(bullet === null ? trimmed : trimmed.slice(bullet[0].length));
+    open = true;
   }
-  return items;
+  return raw.map(cleanItem).filter((item) => item !== "");
 }
 
 /** D2: the "When to use it" bullets joined with " / "; falls back to the first sentence of "What it is", then "". */
 export function whenToUse(markdown: string): string {
-  const lines = unescapeMd(markdown).split(/\r?\n/);
+  const lines = cleanPage(markdown).split(/\r?\n/);
   const when = sectionItems(lines, "when to use it");
   if (when.length > 0) return when.join(" / ");
   const what = sectionItems(lines, "what it is").join(" ");

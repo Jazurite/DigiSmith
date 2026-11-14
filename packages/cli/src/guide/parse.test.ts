@@ -102,3 +102,23 @@ describe("cleanPage", () => {
     expect(cleanPage(md)).toBe("### 1. A\n\n```\nkeep \\. this\n```\n\nafter ~ it\n");
   });
 });
+
+describe("parser edge cases", () => {
+  it("F1: a wrapped line continues the previous item", () => {
+    const md = "## When to use it\n\n*   First item that\n    wraps here.\n*   Second.\n\nSeparate paragraph.\n";
+    expect(whenToUse(md)).toBe("First item that wraps here. / Second. / Separate paragraph.");
+  });
+  it("F2: a hash without a space is not a heading", () => {
+    const md = "## When to use it\n\n*   Item one.\n#1 priority tickets\n#tag\n*   Item two.\n";
+    expect(whenToUse(md)).toBe("Item one. #1 priority tickets #tag / Item two.");
+  });
+  it("F3: a fence closes only on its own marker", () => {
+    const md = "```\n~~~\nkeep \\. one\n```\nafter \\~ it\n";
+    expect(cleanPage(md)).toBe("```\n~~~\nkeep \\. one\n```\nafter ~ it\n");
+  });
+  it("F3: whenToUse does not unescape code fences", () => {
+    const md = "## When to use it\n\n```\nrun a\\.b\n```\n";
+    expect(whenToUse(md)).toContain("a\\.b");
+  });
+});
+
