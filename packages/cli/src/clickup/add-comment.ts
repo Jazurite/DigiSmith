@@ -42,8 +42,10 @@ const label = (t: { id: string; custom_id?: string | null; name?: string }) => `
 
 /** An error after the POST succeeded: carries the id of the comment that was sent. */
 export class PostedCommentError extends Error {
-  constructor(message: string, readonly commentId: string | number) {
+  readonly commentId: string | number;
+  constructor(message: string, commentId: string | number) {
     super(message);
+    this.commentId = commentId;
     this.name = "PostedCommentError";
   }
 }
