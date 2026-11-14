@@ -18,6 +18,8 @@ beforeEach(() => {
   process.env.DIGISMITH_DEPOT_DIR = tmp;
   delete process.env.DIGISMITH_RUN_ID;
   process.exitCode = undefined;
+  // dg run start reads the worker limits from process.cwd()'s config: tmp holds no .digismith, so the real checkout's limits never leak in
+  vi.spyOn(process, "cwd").mockReturnValue(tmp);
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -43,6 +45,7 @@ async function capture(parse: (args: string[]) => Promise<unknown>, args: string
   const status = Number(process.exitCode ?? 0);
   process.exitCode = undefined;
   vi.restoreAllMocks();
+  vi.spyOn(process, "cwd").mockReturnValue(tmp); // restoreAllMocks dropped the pin: set it again for the next call in this test
   return { status, stdout: out.join("\n"), stderr: err.join("\n") };
 }
 

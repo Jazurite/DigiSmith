@@ -17,6 +17,8 @@ beforeEach(() => {
   process.env.DIGISMITH_DEPOT_DIR = tmp;
   delete process.env.DIGISMITH_RUN_ID;
   process.exitCode = undefined;
+  // dg run start reads the worker limits from process.cwd()'s config: tmp holds no .digismith, so the real checkout's limits never leak in
+  vi.spyOn(process, "cwd").mockReturnValue(tmp);
 });
 afterEach(() => {
   vi.restoreAllMocks();
