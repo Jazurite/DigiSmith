@@ -76,6 +76,15 @@ describe("taskIdForKey (S12)", () => {
     expect(taskIdForKey("../x", root)).toBeUndefined();
     fs.rmSync(root, { recursive: true, force: true });
   });
+  it("reads an OCL key's board folder, and still refuses an unknown prefix", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "ocl105-board-"));
+    const dir = path.join(root, ".digismith", "board", "OCL-105—x");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "ticket.md"), "Ticket OCL-105 (task `14zcebrypxm`)\n");
+    expect(taskIdForKey("OCL-105", root)).toBe("14zcebrypxm");
+    expect(taskIdForKey("ABC-1", root)).toBeUndefined();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
 });
 
 describe("parseArgs path safety (review)", () => {

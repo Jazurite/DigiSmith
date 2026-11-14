@@ -137,6 +137,9 @@ describe("markers", () => {
     expect(m.text).toBe("Do X");
     expect(stripMarkers("Do X [resolves: merged DGS-1]")).toBe("Do X");
   });
+  it("reads an OCL key in ticket and merged markers", () => {
+    expect(parseMarkers("[resolves: ticket OCL-9]\n[resolves: merged OCL-12]").resolvers).toEqual([{ kind: "ticket", key: "OCL-9" }, { kind: "merged", key: "OCL-12" }]);
+  });
   it("refuses absolute and .. paths and unknown kinds", () => {
     expect(parseMarkers("x [resolves: gone /etc/passwd]").malformed).toHaveLength(1);
     expect(parseMarkers("x [resolves: exists ../a]").malformed).toHaveLength(1);
@@ -204,6 +207,17 @@ describe("refreshState: kept parts and markers", () => {
     fs.writeFileSync(note, fs.readFileSync(note, "utf-8").replace("- Open thing | why", "- Open thing [resolves: exists stray.txt] | why"));
     const r = await refreshState(opts(), deps(runner({ git })));
     expect(r.state.parked.map((p) => p.what)).toEqual([]);
+  });
+  it("counts an ocl-N commit subject as merged OCL-N", async () => {
+    const git = { code: 0, stdout: `${GIT}ccc\t2026-10-13T18:00:00+07:00\tfeat(scan): ocl-9 reads both spaces\n` };
+    fs.writeFileSync(note, fs.readFileSync(note, "utf-8").replace("[resolves: merged DGS-430]", "[resolves: merged OCL-9]"));
+    const r = await refreshState(opts(), deps(runner({ git })));
+    expect(r.state.parked.map((p) => p.what)).toEqual(["Open thing"]);
+  });
+  it("lists a worker with an OCL key from its terminal title", async () => {
+    const agents = [...AGENTS, agent("ocl-105", "w2", "working", "OCL-105 factory reads both spaces")];
+    const r = await refreshState(opts({ workers: ["dgs-462", "dgs-438", "ocl-105"] }), deps(runner({ agents })));
+    expect(r.state.running.find((x) => x.worker === "ocl-105")!.key).toBe("OCL-105");
   });
   it("needs every marker of an item to hold", async () => {
     fs.writeFileSync(note, fs.readFileSync(note, "utf-8").replace("2. Do Y", "2. Do Y [resolves: gone stray.txt] [resolves: ticket DGS-9]"));

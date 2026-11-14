@@ -1,12 +1,13 @@
 // [resolves: ...] markers (DGS-462): the only way an item drops out of the conductor's state block.
 import * as path from "node:path";
-
+import { KEY_PREFIXES } from "../../packages/cli/src/clickup/spaces.ts";
 
 export type Resolver =
   | { kind: "ticket"; key: string }
   | { kind: "merged"; key: string }
   | { kind: "gone" | "exists"; path: string };
 
+const TICKET_MARKER = new RegExp(`^(ticket|merged)\\s+((?:${KEY_PREFIXES})-\\d+)$`);
 const MARKER = /\s*\[resolves:\s*([^\]]*)\]/g;
 
 export interface ParsedMarkers {
@@ -21,7 +22,7 @@ export function parseMarkers(raw: string): ParsedMarkers {
   const malformed: string[] = [];
   for (const m of raw.matchAll(MARKER)) {
     const body = m[1].trim();
-    const t = /^(ticket|merged)\s+(DGS-\d+)$/.exec(body);
+    const t = TICKET_MARKER.exec(body);
     const p = /^(gone|exists)\s+(\S.*)$/.exec(body);
     if (t) resolvers.push({ kind: t[1] as "ticket" | "merged", key: t[2] });
     else if (p && isRepoRelative(p[2].trim())) resolvers.push({ kind: p[1] as "gone" | "exists", path: p[2].trim() });

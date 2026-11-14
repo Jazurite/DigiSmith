@@ -8,6 +8,10 @@ import type { Runner } from "./runner.ts";
 import { floorWorkspaces, resolveConductor } from "./registry.ts";
 import { parseRunsOn } from "../session-cards/runs-on.ts";
 import { parseMarkers, stripMarkers } from "./markers.ts";
+import { KEY_PREFIXES } from "../../packages/cli/src/clickup/spaces.ts";
+
+const LOG_KEY = new RegExp(`\\b(${KEY_PREFIXES})-(\\d+)`, "gi");
+const TITLE_KEY = new RegExp(`(?:${KEY_PREFIXES})-\\d+`, "i");
 
 /** True if the path (relative to the repo) exists; a path whose real location leaves the repo throws. */
 function repoPathExists(repoDir: string, rel: string): boolean {
@@ -122,7 +126,7 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     for (const row of r.stdout.split("\n")) {
       const [h, , subj = ""] = row.split("\t");
       if (h && !newestHash && !/^chore: bump plugin version/.test(subj)) newestHash = h.slice(0, 7);
-      for (const m of row.split("\t").slice(2).join("\t").matchAll(/\bdgs-(\d+)/gi)) merged.add(`DGS-${m[1]}`);
+      for (const m of row.split("\t").slice(2).join("\t").matchAll(LOG_KEY)) merged.add(`${m[1].toUpperCase()}-${m[2]}`);
     }
   } catch (e) {
     gitOk = false;
@@ -187,13 +191,13 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
         continue;
       }
       seen.add(name.toLowerCase());
-      const key = /DGS-\d+/i.exec(a.terminal_title_stripped ?? "")?.[0].toUpperCase() ?? /dgs-\d+/i.exec(name)?.[0].toUpperCase() ?? "-";
+      const key = TITLE_KEY.exec(a.terminal_title_stripped ?? "")?.[0].toUpperCase() ?? TITLE_KEY.exec(name)?.[0].toUpperCase() ?? "-";
       const before = old.running.find((x) => x.worker.toLowerCase() === name.toLowerCase());
       next.push({ worker: name, key, stage: a.agent_status ?? "unknown", since: cardTime(card?.started) ?? before?.since ?? iso7(now) });
     }
     for (const c of workerCards) {
       if (!ownsCard(c) || [c.name, c.id].some((x) => x && seen.has(String(x).toLowerCase()))) continue;
-      next.push({ worker: c.name ?? c.id ?? "?", key: /DGS-\d+/i.exec(`${c.name} ${c.domain}`)?.[0].toUpperCase() ?? "-", stage: "card open, no pane", since: cardTime(c.started) ?? iso7(now) });
+      next.push({ worker: c.name ?? c.id ?? "?", key: TITLE_KEY.exec(`${c.name} ${c.domain}`)?.[0].toUpperCase() ?? "-", stage: "card open, no pane", since: cardTime(c.started) ?? iso7(now) });
     }
     running = next;
   } catch (e) {
