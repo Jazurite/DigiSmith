@@ -30,9 +30,10 @@ const task = (key: string, name: string, text: string, updated = "100", md?: str
 });
 
 const ADOPTED = "Adopted by Jack on 2026-11-14.";
-const pages: Record<string, string> = { "DGS-758": CLOSE, "DGS-759": EPIC };
+const basePages = (): Record<string, string> => ({ "DGS-758": CLOSE, "DGS-759": EPIC });
 
-function fake(tasks: T[], opts: { failKey?: string; listFails?: boolean } = {}) {
+function fake(tasks: T[], opts: { failKey?: string; listFails?: boolean; pages?: Record<string, string> } = {}) {
+  const pages = opts.pages ?? basePages();
   const getListTasks = vi.fn(async () => {
     if (opts.listFails) throw new Error("list down");
     return tasks;
@@ -65,7 +66,7 @@ describe("refreshGuides", () => {
     const res = await run(f.client);
     expect(f.getTaskByRef.mock.calls.map((c) => c[0]).sort()).toEqual(["DGS-758", "DGS-759"]);
     expect(f.getTaskByRef).toHaveBeenCalledWith("DGS-758", { include_markdown_description: true });
-    expect(res).toEqual({ changed: 2, failed: 0, total: 2 });
+    expect(res).toEqual({ changed: 2, failed: 0, total: 2, failures: [] });
     const idx = readIndex(env)!;
     expect(idx.list_id).toBe("L1");
     expect(idx.guides.map((g) => g.key).sort()).toEqual(["DGS-758", "DGS-759"]);
@@ -77,8 +78,7 @@ describe("refreshGuides", () => {
   });
 
   it("2: a task that passes text_content but fails the Markdown check is dropped", async () => {
-    pages["DGS-762"] = "Not adopted at all.\n";
-    const f = fake([...base(), task("DGS-762", "Guide: Liar", ADOPTED)]);
+    const f = fake([...base(), task("DGS-762", "Guide: Liar", ADOPTED)], { pages: { ...basePages(), "DGS-762": "Not adopted at all.\n" } });
     const res = await run(f.client);
     expect(res.total).toBe(2);
     expect(readIndex(env)!.guides.map((g) => g.key)).not.toContain("DGS-762");
@@ -89,7 +89,7 @@ describe("refreshGuides", () => {
     const f = fake(base());
     const res = await run(f.client);
     expect(f.getTaskByRef).not.toHaveBeenCalled();
-    expect(res).toEqual({ changed: 0, failed: 0, total: 2 });
+    expect(res).toEqual({ changed: 0, failed: 0, total: 2, failures: [] });
     // a changed date_updated fetches again
     const g = fake(base().map((t) => (t.custom_id === "DGS-758" ? { ...t, date_updated: "200" } : t)));
     const res2 = await run(g.client);
@@ -118,7 +118,7 @@ describe("refreshGuides", () => {
     await run(fake(base()).client);
     const bumped = base().map((t) => ({ ...t, date_updated: "300" }));
     const res = await run(fake(bumped, { failKey: "DGS-758" }).client);
-    expect(res).toEqual({ changed: 1, failed: 1, total: 2 });
+    expect(res).toEqual({ changed: 1, failed: 1, total: 2, failures: [{ key: "DGS-758", message: "boom" }] });
     const idx = readIndex(env)!;
     expect(idx.guides.find((g) => g.key === "DGS-758")!.updated).toBe("100");
     expect(idx.guides.find((g) => g.key === "DGS-759")!.updated).toBe("300");
@@ -126,9 +126,18 @@ describe("refreshGuides", () => {
 
   it("5b: a failing fetch with no old entry is omitted; a failing list call rejects", async () => {
     const res = await run(fake(base(), { failKey: "DGS-758" }).client);
-    expect(res).toEqual({ changed: 1, failed: 1, total: 1 });
+    expect(res).toEqual({ changed: 1, failed: 1, total: 1, failures: [{ key: "DGS-758", message: "boom" }] });
     await expect(run(fake(base(), { listFails: true }).client)).rejects.toThrow("list down");
     expect(takeLock(NOW, env)).toBe(true);
+  });
+
+  it("5c: a failed guide whose slug moved gets the new slug, so slugs stay unique", async () => {
+    await run(fake([task("DGS-758", "Guide: Close a ticket", ADOPTED)]).client);
+    const tasks = [task("DGS-758", "Guide: Close a ticket", ADOPTED, "300"), task("DGS-770", "Guide: Close a ticket", ADOPTED, "300")];
+    const res = await run(fake(tasks, { failKey: "DGS-758", pages: { "DGS-770": CLOSE } }).client);
+    expect(res).toMatchObject({ failed: 1, changed: 1, total: 2 });
+    const slugs = readIndex(env)!.guides.map((g) => g.slug).sort();
+    expect(slugs).toEqual(["close-a-ticket-dgs-758", "close-a-ticket-dgs-770"]);
   });
 
   it("6: a fresh lock skips everything; the lock is released after success", async () => {
@@ -146,7 +155,7 @@ describe("refreshGuides", () => {
     const f = fake(tasks);
     const res = await run(f.client);
     expect(f.getTaskByRef).not.toHaveBeenCalled();
-    expect(res).toEqual({ changed: 1, failed: 0, total: 1 });
+    expect(res).toEqual({ changed: 1, failed: 0, total: 1, failures: [] });
     expect(readPage("close-a-ticket", env)).toContain("Closing a ticket moves it");
   });
 });

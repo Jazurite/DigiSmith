@@ -21,7 +21,7 @@ export interface RefreshOptions {
   listId: string;
 }
 
-export type RefreshResult = { skipped: "locked" } | { changed: number; failed: number; total: number };
+export type RefreshResult = { skipped: "locked" } | { changed: number; failed: number; total: number; failures: { key: string; message: string }[] };
 
 type ListTask = Awaited<ReturnType<RefreshClient["getListTasks"]>>[number] & { markdown_description?: string };
 interface Candidate {
@@ -48,7 +48,7 @@ export async function refreshGuides(client: RefreshClient, opts: RefreshOptions)
     const old = new Map((readIndex(env)?.guides ?? []).map((g) => [g.key, g]));
     const guides: GuideIndexEntry[] = [];
     let changed = 0;
-    let failed = 0;
+    const failures: { key: string; message: string }[] = [];
     for (const s of assignSlugs(candidates)) {
       const task = s.task.task;
       const prev = old.get(s.key);
@@ -63,14 +63,14 @@ export async function refreshGuides(client: RefreshClient, opts: RefreshOptions)
         writePageAtomic(s.slug, cleanPage(markdown), env);
         guides.push({ slug: s.slug, key: s.key, id: task.id, kind: s.kind, name: s.name, when: whenToUse(markdown), updated: task.date_updated });
         changed++;
-      } catch {
-        failed++;
-        if (prev !== undefined) guides.push(prev);
+      } catch (err) {
+        failures.push({ key: s.key, message: err instanceof Error ? err.message : String(err) });
+        if (prev !== undefined) guides.push({ ...prev, slug: s.slug, name: s.name, kind: s.kind });
       }
     }
     const index: GuideIndex = { version: 1, fetched_at: new Date(now).toISOString(), list_id: opts.listId, guides };
     writeIndexAtomic(index, env);
-    return { changed, failed, total: guides.length };
+    return { changed, failed: failures.length, total: guides.length, failures };
   } finally {
     releaseLock(env);
   }
