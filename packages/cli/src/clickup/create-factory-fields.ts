@@ -72,6 +72,7 @@ export function createCreateFactoryFieldsCommand(
           try {
             await client.setFieldLocations(created.id, location);
           } catch (e) {
+            console.error(`created without location: ${created.id} ${JSON.stringify(created.name)}`);
             throw new Error(`field ${created.id} was created, but setting its locations failed: ${(e as Error).message}. Run get-field ${created.id} and set the locations again; do not create the field twice.`);
           }
           const back = await client.getFieldLocations(created.id);

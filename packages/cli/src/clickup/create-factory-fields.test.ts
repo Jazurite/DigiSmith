@@ -95,8 +95,17 @@ describe("create-factory-fields", () => {
     const f = front();
     f.setFieldLocations.mockRejectedValueOnce(new Error("boom"));
     await run(read([]), f, { space: OCL, yes: true });
-    expect(String(err.mock.calls[0][0])).toContain("new-1 was created, but setting its locations failed: boom");
+    expect(err.mock.calls.map((c) => String(c[0])).join("\n")).toContain("new-1 was created, but setting its locations failed: boom");
     expect(f.createField).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+  });
+  it("a failed location call prints the created field's id and name on stderr", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const f = front();
+    f.setFieldLocations.mockRejectedValueOnce(new Error("boom"));
+    await run(read([]), f, { space: OCL, yes: true });
+    expect(err.mock.calls.map((c) => String(c[0]))).toContain('created without location: new-1 "Mode"');
     expect(process.exitCode).toBe(1);
   });
 });
