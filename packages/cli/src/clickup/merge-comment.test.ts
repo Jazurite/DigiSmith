@@ -129,6 +129,29 @@ describe("merge-comment command", () => {
     expect(process.exitCode).toBe(1);
     expect(readPosted("DGS-5")).toEqual([]);
   });
+  it("POST ok but read-back fails: records the head with the id, warn keeps its text, a rerun skips", async () => {
+    const c = mockClient();
+    (c.getTaskComments as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cmd = createMergeCommentCommand(() => c, () => repo);
+    await run(cmd, { ...argv(), yes: true });
+    expect(out(err)).toMatch(/^warn: merge-comment: sent \(comment 91\), but the read-back failed: boom/m);
+    expect(process.exitCode).toBe(1);
+    expect(readPosted("DGS-5")).toEqual([expect.objectContaining({ head, id: "91" })]);
+    process.exitCode = 0;
+    await run(cmd, { ...argv(), yes: true });
+    expect(out(log)).toContain("skipped: already posted");
+    expect(c.addTaskComment).toHaveBeenCalledTimes(1);
+  });
+  it("POST ok but read-back misses the comment: records the head with the id", async () => {
+    const c = mockClient();
+    (c.getTaskComments as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createMergeCommentCommand(() => c, () => repo), { ...argv(), yes: true });
+    expect(process.exitCode).toBe(1);
+    expect(readPosted("DGS-5")).toEqual([expect.objectContaining({ head, id: "91" })]);
+  });
   it("a bad sha prints a warn: line and exits 1", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await run(createMergeCommentCommand(() => mockClient(), () => repo), { ...argv(), base: "nope" });

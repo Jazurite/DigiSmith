@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createClient } from "./lib.ts";
-import { postComment } from "./add-comment.ts";
+import { postComment, PostedCommentError } from "./add-comment.ts";
 import { renderMergeComment, type CommitLine } from "./merge-comment-render.ts";
 import { readPosted, recordPosted } from "../tokens/comments-store.ts";
 import { readAttached } from "../tokens/attachments-store.ts";
@@ -57,10 +57,12 @@ export function createMergeCommentCommand(clientFactory: () => ClickUpClient = c
         .option("yes", { type: "boolean", default: false, describe: "post the comment (without it, only print it)" }),
     handler: async (argv) => {
       process.exitCode = 0;
+      let gitHead = "";
       try {
         const key = String(argv.task ?? "").trim();
         if (!CLICKUP_KEY.test(key)) { console.log("not a ClickUp key, skipped"); return; }
         const g = gatherGit(repo(), String(argv.base ?? ""), String(argv.head ?? ""));
+        gitHead = g.head;
         const done = readPosted(key).find((r) => r.head === g.head);
         if (done) { console.log(`skipped: already posted for ${g.head.slice(0, 7)} (comment ${done.id})`); return; }
         const folder = argv.boardFolder ? String(argv.boardFolder) : "";
@@ -96,6 +98,14 @@ export function createMergeCommentCommand(clientFactory: () => ClickUpClient = c
           process.exitCode = 1;
         }
       } catch (err) {
+        if (err instanceof PostedCommentError) {
+          // The POST went through; record the head so a rerun does not post a copy.
+          try {
+            recordPosted(String(argv.task ?? "").trim(), { head: gitHead, id: String(err.commentId), posted_at: new Date().toISOString() });
+          } catch {
+            // a record failure must not hide the warn: line
+          }
+        }
         console.error(`warn: merge-comment: ${(err as Error).message}`);
         process.exitCode = 1;
       }

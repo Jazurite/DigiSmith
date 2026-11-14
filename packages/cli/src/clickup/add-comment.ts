@@ -40,6 +40,14 @@ export function parseCommentArgv(argv: CommentArgv): CommentRequest {
 
 const label = (t: { id: string; custom_id?: string | null; name?: string }) => `${t.custom_id ?? t.id} (${t.id}) "${t.name ?? ""}"`;
 
+/** An error after the POST succeeded: carries the id of the comment that was sent. */
+export class PostedCommentError extends Error {
+  constructor(message: string, readonly commentId: string | number) {
+    super(message);
+    this.name = "PostedCommentError";
+  }
+}
+
 /** Posts a comment, then reads the task's comments back to confirm it. Throws (never re-sends) when the read-back fails or misses. */
 export async function postComment(client: ClickUpClient, taskId: string, text: string): Promise<{ id: string | number }> {
   const created = await client.addTaskComment(taskId, text);
@@ -47,10 +55,10 @@ export async function postComment(client: ClickUpClient, taskId: string, text: s
   try {
     rows = await client.getTaskComments(taskId);
   } catch (err) {
-    throw new Error(`sent (comment ${created.id}), but the read-back failed: ${(err as Error).message}; do not send again, check it in ClickUp`);
+    throw new PostedCommentError(`sent (comment ${created.id}), but the read-back failed: ${(err as Error).message}; do not send again, check it in ClickUp`, created.id);
   }
   if (!rows.some((r) => String(r.id) === String(created.id))) {
-    throw new Error(`sent (comment ${created.id}), but read-back of ${taskId} does not show it; check it in ClickUp`);
+    throw new PostedCommentError(`sent (comment ${created.id}), but read-back of ${taskId} does not show it; check it in ClickUp`, created.id);
   }
   return created;
 }
