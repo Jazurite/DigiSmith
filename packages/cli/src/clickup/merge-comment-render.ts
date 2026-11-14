@@ -50,7 +50,7 @@ export function renderMergeComment(i: MergeCommentInput): string {
   if (i.commits.length > MAX_COMMITS) lines.push(`+${i.commits.length - MAX_COMMITS} more`);
   lines.push(`Tests: ${field(i.tests, "not reported")}`);
   const all = (i.decisions ?? "")
-    .split("\n")
+    .split(/\r?\n|\\n/)
     .map((l) => oneLine(l.replace(/^\s*[-*]\s+/, "")))
     .filter((l) => l !== "");
   const items = all.slice(0, MAX_DECISIONS);

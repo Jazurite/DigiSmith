@@ -77,6 +77,10 @@ describe("renderMergeComment", () => {
     const t = renderMergeComment({ ...base, decisions: "a\nb\nc\nd\ne" });
     expect(t).toContain(["Decisions:", "- a", "- b", "- c", "+2 more decisions", "Next: none"].join("\n"));
   });
+  it("splits decisions on a literal backslash-n as well as real newlines", () => {
+    const t = renderMergeComment({ ...base, decisions: "first\\nsecond" });
+    expect(t).toContain(["Decisions:", "- first", "- second", "Next: none"].join("\n"));
+  });
   it("keeps the single-decision label line when only one decision exists", () => {
     expect(renderMergeComment({ ...base, decisions: "only one" })).toContain("\nDecisions: only one\nNext: none\n");
   });
