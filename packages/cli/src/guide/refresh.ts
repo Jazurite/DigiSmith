@@ -49,7 +49,9 @@ export async function refreshGuides(client: RefreshClient, opts: RefreshOptions)
     const guides: GuideIndexEntry[] = [];
     let changed = 0;
     const failures: { key: string; message: string }[] = [];
-    for (const s of assignSlugs(candidates)) {
+    const slugged = assignSlugs(candidates);
+    const newSlugs = new Set(slugged.map((s) => s.slug));
+    for (const s of slugged) {
       const task = s.task.task;
       const prev = old.get(s.key);
       if (prev !== undefined && prev.slug === s.slug && prev.updated === task.date_updated && readPage(s.slug, env) !== undefined) {
@@ -65,7 +67,8 @@ export async function refreshGuides(client: RefreshClient, opts: RefreshOptions)
         changed++;
       } catch (err) {
         failures.push({ key: s.key, message: err instanceof Error ? err.message : String(err) });
-        if (prev !== undefined) guides.push({ ...prev, slug: s.slug, name: s.name, kind: s.kind });
+        // keep the old entry under its OLD slug: its page file is there. Omit it when another guide now owns that slug.
+        if (prev !== undefined && (prev.slug === s.slug || !newSlugs.has(prev.slug))) guides.push({ ...prev, name: s.name, kind: s.kind });
       }
     }
     const index: GuideIndex = { version: 1, fetched_at: new Date(now).toISOString(), list_id: opts.listId, guides };

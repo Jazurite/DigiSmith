@@ -131,13 +131,23 @@ describe("refreshGuides", () => {
     expect(takeLock(NOW, env)).toBe(true);
   });
 
-  it("5c: a failed guide whose slug moved gets the new slug, so slugs stay unique", async () => {
+  it("5c: a failed guide whose slug moved keeps its old slug (its page file is there); slugs stay unique", async () => {
     await run(fake([task("DGS-758", "Guide: Close a ticket", ADOPTED)]).client);
     const tasks = [task("DGS-758", "Guide: Close a ticket", ADOPTED, "300"), task("DGS-770", "Guide: Close a ticket", ADOPTED, "300")];
     const res = await run(fake(tasks, { failKey: "DGS-758", pages: { "DGS-770": CLOSE } }).client);
     expect(res).toMatchObject({ failed: 1, changed: 1, total: 2 });
-    const slugs = readIndex(env)!.guides.map((g) => g.slug).sort();
-    expect(slugs).toEqual(["close-a-ticket-dgs-758", "close-a-ticket-dgs-770"]);
+    const guides = readIndex(env)!.guides;
+    expect(guides.map((g) => g.slug).sort()).toEqual(["close-a-ticket", "close-a-ticket-dgs-770"]);
+    const kept = guides.find((g) => g.key === "DGS-758")!;
+    expect(readPage(kept.slug, env)).toBeDefined();
+  });
+
+  it("5d: a failed guide whose old slug is now taken by another guide is omitted", async () => {
+    await run(fake([task("DGS-758", "Guide: Close a ticket", ADOPTED)]).client);
+    const tasks = [task("DGS-758", "Guide: Other name", ADOPTED, "300"), task("DGS-770", "Guide: Close a ticket", ADOPTED, "300")];
+    const res = await run(fake(tasks, { failKey: "DGS-758", pages: { "DGS-770": CLOSE } }).client);
+    expect(res).toMatchObject({ failed: 1, changed: 1, total: 1 });
+    expect(readIndex(env)!.guides.map((g) => [g.key, g.slug])).toEqual([["DGS-770", "close-a-ticket"]]);
   });
 
   it("6: a fresh lock skips everything; the lock is released after success", async () => {
