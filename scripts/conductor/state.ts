@@ -10,6 +10,9 @@ import { stripMarkers } from "./markers.ts";
 import { newestMtime } from "./watch.ts";
 import { currentCount } from "../../packages/cli/src/run/limit-check.ts";
 import { limitLine } from "../../packages/cli/src/run/limit.ts";
+import { KEY_PREFIXES } from "../../packages/cli/src/clickup/spaces.ts";
+
+const MERGE_KEY = new RegExp(`\\b(${KEY_PREFIXES})-(\\d+)`, "i");
 
 /** an item or block content older than this is flagged in Health (DGS-577) */
 export const STALE_AFTER_MS = 2 * 24 * 3600_000;
@@ -216,9 +219,9 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     const seen = new Set<string>();
     for (const row of r.stdout.split("\n")) {
       const subject = row.split("\t").slice(2).join("\t");
-      const m = /\bdgs-(\d+)/i.exec(subject);
+      const m = MERGE_KEY.exec(subject);
       if (!m) continue;
-      const key = `DGS-${m[1]}`;
+      const key = `${m[1].toUpperCase()}-${m[2]}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const report = findReport(opts.repoDir, key);

@@ -114,6 +114,11 @@ describe("collectState", () => {
     expect(s.sources).toMatchObject({ note: "ok", git: "ok", herdr: "ok", clickup: "skipped" });
     expect(s.warnings).toEqual([]);
   });
+  it("the merged-today list reads OCL merges", async () => {
+    const git = "eee\t2026-10-13T12:30:00+07:00\tfeat(ocl-105): factory reads both spaces";
+    const s = await collectState(base(), deps(fakeRunner({ git: { code: 0, stdout: git } })));
+    expect(s.done).toEqual([{ key: "OCL-105", line: "factory reads both spaces" }]);
+  });
   it("asks git for origin/main since the window start, defaulting to the start of today UTC+7", async () => {
     const runner = fakeRunner();
     await collectState(base(), deps(runner));
