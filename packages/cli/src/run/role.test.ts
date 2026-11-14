@@ -11,6 +11,9 @@ describe("roleOf", () => {
   it("inside herdr before the labeller: other, pending", () => {
     expect(roleOf({ inHerdr: true, looked: false, agentName: null, maestroIdentity: true })).toEqual({ role: "other", role_from: "pending" });
   });
+  it("an ocl-105 pane is a builder", () => {
+    expect(herdr("ocl-105")).toEqual({ role: "builder", role_from: "herdr" });
+  });
   it("applies the agent name table, first match wins", () => {
     expect(herdr("digismith-conductor")).toEqual({ role: "conductor", role_from: "herdr" });
     expect(herdr("main-conductor")).toEqual({ role: "conductor", role_from: "herdr" });
@@ -36,6 +39,7 @@ describe("ticketOfAgentName", () => {
   it("upper-cases a key-shaped name only", () => {
     expect(ticketOfAgentName("dgs-598")).toBe("DGS-598");
     expect(ticketOfAgentName("b2b-1")).toBe("B2B-1");
+    expect(ticketOfAgentName("ocl-105")).toBe("OCL-105");
     expect(ticketOfAgentName("DGS-598")).toBeNull();
     expect(ticketOfAgentName("dgs-598-rev1")).toBeNull();
     expect(ticketOfAgentName("digismith-conductor")).toBeNull();
