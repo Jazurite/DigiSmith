@@ -91,11 +91,16 @@ export function createGuideListCommand(clientFactory: Factory = createClient, ex
         }
         try {
           // a skipped (locked) refresh is fine: the cache is current enough
-          await withLimit(refreshGuides(clientFactory(), { listId: LIST_ID }), state, () => releaseLock());
+          const result = await withLimit(refreshGuides(clientFactory(), { listId: LIST_ID }), state, () => releaseLock());
           const fresh = readIndex();
           if (fresh !== undefined) {
             printList(fresh.guides, json);
             process.exitCode = 0;
+            return;
+          }
+          if ("skipped" in result) {
+            console.error("guide list: a refresh is already running, try again");
+            process.exitCode = 1;
             return;
           }
         } catch {
@@ -180,11 +185,13 @@ export function createGuideShowCommand(clientFactory: Factory = createClient, ex
       }
       let index = readIndex();
       let client: ClickUpClient | undefined;
+      let busy = false;
       try {
         client = clientFactory();
         if (index === undefined) {
-          await withLimit(refreshGuides(client, { listId: LIST_ID }), state, () => releaseLock());
+          const result = await withLimit(refreshGuides(client, { listId: LIST_ID }), state, () => releaseLock());
           index = readIndex();
+          busy = index === undefined && "skipped" in result;
         }
       } catch {
         // ClickUp unreachable: fall through to the cache
@@ -201,6 +208,11 @@ export function createGuideShowCommand(clientFactory: Factory = createClient, ex
           process.exitCode = 1;
         }
       };
+      if (busy) {
+        console.error("guide: a refresh is already running, try again");
+        process.exitCode = 1;
+        return;
+      }
       if (index === undefined) return down();
       if (lookupFailure(name, index.guides)) return;
       const found = resolveGuide(index.guides, name);

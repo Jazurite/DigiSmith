@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { handlerOf } from "../clickup/handler-of.test-util.ts";
-import { readIndex, readPage, writeIndexAtomic, writePageAtomic, type GuideIndexEntry } from "./cache.ts";
+import { readIndex, readPage, takeLock, writeIndexAtomic, writePageAtomic, type GuideIndexEntry } from "./cache.ts";
 import { createGuideListCommand, createGuideRefreshCommand, createGuideShowCommand } from "./index.ts";
 
 const ADOPTED = "Adopted by Jack on 2026-11-14.";
@@ -137,6 +137,25 @@ describe("dg guide list", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("a refresh already running and no cache: says so, exit 1 (not ClickUp unreachable)", async () => {
+    expect(takeLock()).toBe(true);
+    const f = fake(tasks());
+    await handlerOf<ListArgv>(createGuideListCommand(() => f.client))({});
+    expect(err).toEqual(["guide list: a refresh is already running, try again"]);
+    expect(out).toEqual([]);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("a refresh already running with a cache: prints the cache, no notice, exit 0", async () => {
+    seed([entry("a", "DGS-1")]);
+    expect(takeLock()).toBe(true);
+    const f = fake(tasks());
+    await handlerOf<ListArgv>(createGuideListCommand(() => f.client))({});
+    expect(out.join("\n").split("\t")[0]).toBe("a");
+    expect(err).toEqual([]);
+    expect(process.exitCode).toBe(0);
+  });
+
   it("an 8-second hang is cut and the cache path runs", async () => {
     vi.useFakeTimers();
     seed([entry("a", "DGS-1")]);
@@ -195,6 +214,15 @@ describe("dg guide <name>", () => {
     expect(out).toEqual([CLEAN]);
     expect(err).toEqual(["guide: ClickUp unreachable, using cache from 2026-11-14 17:00 UTC+7"]);
     expect(process.exitCode).toBe(0);
+  });
+
+  it("a refresh already running and no cache: says so, exit 1", async () => {
+    expect(takeLock()).toBe(true);
+    const f = fake(tasks());
+    await handlerOf<ShowArgv>(createGuideShowCommand(() => f.client))({ name: "close-a-ticket" });
+    expect(err).toEqual(["guide: a refresh is already running, try again"]);
+    expect(out).toEqual([]);
+    expect(process.exitCode).toBe(1);
   });
 
   it("ClickUp down, no cached page: exit 1", async () => {
