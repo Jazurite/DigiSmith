@@ -313,3 +313,10 @@ describe("CLI", () => {
     expect(result.stderr).toContain('unknown --action "bogus"');
   });
 });
+
+describe("an OCL key (OCL-105)", () => {
+  it("path, parse and find work with an OCL key", () => {
+    expect(boardRelPathForSlug("OCL-105", "factory-reads-both-spaces")).toBe(".digismith/board/OCL-105—factory-reads-both-spaces");
+    expect(parseFolderName("OCL-105—factory-reads-both-spaces")).toEqual({ key: "OCL-105", slug: "factory-reads-both-spaces" });
+  });
+});

@@ -550,3 +550,26 @@ describe("returned (DGS-739)", () => {
     expect(readState(dir, "DGS-1")!.log.at(-1)?.outcome).toBe("refused");
   });
 });
+
+describe("an OCL key (OCL-105)", () => {
+  const chain: EventInput[] = [
+    { event: "refinement-started" }, { event: "approved", quote: "approved, go" }, { event: "started", by: "worker" },
+    { event: "review-started" }, { event: "merged", sha: "abc" },
+  ];
+  const runChain = async (key: string) => {
+    const t = new FakeTracker(snapshot("concept", { key, signoff: "Auto" }));
+    const lines: string[] = [];
+    for (const input of chain) { const r = await runEvent(deps(t), key, input); lines.push(...r.out, ...r.warn); }
+    return { t, lines };
+  };
+  it("the whole event chain on OCL-105 is accepted, ends where DGS-105 ends, and keeps its own state file", async () => {
+    const o = await runChain("OCL-105");
+    const d = await runChain("DGS-105");
+    expect(o.lines.filter((l) => /refus/i.test(l))).toEqual([]);
+    expect(d.lines.filter((l) => /refus/i.test(l))).toEqual([]);
+    expect(o.t.ticket.status).toBe(d.t.ticket.status);
+    expect(o.t.ticket.status).toBe("done");
+    expect(fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()).toEqual(["DGS-105.json", "OCL-105.json"]);
+    expect(readState(dir, "OCL-105")!.log.map((e) => e.outcome)).toEqual(chain.map(() => "applied"));
+  });
+});

@@ -6,6 +6,8 @@ Command: `dg autonomous watch`. The Nexus scheduler runs it every 5 minutes, all
 
 ## Ticket flow (DGS-635)
 
+The scan reads both spaces (DGS and OCL); the claim, lock and order carry the ticket's own key.
+
 - A ticket in `to do` whose Mode is not Manual (an empty Mode is Autonomous): the scan claims it at any hour when it is ready. The claim sets the status `claimed`, writes the lock and writes the order.
 - The conductor sets `in progress` when the Builder starts, and reads the status back.
 - A ticket with Mode Manual is never claimed. It stays in `to do` for attended work.

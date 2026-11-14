@@ -2,6 +2,8 @@
 
 Keeps ClickUp in step with the work (DGS-549). Not a session: each call loads one ticket's state file, acts, saves, ends.
 
+Reads the DigiSmith (DGS) and Oculus (OCL) spaces; a key finds its ticket across the team, so the key prefix needs no setting.
+
     dg steward event <event> --ticket <KEY> [--by <who>] [--sha <sha>] [--answer yes|no] [--quote "<Jack's words>"] [--hook] [--dry-run]
     dg steward rebuild --ticket <KEY>
 

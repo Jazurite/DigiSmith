@@ -8,7 +8,7 @@ import type { Exec } from "./conductor.ts";
 import { escalate } from "./director/escalate.ts";
 import { readDecisions } from "./director/record.ts";
 import { fakeStatus } from "./director/status.test-util.ts";
-import { DONE_WHEN_QUESTION, readRefineLock, acquireRefineLock } from "./director/refine.ts";
+import { DONE_WHEN_QUESTION, readRefineLock, acquireRefineLock, clearRefineLock } from "./director/refine.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { runScan, type ScanDeps } from "./scan.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
@@ -76,6 +76,19 @@ describe("the refine lane: switch and claim", () => {
     expect(kinds()).toContain("refine-claim");
     expect(readDecisions(dir)).toMatchObject([{ ticket: "DGS-2", id: "claim-refine", side: "within" }]);
     expect(readFileSync(join(ordersDir, orders()[0]), "utf8")).toContain("refine DGS-2");
+  });
+
+  it("OCL-105: an OCL refinement ticket is picked like a DGS one, in the same rank order", async () => {
+    addRefine("t1", { priority: 1 });
+    addRefine("t2", { key: "OCL-9", priority: 2 });
+    await runScan(mk());
+    expect(readRefineLock(dir)).toMatchObject({ ticket: "DGS-1" });
+    clearRefineLock(dir);
+    tracker.tasks.get("t1")!.status = "concept";
+    await runScan(mk());
+    expect(readRefineLock(dir)).toMatchObject({ ticket: "OCL-9", taskId: "t2" });
+    expect(orders().some((o) => /-OCL-9\.md$/.test(o))).toBe(true);
+    expect(readDecisions(dir).map((d) => d.ticket)).toEqual(["DGS-1", "OCL-9"]);
   });
 
   it("a refine claim never writes a ClickUp status", async () => {

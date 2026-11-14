@@ -822,3 +822,19 @@ describe("runScan: the claim writes the driver record (DGS-683 T22)", () => {
     expect(driversDir(home)).toBe(join(homedir(), ".digismith-depot", "drivers"));
   });
 });
+
+describe("runScan: an OCL ticket end to end (OCL-105)", () => {
+  it("claims OCL-106: the claim, the lock, the order file name and the driver record carry the OCL key", async () => {
+    tracker.add({ id: "t1", key: "OCL-106", name: "Guardrails pin" });
+    const r = await runScan(mk());
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "OCL-106", candidates: 1 });
+    expect(tracker.tasks.get("t1")?.status).toBe("claimed");
+    const lock = readLock(dir);
+    expect(lock?.ticket).toBe("OCL-106");
+    const file = join(ordersDir, "order-ao-2026-10-21-0000-OCL-106.md");
+    expect(lock?.order).toBe(file);
+    expect(readFileSync(file, "utf-8")).toContain("build OCL-106");
+    expect(kinds()).toEqual(["claim", "scan"]);
+    expect(readDriver("OCL-106", { DIGISMITH_DEPOT_DIR: root })).toMatchObject({ ticket: "OCL-106", driver: "digismith-conductor", mode: "factory" });
+  });
+});
