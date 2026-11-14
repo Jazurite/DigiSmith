@@ -31,6 +31,7 @@ import { addDependencyCommand } from "./add-dependency.ts";
 import { removeDependencyCommand } from "./remove-dependency.ts";
 import { addLinkCommand } from "./add-link.ts";
 import { addCommentCommand } from "./add-comment.ts";
+import { mergeCommentCommand } from "./merge-comment.ts";
 import { taskStampCommand } from "./task-stamp.ts";
 import { ticketTotalCommand } from "./ticket-total.ts";
 import { removeLinkCommand } from "./remove-link.ts";
@@ -79,6 +80,7 @@ const clickupCommand: CommandModule = {
       .command(addLinkCommand)
       .command(removeLinkCommand)
       .command(addCommentCommand)
+      .command(mergeCommentCommand)
       .command(taskStampCommand)
       .command(ticketTotalCommand)
       .command(checklistCommand)

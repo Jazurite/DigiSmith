@@ -49,6 +49,7 @@ digismith clickup remove-dependency --task <id|key> (--waiting-on <id|key> | --b
 digismith clickup add-link --task <id|key> --to <id|key> [--yes]   # link two tasks (public API; dry run without --yes; has an allow rule)
 digismith clickup remove-link --task <id|key> --to <id|key> [--yes]  # remove a link, never a task (dry run without --yes; no allow rule)
 digismith clickup add-comment --task <id|key> (--text <s> | --markdown-file <path>) [--yes]  # post a comment (public API; dry run without --yes; file sent as plain text, not converted; a second --yes posts a second comment; no allow rule)
+digismith clickup merge-comment --task <key> --base <sha> --head <sha> [--tests <s>] [--decisions <s>] [--next <s>] [--split-off <s>] [--part <s>] [--board-folder <path>] [--yes]  # post the one progress comment for a merge (dry run unless --yes; skips a head already posted; a failure prints a warn: line and never blocks)
 digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session and its refresh cookie of a Proxyman capture in ~/.digismith-depot/.env (no secret printed; says "renewal: yes/no")
 digismith clickup frontdoor refresh   # renew the Frontdoor session with the stored refresh cookie (prints the old and new expiry, no secret)
 digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked request/response bodies of the Frontdoor calls in a capture
