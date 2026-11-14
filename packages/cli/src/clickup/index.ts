@@ -24,6 +24,7 @@ import { renameStatusCommand } from "./rename-status.ts";
 import { deleteTaskTypeCommand } from "./delete-task-type.ts";
 import { updateFieldCommand } from "./update-field.ts";
 import { createFieldCommand } from "./create-field.ts";
+import { createFactoryFieldsCommand } from "./create-factory-fields.ts";
 import { createViewCommand } from "./create-view.ts";
 import { listFieldsCommand } from "./list-fields.ts";
 import { getFieldCommand } from "./get-field.ts";
@@ -72,6 +73,7 @@ const clickupCommand: CommandModule = {
       .command(deleteTaskTypeCommand)
       .command(updateFieldCommand)
       .command(createFieldCommand)
+      .command(createFactoryFieldsCommand)
       .command(createViewCommand)
       .command(listFieldsCommand)
       .command(getFieldCommand)
