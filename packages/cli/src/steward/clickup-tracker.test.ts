@@ -82,3 +82,35 @@ describe("filing", () => {
     expect(c.createTask).toHaveBeenCalledWith("L1", { name: "A", status: "backlog", priority: 3 });
   });
 });
+
+describe("two spaces", () => {
+  it("listTargets merges the lists of both spaces, in order", async () => {
+    const c = client({
+      getSpaceFolders: vi.fn(async (s: string) => [{ id: `F-${s}`, name: `Folder ${s}`, lists: [{ id: `L-${s}`, name: `List ${s}` }] }]),
+      getFolderlessLists: vi.fn(async (s: string) => (s === "S2" ? [{ id: "LX", name: "Loose" }] : [])),
+    });
+    const out = await new ClickUpTracker(c, ["S1", "S2"]).listTargets();
+    expect(out.map((t) => [t.id, t.folder])).toEqual([["L-S1", "Folder S1"], ["L-S2", "Folder S2"], ["LX", ""]]);
+  });
+  it("findCandidates searches both spaces and keeps the best matches", async () => {
+    const hit = (key: string, name: string) => task({ custom_id: key, name, status: { status: "refinement" } });
+    const c = client({
+      searchTeamTasks: vi.fn(async (s: string) =>
+        s === "S1" ? [hit("DGS-3", "Steward role keeps sync")] : [hit("OCL-9", "Steward role keeps sync state")]),
+    });
+    const out = await new ClickUpTracker(c, ["S1", "S2"]).findCandidates("steward role keeps sync");
+    expect(out.map((x) => x.key).sort()).toEqual(["DGS-3", "OCL-9"]);
+    expect(c.searchTeamTasks).toHaveBeenCalledTimes(2);
+  });
+  it("getTicket reads an OCL key with no space id", async () => {
+    const c = client({ getTaskByRef: vi.fn().mockResolvedValue(task({ custom_id: "OCL-105" })) });
+    const t = await new ClickUpTracker(c, ["S1", "S2"]).getTicket("OCL-105");
+    expect(t.key).toBe("OCL-105");
+    expect(c.getTaskByRef).toHaveBeenCalledWith("OCL-105");
+  });
+  it("a single space id string still works", async () => {
+    const c = client();
+    await new ClickUpTracker(c, "S1").listTargets();
+    expect(c.getSpaceFolders).toHaveBeenCalledWith("S1");
+  });
+});

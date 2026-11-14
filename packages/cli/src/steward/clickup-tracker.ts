@@ -27,11 +27,11 @@ function words(text: string): Set<string> {
 
 export class ClickUpTracker implements Tracker {
   private readonly client: ClickUpClient;
-  private readonly spaceId: string;
+  private readonly spaceIds: string[];
 
-  constructor(client: ClickUpClient, spaceId: string) {
+  constructor(client: ClickUpClient, spaceIds: string | string[]) {
     this.client = client;
-    this.spaceId = spaceId;
+    this.spaceIds = Array.isArray(spaceIds) ? spaceIds : [spaceIds];
   }
 
   private async taskOf(key: string): Promise<ClickUpTask> {
@@ -75,16 +75,19 @@ export class ClickUpTracker implements Tracker {
   }
 
   async listTargets(): Promise<ListTarget[]> {
-    const [folders, loose] = await Promise.all([this.client.getSpaceFolders(this.spaceId), this.client.getFolderlessLists(this.spaceId)]);
     const out: ListTarget[] = [];
-    for (const f of folders) for (const l of f.lists) out.push({ id: l.id, name: l.name, folder: f.name, description: "" });
-    for (const l of loose) out.push({ id: l.id, name: l.name, folder: "", description: "" });
+    for (const space of this.spaceIds) {
+      const [folders, loose] = await Promise.all([this.client.getSpaceFolders(space), this.client.getFolderlessLists(space)]);
+      for (const f of folders) for (const l of f.lists) out.push({ id: l.id, name: l.name, folder: f.name, description: "" });
+      for (const l of loose) out.push({ id: l.id, name: l.name, folder: "", description: "" });
+    }
     return out;
   }
 
   async findCandidates(idea: string): Promise<Candidate[]> {
     const want = words(idea);
-    const tasks = await this.client.searchTeamTasks(this.spaceId);
+    const tasks: ClickUpTask[] = [];
+    for (const space of this.spaceIds) tasks.push(...(await this.client.searchTeamTasks(space)));
     return tasks
       .map((t) => ({ t, score: [...words(t.name)].filter((w) => want.has(w)).length }))
       .filter((x) => x.score >= 2)
