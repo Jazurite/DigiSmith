@@ -38,6 +38,7 @@ const MILESTONES: T[] = [
 
 interface FakeOpts {
   search: T[];
+  searchBySpace?: Record<string, T[]>; // a search pool per space id; falls back to search
   full?: Record<string, T>;           // getTaskByRef answers (by id or key)
   lists?: Record<string, string[]>;   // list id -> statuses
   folderLists?: string[];
@@ -48,7 +49,7 @@ interface FakeOpts {
 function fakeClient(o: FakeOpts) {
   const calls: string[] = [];
   const byRef = (ref: string): T => {
-    const hit = o.full?.[ref] ?? o.search.find((t) => t.id === ref || t.custom_id === ref)
+    const hit = o.full?.[ref] ?? [...o.search, ...Object.values(o.searchBySpace ?? {}).flat()].find((t) => t.id === ref || t.custom_id === ref)
       ?? MILESTONES.find((t) => t.id === ref || t.custom_id === ref);
     if (!hit) throw new Error(`no task ${ref}`);
     return { attachments: [], ...hit };
@@ -57,7 +58,8 @@ function fakeClient(o: FakeOpts) {
     async searchTeamTasks(spaceId: string, maxPages = 10, status?: string) {
       calls.push(`searchTeamTasks ${spaceId} ${status ?? "-"}`);
       const out: T[] = [];
-      const pool = status === undefined || o.ignoreStatus ? o.search : o.search.filter((t) => (t.status as { status: string }).status.toLowerCase() === status.toLowerCase());
+      const source = o.searchBySpace?.[spaceId] ?? o.search;
+      const pool = status === undefined || o.ignoreStatus ? source : source.filter((t) => (t.status as { status: string }).status.toLowerCase() === status.toLowerCase());
       for (let page = 0; page < maxPages; page++) {
         const batch = pool.slice(page * 100, page * 100 + 100);
         out.push(...batch);
@@ -380,5 +382,49 @@ describe("ClickUpLoTracker writes and reads", () => {
     const { client, calls } = fakeClient({ search: [] });
     await new ClickUpLoTracker(client, SPACE).comment("14zcebrw02y", "hi");
     expect(calls).toEqual(["addTaskComment 14zcebrw02y hi"]);
+  });
+});
+
+describe("two spaces", () => {
+  const dgs = task({ id: "d1", custom_id: "DGS-700", name: "DigiSmith one", custom_fields: [signOffField(0), modeField(0)] });
+  const ocl = task({ id: "o1", custom_id: "OCL-106", name: "Oculus one", custom_fields: [signOffField(0), modeField(0)] });
+
+  it("lists the tickets of every space, one search per space, in order", async () => {
+    const { client, calls } = fakeClient({ search: [], searchBySpace: { S1: [dgs], S2: [ocl] } });
+    const out = await new ClickUpLoTracker(client, ["S1", "S2"]).listByStatus("to do");
+    expect(out.map((t) => t.key)).toEqual(["DGS-700", "OCL-106"]);
+    expect(calls.filter((c) => c.startsWith("searchTeamTasks"))).toEqual(["searchTeamTasks S1 to do", "searchTeamTasks S2 to do"]);
+  });
+  it("a ticket that both searches return is listed once", async () => {
+    const { client } = fakeClient({ search: [], searchBySpace: { S1: [dgs], S2: [dgs, ocl] } });
+    const out = await new ClickUpLoTracker(client, ["S1", "S2"]).listByStatus("to do");
+    expect(out.map((t) => t.key)).toEqual(["DGS-700", "OCL-106"]);
+  });
+  it("a failed read of the second space fails the whole list", async () => {
+    const { client } = fakeClient({ search: [], searchBySpace: { S1: [dgs] } });
+    (client as unknown as { searchTeamTasks: unknown }).searchTeamTasks = async (s: string) => {
+      if (s === "S2") throw new Error("503");
+      return [dgs];
+    };
+    await expect(new ClickUpLoTracker(client, ["S1", "S2"]).listByStatus("to do")).rejects.toThrow("503");
+  });
+  it("hasStatus is true when only the second space has the status", async () => {
+    const { client } = fakeClient({ search: [], lists: { L1: ["backlog"], L2: ["to do"] } });
+    (client as unknown as { getSpaceFolders: unknown }).getSpaceFolders = async (s: string) =>
+      [{ id: "f", name: "F", lists: [{ id: s === "S1" ? "L1" : "L2", name: "x" }] }];
+    const t = new ClickUpLoTracker(client, ["S1", "S2"]);
+    expect(await t.hasStatus("to do")).toBe(true);
+    expect(await t.hasStatus("nope")).toBe(false);
+  });
+  it("a single space id string still works", async () => {
+    const { client, calls } = fakeClient({ search: [dgs] });
+    await new ClickUpLoTracker(client, "S1").listByStatus("to do");
+    expect(calls.filter((c) => c.startsWith("searchTeamTasks"))).toEqual(["searchTeamTasks S1 to do"]);
+  });
+  it("an OCL ticket keeps its OCL key and its Oculus Mode and Sign-off", async () => {
+    const manual = task({ id: "o2", custom_id: "OCL-107", custom_fields: [signOffField(1), modeField(1)] });
+    const { client } = fakeClient({ search: [], searchBySpace: { S2: [manual] } });
+    const [t] = await new ClickUpLoTracker(client, ["S1", "S2"]).listByStatus("to do");
+    expect(t).toMatchObject({ key: "OCL-107", mode: "Manual", signOff: "Jack" });
   });
 });

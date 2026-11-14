@@ -39,18 +39,18 @@ function scheduledAt(t: ClickUpTask): number | null | "invalid" {
   return Number.isSafeInteger(n) && n > 0 ? n : "invalid";
 }
 
-/** Tracker over the ClickUp API for one space. Reads only, except setStatus and comment. */
+/** Tracker over the ClickUp API for one or more spaces. Reads only, except setStatus and comment. */
 export class ClickUpLoTracker implements Tracker {
   private milestones: Promise<Map<string, string>> | null = null;
   private lists: Promise<string[]> | null = null;
   private readonly listStatuses = new Map<string, Promise<string[]>>();
 
   private readonly client: ClickUpClient;
-  private readonly spaceId: string;
+  private readonly spaceIds: string[];
 
-  constructor(client: ClickUpClient, spaceId: string) {
+  constructor(client: ClickUpClient, spaceIds: string | string[]) {
     this.client = client;
-    this.spaceId = spaceId;
+    this.spaceIds = Array.isArray(spaceIds) ? spaceIds : [spaceIds];
   }
 
   /**
@@ -73,14 +73,24 @@ export class ClickUpLoTracker implements Tracker {
   }
 
   private async loadLists(): Promise<string[]> {
-    const folders = await this.client.getSpaceFolders(this.spaceId);
-    const folderless = await this.client.getFolderlessLists(this.spaceId);
-    return [...folders.flatMap((f) => f.lists ?? []), ...folderless].map((l) => l.id);
+    const ids: string[] = [];
+    for (const space of this.spaceIds) {
+      const folders = await this.client.getSpaceFolders(space);
+      const folderless = await this.client.getFolderlessLists(space);
+      ids.push(...[...folders.flatMap((f) => f.lists ?? []), ...folderless].map((l) => l.id));
+    }
+    return ids;
   }
 
   async listByStatus(name: string): Promise<LoTask[]> {
     const want = name.toLowerCase();
-    const all = await this.client.searchTeamTasks(this.spaceId, 10, name);
+    const seen = new Set<string>();
+    const all: ClickUpTask[] = [];
+    for (const space of this.spaceIds) {
+      for (const t of await this.client.searchTeamTasks(space, 10, name)) {
+        if (!seen.has(t.id)) { seen.add(t.id); all.push(t); }
+      }
+    }
     const byId = new Map(all.map((t) => [t.id, t]));
     const out: LoTask[] = [];
     for (const hit of all) {
