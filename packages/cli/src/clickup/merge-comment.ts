@@ -18,7 +18,9 @@ function git(repo: string, args: string[]): string {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
 
-export function gatherGit(repo: string, base: string, head: string) {
+export function gatherGit(repo: string, baseIn: string, headIn: string) {
+  const base = baseIn.trim().toLowerCase();
+  const head = headIn.trim().toLowerCase();
   for (const s of [base, head]) if (!SHA.test(s)) throw new Error(`"${s}" is not a commit sha (7 to 40 hex characters)`);
   const fullBase = git(repo, ["rev-parse", "--verify", `${base}^{commit}`]);
   const fullHead = git(repo, ["rev-parse", "--verify", `${head}^{commit}`]);
@@ -40,7 +42,7 @@ export function gatherGit(repo: string, base: string, head: string) {
 export function createMergeCommentCommand(clientFactory: () => ClickUpClient = createClient, repo: () => string = () => process.cwd()): CommandModule {
   return {
     command: "merge-comment",
-    describe: "post the one progress comment for a merge on a ClickUp ticket; a dry run unless --yes; skips a head already posted; never blocks (a failure prints a warn: line)",
+    describe: "post the one progress comment for a merge on a ClickUp ticket; a dry run unless --yes; skips a head already posted; never blocks (a failure prints a warn: line); the plugin version is read at HEAD of the checkout, not at --head, after the post-finish hooks",
     builder: (y) =>
       y
         .option("task", { type: "string", requiresArg: true, demandOption: true, describe: "ticket key (DGS-178)" })

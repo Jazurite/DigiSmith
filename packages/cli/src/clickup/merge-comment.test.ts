@@ -11,8 +11,9 @@ import { recordAttached } from "../tokens/attachments-store.ts";
 const git = (cwd: string, ...a: string[]) =>
   execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...a], { cwd, encoding: "utf8" }).trim();
 
-let dir: string, repo: string, base: string, head: string;
+let dir: string, repo: string, base: string, head: string, prevRegistry: string | undefined;
 beforeEach(() => {
+  prevRegistry = process.env.DIGISMITH_TOKEN_REGISTRY_DIR;
   dir = mkdtempSync(join(tmpdir(), "dg178-"));
   process.env.DIGISMITH_TOKEN_REGISTRY_DIR = join(dir, "registry");
   repo = join(dir, "repo");
@@ -30,7 +31,8 @@ beforeEach(() => {
   git(repo, "commit", "-q", "-m", "chore: bump plugin version");
 });
 afterEach(() => {
-  delete process.env.DIGISMITH_TOKEN_REGISTRY_DIR;
+  if (prevRegistry === undefined) delete process.env.DIGISMITH_TOKEN_REGISTRY_DIR;
+  else process.env.DIGISMITH_TOKEN_REGISTRY_DIR = prevRegistry;
   rmSync(dir, { recursive: true, force: true });
   vi.restoreAllMocks();
   process.exitCode = 0;
@@ -46,7 +48,7 @@ const mockClient = () =>
   }) as unknown as ClickUpClient & { addTaskComment: ReturnType<typeof vi.fn> };
 
 describe("gatherGit", () => {
-  it("lists commits in the range, resolves full shas and reads the version at HEAD", () => {
+  it("lists commits in the range, resolves full shas and reads the plugin version at HEAD, not at --head, on purpose", () => {
     const g = gatherGit(repo, base.slice(0, 7), head.slice(0, 7));
     expect(g.base).toBe(base);
     expect(g.head).toBe(head);
@@ -62,6 +64,11 @@ describe("gatherGit", () => {
     git(solo, "commit", "-q", "-m", "x");
     const h = git(solo, "rev-parse", "HEAD");
     expect(gatherGit(solo, h, h).version).toBeUndefined();
+  });
+  it("accepts an uppercase sha and resolves the same full sha", () => {
+    const g = gatherGit(repo, ` ${base.slice(0, 7).toUpperCase()} `, head.toUpperCase());
+    expect(g.base).toBe(base);
+    expect(g.head).toBe(head);
   });
   it("refuses a ref that is not a hex sha", () => {
     expect(() => gatherGit(repo, "main; rm", head)).toThrow("not a commit sha");
@@ -138,5 +145,17 @@ describe("merge-comment command", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     await run(createMergeCommentCommand(() => c, () => repo), { ...argv(), yes: true });
     expect(readPosted("DGS-5")[0].id).toBe("91");
+  });
+  it("post ok but depot record fails: warn names the comment id, exits 1", async () => {
+    const blocker = join(dir, "blocker");
+    writeFileSync(blocker, "x");
+    process.env.DIGISMITH_TOKEN_REGISTRY_DIR = join(blocker, "sub");
+    const c = mockClient();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createMergeCommentCommand(() => c, () => repo), { ...argv(), yes: true });
+    expect(c.addTaskComment).toHaveBeenCalledTimes(1);
+    expect(out(err)).toMatch(/^warn: merge-comment: posted comment 91 .*a rerun posts a copy/m);
+    expect(process.exitCode).toBe(1);
   });
 });
