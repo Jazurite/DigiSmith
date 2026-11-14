@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DGS-785 — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style></head><body>
+<header>
+<h1>DGS-785 Guide index — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-785</strong></span><span>Date: 2026-11-14</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Adopted user-manual guides in ClickUp list F.9 are now readable from the command line and listed at session start. <code>dg guide list</code> shows every adopted guide, <code>dg guide &lt;name&gt;</code> prints one page, <code>dg guide refresh</code> rewrites the cache. A Maestro session gets one index line per guide (never a page body, at most 3000 bytes). The <code>hooks/</code> folder is untouched.</p>
+</section>
+<h2>What changed</h2>
+<ul>
+<li><code>packages/cli/src/guide/</code>: parser (adoption test, slug, "When to use it"), depot cache with an exclusive refresh lock, lookup by slug, key or prefix, refresh from F.9 (one list call with <code>markdown_description</code>), and the <code>dg guide</code> command with an 8-second limit and a cache fallback.</li>
+<li><code>scripts/guides/index-text.ts</code>: builds the capped index block from <code>index.json</code> only, and starts a background refresh when the cache is older than 15 minutes.</li>
+<li><code>scripts/session-cards/card-hook.ts</code>: <code>identityContext</code> appends the block for a Maestro identity. Workers and conductors get nothing.</li>
+<li>Tests: a contract test runs the real refresh into a temp depot and reads the result with the hook side; the hooks.json test pins the hook count of every event.</li>
+</ul>
+<h2>Tests</h2>
+<p>Full <code>packages/cli</code> suite: 217 files, 3548 tests, 3547 pass; the one failure is the known guardrails pin (<code>src/autonomous/guardrails.test.ts</code>, ticket OCL-106). <code>tsc -p tsconfig.build.json --noEmit</code> exit 0. <code>scripts/guides</code> and <code>scripts/session-cards</code>: 9 files, 139 tests pass. <code>git diff origin/main --stat</code>: 22 files, nothing under <code>hooks/</code>.</p>
+<h2>Whole-branch review</h2>
+<p>Claude (opus): ready to merge, nothing critical or important. Three minor findings, all fixed test first: the index line format now follows the spec (<code>- slug: when</code>), a locked refresh no longer reads as "ClickUp unreachable", and <code>index.json</code> stays guides-then-manuals after a failed fetch. Per-task reviews found and fixed one Important (atomic refresh lock) and two more (hook crash on a missing <code>dg</code>, an assertion-free test).</p>
+<h2>First use</h2>
+<p>After the merge: <code>dg guide list</code> shows the adopted guides; <code>dg guide close-a-ticket</code> prints DGS-758's page; a fresh Maestro session (identityContext) shows the index block. Open point: the hook starts the background refresh with <code>dg</code> on PATH; if the hook environment lacks it, the cache refreshes on the next manual <code>dg guide list</code>.</p>
+</body></html>
