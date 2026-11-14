@@ -17,6 +17,8 @@ import { claimDriver, readDriver } from "../conductor/drivers.ts";
 import { driverRefusal } from "../run/limit-check.ts";
 import { driversDir } from "../conductor/drivers.ts";
 import { defaultDeps } from "./index.ts";
+import type { ClickUpClient } from "@digismith/clickup-client";
+import { ClickUpLoTracker } from "./tracker-clickup.ts";
 import { dirname } from "node:path";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
@@ -836,5 +838,33 @@ describe("runScan: an OCL ticket end to end (OCL-105)", () => {
     expect(readFileSync(file, "utf-8")).toContain("build OCL-106");
     expect(kinds()).toEqual(["claim", "scan"]);
     expect(readDriver("OCL-106", { DIGISMITH_DEPOT_DIR: root })).toMatchObject({ ticket: "OCL-106", driver: "digismith-conductor", mode: "factory" });
+  });
+
+  it("one scan over the two-space tracker claims an OCL ticket that sits only in the second space", async () => {
+    const state = { status: "to do" };
+    const updates: string[] = [];
+    const ticket = () => ({
+      id: "o1", custom_id: "OCL-106", custom_item_id: 0, name: "Guardrails pin", text_content: "", description: "",
+      status: { status: state.status, type: "custom" }, date_created: "1000", due_date: null, priority: null,
+      custom_fields: [{ id: "fm", name: "Mode", type: "drop_down", value: 0, type_config: { options: [{ name: "Autonomous", orderindex: 0 }, { name: "Manual", orderindex: 1 }] } }],
+      dependencies: [], linked_tasks: [],
+      attachments: [{ id: "a1", title: "design.md", extension: "md" }, { id: "a2", title: "plan.md", extension: "md" }],
+    });
+    const client = {
+      async searchTeamTasks(space: string, _p: number, status?: string) {
+        return space === "S2" && status?.toLowerCase() === state.status ? [ticket()] : [];
+      },
+      async getTaskByRef(ref: string) { if (ref !== "o1" && ref !== "OCL-106") throw new Error(`no ${ref}`); return ticket(); },
+      async updateTask(id: string, body: { status?: string }) { updates.push(`${id} ${body.status}`); if (body.status) state.status = body.status; return ticket(); },
+      async addTaskComment() { return { id: 1 }; },
+      async getListStatuses() { return ["to do", "claimed"]; },
+      async getAllListTasks() { return []; },
+      async getSpaceFolders() { return []; },
+      async getFolderlessLists(space: string) { return space === "S2" ? [{ id: "L2", name: "L2" }] : []; },
+    } as unknown as ClickUpClient;
+    const r = await runScan(mk({ tracker: new ClickUpLoTracker(client, ["S1", "S2"]) }));
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "OCL-106", candidates: 1 });
+    expect(readLock(dir)?.ticket).toBe("OCL-106");
+    expect(updates).toEqual(["o1 claimed"]);
   });
 });
