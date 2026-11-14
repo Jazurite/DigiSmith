@@ -33,7 +33,7 @@ Check: `launchctl print gui/$(id -u)/com.jazurite.digismith.nexus-api | head -3`
 - [ ] The three stats are read as a label with its value: "weeks lived", "weeks left", "lived".
 - [ ] Quick Nav is off (press Left and Right arrow together until VoiceOver says "Quick Nav off"). Tab to the grid. You hear a grid with a name that tells you to use the arrow keys.
 - [ ] An arrow key moves one week. Each box reads "Age N, week W of 52, D Month YYYY to D Month YYYY", then lived, this week or ahead.
-- [ ] Row headers read "Age N". Column headers read "Week 1", "Week 13", "Week 26", "Week 39", "Week 52".
+- [ ] Row headers read "Age N", and the corner header over the row headers reads "Age". Column headers read "Week 1", "Week 13", "Week 26", "Week 39", "Week 52".
 - [ ] Fn+Left and Fn+Right (Home and End) go to the first and last week of the row. Cmd+Fn+Left and Cmd+Fn+Right (first and last box) go to the first and last box. Fn+Up and Fn+Down (Page Up and Page Down) move ten years. On a full keyboard, Home, End, Ctrl+Home, Ctrl+End, Page Up and Page Down do the same.
 - [ ] The tooltip shows over the focused box and Escape hides it.
 - [ ] The tooltip text is not read a second time after the box name.
