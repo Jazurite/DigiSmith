@@ -60,5 +60,6 @@ describe("readers over the merged tracker", () => {
   });
   it("the watchdog's ticket key rule accepts an OCL key", () => {
     expect(TICKET_RE.test("OCL-106")).toBe(true);
+    for (const bad of ["not a key", "ocl-106", "XOCL-106 ", "-106"]) expect(TICKET_RE.test(bad), bad).toBe(false);
   });
 });
