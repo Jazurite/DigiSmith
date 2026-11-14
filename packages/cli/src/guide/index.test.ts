@@ -217,13 +217,46 @@ describe("dg guide <name>", () => {
     expect(process.exitCode).toBe(0);
   });
 
-  it("scrubs tokens from client errors; stdout stays clean", async () => {
+  it("a failing client leaves stdout clean and puts no token on stderr", async () => {
     seed([entry("close-a-ticket", "DGS-758")]);
     const f = fake(tasks(), { taskError: new Error("bad Bearer sk-live-123 and pk_abc and sk-xyz") });
     const spy = vi.spyOn(console, "error");
     await handlerOf<ShowArgv>(createGuideShowCommand(() => f.client))({ name: "close-a-ticket" });
     expect(out).toEqual([]);
     expect(JSON.stringify(spy.mock.calls)).not.toMatch(/sk-live|pk_abc|sk-xyz/);
+  });
+});
+
+describe("process end after the limit", () => {
+  type RArgv = { quiet?: boolean };
+  it("list: a hung call leads to exit(code) once the limit passed", async () => {
+    vi.useFakeTimers();
+    seed([entry("a", "DGS-1")]);
+    const f = fake(tasks(), { hang: true });
+    const exit = vi.fn();
+    const p = handlerOf<ListArgv>(createGuideListCommand(() => f.client, exit))({});
+    await vi.advanceTimersByTimeAsync(8_001);
+    await p;
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(exit).toHaveBeenCalledTimes(1);
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  it("show: a hung call with no cached page exits 1; no exit without a timeout", async () => {
+    vi.useFakeTimers();
+    seed([entry("a", "DGS-1")]);
+    const exit = vi.fn();
+    const h = fake(tasks(), { hang: true });
+    const p = handlerOf<ShowArgv>(createGuideShowCommand(() => h.client, exit))({ name: "a" });
+    await vi.advanceTimersByTimeAsync(8_001);
+    await p;
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(exit).toHaveBeenCalledWith(1);
+    const ok = fake(tasks());
+    const exit2 = vi.fn();
+    await handlerOf<RArgv>(createGuideRefreshCommand(() => ok.client))({});
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(exit2).not.toHaveBeenCalled();
   });
 });
 

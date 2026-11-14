@@ -19,11 +19,23 @@ function errText(err: unknown): string {
   return scrub(err instanceof Error ? err.message : String(err));
 }
 
+interface LimitState {
+  hit: boolean;
+}
+type Exit = (code: number) => void;
+const EXIT_GRACE_MS = 200;
+
+/** After a timeout a hung socket can keep the process alive: end it shortly, only if something still holds the loop. */
+function endAfterTimeout(state: LimitState, exit: Exit): void {
+  if (state.hit) setTimeout(() => exit(Number(process.exitCode ?? 1)), EXIT_GRACE_MS).unref();
+}
+
 /** Reject after the limit; the underlying call is left to finish or die with the process. */
-async function withLimit<T>(work: Promise<T>, onTimeout?: () => void): Promise<T> {
+async function withLimit<T>(work: Promise<T>, state: LimitState, onTimeout?: () => void): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const limit = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
+      state.hit = true;
       onTimeout?.();
       reject(new Error(`ClickUp did not answer within ${LIMIT_MS / 1000} seconds`));
     }, LIMIT_MS);
@@ -47,13 +59,14 @@ function cacheNotice(index: GuideIndex): string {
 }
 
 type Factory = () => ClickUpClient;
+const defaultExit: Exit = (code) => process.exit(code);
 
 function printList(guides: GuideIndexEntry[], json: boolean): void {
   if (json) console.log(JSON.stringify(guides, null, 2));
   else for (const g of guides) console.log(`${g.slug}\t${g.key}\t${g.when}`);
 }
 
-export function createGuideListCommand(clientFactory: Factory = createClient): CommandModule {
+export function createGuideListCommand(clientFactory: Factory = createClient, exit: Exit = defaultExit): CommandModule {
   return {
     command: "list",
     describe: "list the guides and manuals (slug, key, when to use)",
@@ -63,43 +76,42 @@ export function createGuideListCommand(clientFactory: Factory = createClient): C
         .option("offline", { type: "boolean", describe: "use the cache, make no ClickUp call" }),
     handler: async (argv) => {
       const json = argv.json === true;
-      if (argv.offline !== true) {
-        try {
-          const result = await withLimit(refreshGuides(clientFactory(), { listId: LIST_ID }), () => releaseLock());
-          if ("skipped" in result) {
-            // another refresh is running: the cache is current enough
+      const state: LimitState = { hit: false };
+      try {
+        if (argv.offline === true) {
+          const index = readIndex();
+          if (index === undefined) {
+            console.error("guide list: no cache");
+            process.exitCode = 1;
+            return;
           }
+          printList(index.guides, json);
+          process.exitCode = 0;
+          return;
+        }
+        try {
+          // a skipped (locked) refresh is fine: the cache is current enough
+          await withLimit(refreshGuides(clientFactory(), { listId: LIST_ID }), state, () => releaseLock());
+          const fresh = readIndex();
+          if (fresh !== undefined) {
+            printList(fresh.guides, json);
+            process.exitCode = 0;
+            return;
+          }
+        } catch {
           const index = readIndex();
           if (index !== undefined) {
+            console.error(cacheNotice(index));
             printList(index.guides, json);
             process.exitCode = 0;
             return;
           }
-        } catch (err) {
-          const index = readIndex();
-          if (index === undefined) {
-            console.error("guide list: ClickUp unreachable and no cache");
-            process.exitCode = 1;
-            return;
-          }
-          console.error(cacheNotice(index));
-          printList(index.guides, json);
-          process.exitCode = 0;
-          void err;
-          return;
         }
         console.error("guide list: ClickUp unreachable and no cache");
         process.exitCode = 1;
-        return;
+      } finally {
+        endAfterTimeout(state, exit);
       }
-      const index = readIndex();
-      if (index === undefined) {
-        console.error("guide list: no cache");
-        process.exitCode = 1;
-        return;
-      }
-      printList(index.guides, json);
-      process.exitCode = 0;
     },
   };
 }
@@ -144,12 +156,22 @@ function lookupFailure(name: string, guides: GuideIndexEntry[]): boolean {
   return false;
 }
 
-export function createGuideShowCommand(clientFactory: Factory = createClient): CommandModule {
+export function createGuideShowCommand(clientFactory: Factory = createClient, exit: Exit = defaultExit): CommandModule {
   return {
     command: "$0 [name]",
     describe: "print a guide page as Markdown",
     builder: (y) => y.positional("name", { type: "string", describe: "slug, key or unique slug prefix" }),
     handler: async (argv) => {
+      const state: LimitState = { hit: false };
+      try {
+        await show(argv, state);
+      } finally {
+        endAfterTimeout(state, exit);
+      }
+    },
+  };
+
+  async function show(argv: Record<string, unknown>, state: LimitState): Promise<void> {
       const name = typeof argv.name === "string" ? argv.name : "";
       if (name === "") {
         console.error("guide: usage: dg guide <name> | list | refresh");
@@ -161,11 +183,11 @@ export function createGuideShowCommand(clientFactory: Factory = createClient): C
       try {
         client = clientFactory();
         if (index === undefined) {
-          await withLimit(refreshGuides(client, { listId: LIST_ID }), () => releaseLock());
+          await withLimit(refreshGuides(client, { listId: LIST_ID }), state, () => releaseLock());
           index = readIndex();
         }
-      } catch (err) {
-        void err;
+      } catch {
+        // ClickUp unreachable: fall through to the cache
       }
       const down = (): void => {
         const cached = index === undefined ? undefined : resolveGuide(index.guides, name);
@@ -185,9 +207,10 @@ export function createGuideShowCommand(clientFactory: Factory = createClient): C
       if (found.kind !== "found" || client === undefined) return down();
       const guide = found.guide;
       try {
-        const task = (await withLimit(client.getTaskByRef(guide.key, { include_markdown_description: true }))) as { markdown_description?: string };
+        const task = (await withLimit(client.getTaskByRef(guide.key, { include_markdown_description: true }), state)) as { markdown_description?: string };
         const markdown = task.markdown_description ?? "";
         if (!isAdopted(markdown)) {
+          // Exits 2, but the guide stays in the index and page cache until the next refresh drops it.
           lookupFailure(name, index.guides.filter((g) => g.slug !== guide.slug));
           if (process.exitCode !== 2) {
             console.error(`guide: no guide "${name}".`);
@@ -203,12 +226,10 @@ export function createGuideShowCommand(clientFactory: Factory = createClient): C
         }
         console.log(page);
         process.exitCode = 0;
-      } catch (err) {
-        void err;
+      } catch {
         down();
       }
-    },
-  };
+  }
 }
 
 export function createGuideCommand(clientFactory: Factory = createClient): CommandModule {
