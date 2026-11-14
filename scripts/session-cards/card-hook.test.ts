@@ -2,11 +2,19 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { endHook, readStarterEnv, startHook, touchHook } from "./card-hook.ts";
 import { findCardBySession, listCards } from "./cards.ts";
 import { writeIdentity } from "../identity.ts";
 import { main } from "./hook-cli.ts";
+import { readGuideIndexBlock } from "../guides/index-text.ts";
+
+// A hook test must never spawn a real `dg`: the real function gets a fake spawn unless a test passes its own.
+vi.mock("../guides/index-text.ts", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../guides/index-text.ts")>();
+  const fakeSpawn = () => ({ on: () => undefined, unref: () => undefined });
+  return { ...orig, readGuideIndexBlock: vi.fn((env?: NodeJS.ProcessEnv, now?: number, deps?: Parameters<typeof orig.readGuideIndexBlock>[2]) => orig.readGuideIndexBlock(env, now, deps ?? { spawn: fakeSpawn })) };
+});
 
 let depot: string;
 let env: NodeJS.ProcessEnv;
@@ -145,6 +153,7 @@ describe("endHook", () => {
 
 describe("startHook identity branch (DGS-411)", () => {
   let repo: string;
+  beforeEach(() => vi.mocked(readGuideIndexBlock).mockClear());
   const record = () => ({
     id: "digismith-maestro", name: "DigiSmith Maestro", owner: "jack", project: "DigiSmith", folder: repo,
     conductors: ["digismith-conductor"], role: "maestro", machine: "jack-desktop", state: path.join(repo, "note.md"), created: "2026-10-13T15:00+07:00",
@@ -218,5 +227,50 @@ describe("startHook identity branch (DGS-411)", () => {
     const out = main("start", JSON.stringify({ session_id: "d9", cwd: repo }), bare());
     expect(out).toContain("[digismith identity]");
     expect(main("start", JSON.stringify({ session_id: "d9", cwd: repo }), { DIGISMITH_DEPOT_DIR: "/dev/null/x" } as NodeJS.ProcessEnv)).toBe("");
+  });
+  describe("guide index in the Maestro context (DGS-785)", () => {
+    const HEADER = "User manual (DigiSmith): before acting on a request that matches a line, read the page with dg guide <slug>.";
+    const writeCache = () => {
+      fs.mkdirSync(path.join(depot, "guides"), { recursive: true });
+      fs.writeFileSync(
+        path.join(depot, "guides", "index.json"),
+        JSON.stringify({ version: 1, fetched_at: new Date().toISOString(), guides: [{ slug: "merge-a-ticket", kind: "guide", when: "when merging a ticket" }] }),
+      );
+    };
+    it("a Maestro context ends with the guide block, which starts with the header line", () => {
+      writeIdentity(record(), bare());
+      writeCache();
+      const r = startHook({ session_id: "g1", cwd: repo }, bare(), { now: T0 });
+      const ctx = r.context!;
+      expect(ctx).toContain("[digismith identity]");
+      const block = ctx.slice(ctx.indexOf(HEADER));
+      expect(ctx.indexOf(HEADER)).toBeGreaterThan(0);
+      expect(ctx.endsWith(block)).toBe(true);
+      expect(block).toContain("merge-a-ticket — when merging a ticket");
+    });
+    it("a worker env and a conductor env get no guide block", () => {
+      writeIdentity(record(), bare());
+      writeCache();
+      const w = startHook(ev("w9", { cwd: repo }), env, { now: T0 });
+      expect(w.context).toBeUndefined();
+      const c = startHook(ev("c9", { cwd: repo }), { ...env, DIGISMITH_ROLE: "conductor", DIGISMITH_ID: "c-1" }, { now: T0 });
+      expect(c.context).toBeUndefined();
+      expect(vi.mocked(readGuideIndexBlock)).not.toHaveBeenCalled();
+    });
+    it("when the guide block throws, the identity context is returned unchanged", () => {
+      writeIdentity(record(), bare());
+      startHook({ session_id: "t0", cwd: repo }, bare(), { now: T0 });
+      vi.mocked(readGuideIndexBlock).mockImplementationOnce(() => { throw new Error("boom"); });
+      const r = startHook({ session_id: "t0", cwd: repo }, bare(), { now: T0 });
+      expect(r.context!.split("\n")).toHaveLength(3);
+      expect(r.context!.startsWith("[digismith identity] You are DigiSmith Maestro")).toBe(true);
+      expect(r.context).not.toContain(HEADER);
+    });
+    it("when the block is undefined, the context is the identity text only", () => {
+      writeIdentity(record(), bare());
+      vi.mocked(readGuideIndexBlock).mockImplementationOnce(() => undefined);
+      const r = startHook({ session_id: "u0", cwd: repo }, bare(), { now: T0 });
+      expect(r.context!.split("\n")).toHaveLength(3);
+    });
   });
 });

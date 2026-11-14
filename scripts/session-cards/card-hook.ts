@@ -6,6 +6,7 @@ import { cardFromIdentity, findByFolder } from "../identity.ts";
 import type { Identity } from "../identity.ts";
 import type { SessionCard } from "./cards.ts";
 import { formatRunsOn } from "./runs-on.ts";
+import { readGuideIndexBlock } from "../guides/index-text.ts";
 
 export type HookEvent = { session_id?: string; cwd?: string; source?: string; reason?: string };
 export type HookDeps = { now?: Date };
@@ -53,12 +54,20 @@ function identityContext(identity: Identity, session: string, env: NodeJS.Proces
   const others = listCards(identity.project, { scope: "open", env })
     .map((r) => r.card)
     .filter((c) => c.id === identity.id && c.session !== session);
+  // DGS-785: the guide index is the optional third part; a failure here never costs the identity text.
+  let guide: string | undefined;
+  try {
+    guide = readGuideIndexBlock(env);
+  } catch {
+    guide = undefined;
+  }
   return [
     `[digismith identity] You are ${identity.name} (id ${identity.id}, role maestro), project ${identity.project}, session ${session}, conductor ${identity.conductors[0]}.`,
     others.length === 0
       ? "No other open session of this identity."
       : `Other open sessions of this identity: ${others.map((c) => `${c.session} (last seen ${c.last_seen})`).join(", ")}.`,
     "Any session of this identity may give orders; shared state lives in the conductor and the depot, not in this chat.",
+    ...(guide ? [guide] : []),
   ].join("\n");
 }
 

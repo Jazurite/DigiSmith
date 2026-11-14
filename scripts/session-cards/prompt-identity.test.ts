@@ -2,12 +2,19 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { identityPromptHandler, isCatchUpPrompt, CATCH_UP_MARKER } from "./prompt-identity.ts";
 import type { CliRun } from "./prompt-identity.ts";
 import { findCardBySession, listCards } from "./cards.ts";
 import { writeIdentity } from "../identity.ts";
 import { PRE_PROMPT_HANDLERS, main } from "./hook-cli.ts";
+
+// A hook test must never spawn a real `dg`: the real function gets a fake spawn.
+vi.mock("../guides/index-text.ts", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../guides/index-text.ts")>();
+  const fakeSpawn = () => ({ on: () => undefined, unref: () => undefined });
+  return { ...orig, readGuideIndexBlock: (env?: NodeJS.ProcessEnv, now?: number, deps?: Parameters<typeof orig.readGuideIndexBlock>[2]) => orig.readGuideIndexBlock(env, now, deps ?? { spawn: fakeSpawn }) };
+});
 
 let depot: string;
 let repo: string;
@@ -47,6 +54,15 @@ describe("identityPromptHandler", () => {
     expect(out).toContain("[digismith identity]");
     expect(out).toContain("session d1");
     expect(findCardBySession("d1", "DigiSmith", bare())!.card).toMatchObject({ role: "maestro", id: "digismith-maestro" });
+  });
+  it("the prompt that writes the card prints the guide block; the next prompt prints nothing (DGS-785)", () => {
+    writeIdentity(record(), bare());
+    fs.mkdirSync(path.join(depot, "guides"), { recursive: true });
+    fs.writeFileSync(path.join(depot, "guides", "index.json"), JSON.stringify({ version: 1, fetched_at: new Date().toISOString(), guides: [{ slug: "merge-a-ticket", kind: "guide", when: "when merging" }] }));
+    const out = identityPromptHandler(ev({ prompt: "hello" }), bare())!;
+    expect(out).toContain("User manual (DigiSmith)");
+    expect(out).toContain("merge-a-ticket — when merging");
+    expect(identityPromptHandler(ev({ prompt: "again" }), bare())).toBeUndefined();
   });
   it("idempotent: a second prompt writes no second card and prints nothing", () => {
     writeIdentity(record(), bare());

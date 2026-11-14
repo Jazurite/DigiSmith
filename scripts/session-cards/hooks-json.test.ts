@@ -22,6 +22,11 @@ describe("hooks/hooks.json", () => {
     expect(c).toHaveLength(1);
     expect(c[0]).toContain("session-cards/hook-cli.ts\" end");
   });
+  it("DGS-785: the guide index adds no hook entry (SessionStart stays at 4 commands, none mentions guide)", () => {
+    const c = commands("SessionStart");
+    expect(c).toHaveLength(4);
+    expect(c.some((x) => /guide/i.test(x))).toBe(false);
+  });
   it("every command resolves under CLAUDE_PLUGIN_ROOT", () => {
     for (const e of ["SessionStart", "UserPromptSubmit", "SessionEnd"]) {
       for (const c of commands(e)) expect(c).toContain("${CLAUDE_PLUGIN_ROOT}/scripts/");
