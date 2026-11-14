@@ -96,11 +96,11 @@ Reasons: Jack speaks to the Maestro and expects it to match his meaning; workers
 
 **No edit to `hooks/hooks.json`.** `hooks/` is a PROTECTED path. The Maestro's SessionStart context already comes from `identityContext` in `scripts/session-cards/card-hook.ts`; the index is one more block returned from there. If the worker finds it needs a `hooks/` edit, it must stop and ask. The first-prompt fallback (`prompt-identity.ts`) gets the index too, because it prints `r.context`.
 
-New files, plain scripts in the plugin (they must run with `node --experimental-strip-types`, no workspace imports):
+New files (corrected 2026-11-14: `packages/cli` builds with `rootDir: src`, so the CLI cannot import from `scripts/`):
 
-- `scripts/guides/cache.ts`: read and validate `index.json`; slug, adoption and `when` parsing shared by the CLI (the CLI imports them from here, so one parser exists).
-- `scripts/guides/index-text.ts`: `buildGuideIndex(cache, now): string` and `maybeRefresh(...)`.
-- `scripts/session-cards/card-hook.ts`: `identityContext` appends `buildGuideIndex(...)` output; wrapped so any error gives no block.
+- `packages/cli/src/guide/` (compiled with the CLI): `parse.ts` (adoption test, slug, "When to use it", page cleaning), `cache.ts` (depot paths, atomic writes, lock), `lookup.ts`, `refresh.ts`, `index.ts` (the command). All Markdown parsing lives here, in one place; it runs only inside `dg guide refresh`.
+- `scripts/guides/index-text.ts` (plain plugin script, runs with `node --experimental-strip-types`, only `node:` imports and `../depot-dir.ts`): `buildGuideIndex(cache, now): string` and `maybeRefresh(...)`. It parses no Markdown: it reads `index.json` only. The cache file is the contract between the two sides; a contract test (plan Task 8) keeps them in step.
+- `scripts/session-cards/card-hook.ts`: `identityContext` appends the block from `index-text.ts`; wrapped so any error gives no block.
 
 Injected format (UTF-8, LF, plain text):
 
