@@ -28,7 +28,8 @@ export function createFrontdoorClient(envPath?: string): FrontdoorClient {
   });
 }
 
-export const DIGISMITH_SPACE_ID = "1301150000001271";
+import { DIGISMITH_SPACE_ID } from "./spaces.ts";
+export { DIGISMITH_SPACE_ID };
 
 export function createDigiSmithSpace(client: ClickUpClient = createClient()): Space {
   return new Space(client, DIGISMITH_SPACE_ID);
