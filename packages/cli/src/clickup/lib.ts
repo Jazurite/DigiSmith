@@ -1,6 +1,7 @@
 import { ClickUpClient, FileSessionStore, FrontdoorClient, checkCredentials, readFrontdoorAuth, Space } from "@digismith/clickup-client";
 import { readFileSync } from "node:fs";
 import { parseDateFlag, assertDateOrder } from "./parse-date.ts";
+import { DIGISMITH_SPACE_ID } from "./spaces.ts";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
 import type { Argv } from "yargs";
 
@@ -28,7 +29,6 @@ export function createFrontdoorClient(envPath?: string): FrontdoorClient {
   });
 }
 
-import { DIGISMITH_SPACE_ID } from "./spaces.ts";
 export { DIGISMITH_SPACE_ID };
 
 export function createDigiSmithSpace(client: ClickUpClient = createClient()): Space {
