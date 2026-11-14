@@ -219,6 +219,11 @@ describe("refreshState: kept parts and markers", () => {
     const r = await refreshState(opts({ workers: ["dgs-462", "dgs-438", "ocl-105"] }), deps(runner({ agents })));
     expect(r.state.running.find((x) => x.worker === "ocl-105")!.key).toBe("OCL-105");
   });
+  it("ignores a key glued to a letter in a terminal title", async () => {
+    const agents = [...AGENTS, agent("xocl-105", "w2", "working", "XOCL-105 factory reads both spaces")];
+    const r = await refreshState(opts({ workers: ["dgs-462", "dgs-438", "xocl-105"] }), deps(runner({ agents })));
+    expect(r.state.running.find((x) => x.worker === "xocl-105")!.key).toBe("-");
+  });
   it("needs every marker of an item to hold", async () => {
     fs.writeFileSync(note, fs.readFileSync(note, "utf-8").replace("2. Do Y", "2. Do Y [resolves: gone stray.txt] [resolves: ticket DGS-9]"));
     const r = await refreshState(opts(), deps(runner(), { ticketStatus: async () => "in progress" }));

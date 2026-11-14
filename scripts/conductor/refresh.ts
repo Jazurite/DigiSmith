@@ -11,7 +11,7 @@ import { parseMarkers, stripMarkers } from "./markers.ts";
 import { KEY_PREFIXES } from "../../packages/cli/src/clickup/spaces.ts";
 
 const LOG_KEY = new RegExp(`\\b(${KEY_PREFIXES})-(\\d+)`, "gi");
-const TITLE_KEY = new RegExp(`(?:${KEY_PREFIXES})-\\d+`, "i");
+const TITLE_KEY = new RegExp(`\\b(?:${KEY_PREFIXES})-\\d+`, "i");
 
 /** True if the path (relative to the repo) exists; a path whose real location leaves the repo throws. */
 function repoPathExists(repoDir: string, rel: string): boolean {
