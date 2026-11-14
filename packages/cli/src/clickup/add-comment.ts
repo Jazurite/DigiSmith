@@ -40,6 +40,21 @@ export function parseCommentArgv(argv: CommentArgv): CommentRequest {
 
 const label = (t: { id: string; custom_id?: string | null; name?: string }) => `${t.custom_id ?? t.id} (${t.id}) "${t.name ?? ""}"`;
 
+/** Posts a comment, then reads the task's comments back to confirm it. Throws (never re-sends) when the read-back fails or misses. */
+export async function postComment(client: ClickUpClient, taskId: string, text: string): Promise<{ id: string }> {
+  const created = await client.addTaskComment(taskId, text);
+  let rows;
+  try {
+    rows = await client.getTaskComments(taskId);
+  } catch (err) {
+    throw new Error(`sent (comment ${created.id}), but the read-back failed: ${(err as Error).message}; do not send again, check it in ClickUp`);
+  }
+  if (!rows.some((r) => String(r.id) === String(created.id))) {
+    throw new Error(`sent (comment ${created.id}), but read-back of ${taskId} does not show it; check it in ClickUp`);
+  }
+  return created;
+}
+
 export function createAddCommentCommand(clientFactory: () => ClickUpClient = createClient): CommandModule {
   return {
     command: "add-comment",
@@ -72,16 +87,7 @@ export function createAddCommentCommand(clientFactory: () => ClickUpClient = cre
           console.log(`comment on ${label(t)}; ${warn}`);
           console.log("nothing sent; add --yes to send");
         } else {
-          const created = await client.addTaskComment(t.id, req.text);
-          let rows;
-          try {
-            rows = await client.getTaskComments(t.id);
-          } catch (err) {
-            throw new Error(`sent (comment ${created.id}), but the read-back failed: ${(err as Error).message}; do not send again, check it in ClickUp`);
-          }
-          if (!rows.some((r) => String(r.id) === String(created.id))) {
-            throw new Error(`sent (comment ${created.id}), but read-back of ${t.id} does not show it; check it in ClickUp`);
-          }
+          const created = await postComment(client, t.id, req.text);
           console.log(`added comment ${created.id} on ${label(t)}; read back OK`);
         }
         process.exitCode = 0;

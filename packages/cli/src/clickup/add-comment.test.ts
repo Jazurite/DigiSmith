@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClickUpClient } from "@digismith/clickup-client";
-import { parseCommentArgv, createAddCommentCommand } from "./add-comment.ts";
+import { parseCommentArgv, createAddCommentCommand, postComment } from "./add-comment.ts";
 
 type Handler = (argv: Record<string, unknown>) => Promise<void>;
 const run = (c: { handler: unknown }, argv: Record<string, unknown>) => (c.handler as Handler)(argv);
@@ -163,5 +163,30 @@ describe("add-comment command", () => {
     await run(createAddCommentCommand(() => { throw new Error("no auth"); }), { task: "a1" });
     expect(out(err)).toContain("exactly one");
     expect(process.exitCode).toBe(1);
+  });
+});
+
+describe("postComment", () => {
+  it("posts, reads back and returns the created comment", async () => {
+    const client = {
+      addTaskComment: vi.fn().mockResolvedValue({ id: 77 }),
+      getTaskComments: vi.fn().mockResolvedValue([{ id: "77" }]),
+    } as unknown as ClickUpClient;
+    await expect(postComment(client, "t1", "hello")).resolves.toEqual({ id: 77 });
+    expect(client.addTaskComment).toHaveBeenCalledWith("t1", "hello");
+  });
+  it("throws when the read-back does not show the comment", async () => {
+    const client = {
+      addTaskComment: vi.fn().mockResolvedValue({ id: 77 }),
+      getTaskComments: vi.fn().mockResolvedValue([{ id: "1" }]),
+    } as unknown as ClickUpClient;
+    await expect(postComment(client, "t1", "x")).rejects.toThrow("read-back of t1 does not show it");
+  });
+  it("throws a do-not-send-again message when the read-back call fails", async () => {
+    const client = {
+      addTaskComment: vi.fn().mockResolvedValue({ id: 77 }),
+      getTaskComments: vi.fn().mockRejectedValue(new Error("boom")),
+    } as unknown as ClickUpClient;
+    await expect(postComment(client, "t1", "x")).rejects.toThrow("do not send again");
   });
 });
