@@ -22,10 +22,11 @@ describe("hooks/hooks.json", () => {
     expect(c).toHaveLength(1);
     expect(c[0]).toContain("session-cards/hook-cli.ts\" end");
   });
-  it("DGS-785: the guide index adds no hook entry (SessionStart stays at 4 commands, none mentions guide)", () => {
-    const c = commands("SessionStart");
-    expect(c).toHaveLength(4);
-    expect(c.some((x) => /guide/i.test(x))).toBe(false);
+  it("DGS-785: every event keeps its hook-command count and no command mentions guide", () => {
+    const expected: Record<string, number> = { SessionStart: 4, UserPromptSubmit: 1, Notification: 1, PostToolUse: 1, Stop: 1, SessionEnd: 2 };
+    const actual = Object.fromEntries(Object.keys(hooks).map((e) => [e, commands(e).length]));
+    expect(actual).toEqual(expected);
+    for (const e of Object.keys(hooks)) expect(commands(e).some((x) => /guide/i.test(x))).toBe(false);
   });
   it("every command resolves under CLAUDE_PLUGIN_ROOT", () => {
     for (const e of ["SessionStart", "UserPromptSubmit", "SessionEnd"]) {
