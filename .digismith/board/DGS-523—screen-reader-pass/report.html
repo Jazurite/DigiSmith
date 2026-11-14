@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DGS-523 — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style></head><body>
+<header>
+<h1>DGS-523 Screen-reader checklist — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-523</strong></span><span>Date: 2026-11-14</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The VoiceOver checklist for the life dashboard is written, and a unit test keeps it in line with the page code. <strong>The pass itself is pending Jack.</strong> Nobody has run the checklist, and Jack has not decided the two recorded exceptions (WCAG 2.5.8 and 1.4.13). The ticket stays in Jack's sign-off until he signs the line in the checklist. See <a href="findings.md">findings.md</a> for the review table.</p>
+</section>
+<h2>What changed</h2>
+<ul>
+<li><code>scripts/nexus-web/tests/a11y/voiceover-checklist.md</code>: Part A (Mac, 11 lines), Part B (iPhone, 5 lines), Part C (the two exceptions, 2 lines) and a sign-off line. It says where the optional API stop commands run (on the Workbox) and names the StatePanel stories as the Storybook sidebar shows them.</li>
+<li><code>scripts/nexus-web/tests/unit/voiceover-checklist.test.ts</code>: checks the parts and tick counts, that quoted strings and story names still exist in the code, that the tooltip is not read twice, that both exceptions are named, and that no private value (date, age, stat number, lived percentage) is in the checklist.</li>
+<li>No product code, no <code>EXCEPTIONS.md</code> change, no config change.</li>
+</ul>
+<h2>Tests</h2>
+<p><code>pnpm vitest run tests/unit/voiceover-checklist.test.ts</code> in <code>scripts/nexus-web</code>: 1 file, 18 tests pass. The whole page suite and <code>packages/cli</code> were not run (load was above 4; the plan touches no <code>packages/cli</code> code). The read-only <code>launchctl print</code> check shows the API service at the plist path the checklist names; no <code>launchctl</code> change was made.</p>
+<section id="finalreview">
+<h2>Final Review &amp; Fix</h2>
+<p>Whole-branch review (opus): ready to merge, nothing critical or important. Three minor findings, all fixed. The per-task reviews raised five minor findings: three fixed, two accepted. Table: <a href="findings.md">findings.md</a>.</p>
+</section>
+<h2>Deviations</h2>
+<ul>
+<li>The guard test was committed in Task 1, not once in Task 3, so the Task 1 Reviewer had a diff.</li>
+<li>The privacy test is stricter than the plan (age count, thousands separators, weeks lived or left, lived and progress percentages), from plan review round 2 finding F13.</li>
+<li>Eight small <code>fix(a11y)</code> commits followed review rulings.</li>
+</ul>
+<h2>First use</h2>
+<p>Jack runs Parts A to C on the Mac and the iPhone, accepts or rejects each exception and signs the line.</p>
+</body></html>
