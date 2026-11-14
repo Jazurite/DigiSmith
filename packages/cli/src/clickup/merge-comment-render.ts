@@ -30,7 +30,8 @@ export function formatTime(d: Date): string {
 
 function oneLine(s: string): string {
   const t = s.replace(/\s+/g, " ").trim();
-  return t.length > MAX_FIELD ? `${t.slice(0, MAX_FIELD - 3)}...` : t;
+  const cps = Array.from(t);
+  return cps.length > MAX_FIELD ? `${cps.slice(0, MAX_FIELD - 3).join("")}...` : t;
 }
 
 function field(s: string | undefined, fallback: string): string {
@@ -41,19 +42,23 @@ function field(s: string | undefined, fallback: string): string {
 export function renderMergeComment(i: MergeCommentInput): string {
   const when = formatTime(i.now);
   const lines: string[] = [];
-  lines.push(i.part ? `${i.key} part merged, ${when}: ${oneLine(i.part)}.` : `${i.key} merged, ${when}: done.`);
+  lines.push(
+    i.part ? `${i.key} part merged, ${when}: ${oneLine(i.part).replace(/\.$/, "")}.` : `${i.key} merged, ${when}: done.`,
+  );
   lines.push(`Merge ${i.base.slice(0, 7)}..${i.head.slice(0, 7)}${i.version ? `, plugin ${i.version}` : ""}.`);
   for (const c of i.commits.slice(0, MAX_COMMITS)) lines.push(`- ${oneLine(c.subject)} (${c.sha.slice(0, 7)})`);
   if (i.commits.length > MAX_COMMITS) lines.push(`+${i.commits.length - MAX_COMMITS} more`);
   lines.push(`Tests: ${field(i.tests, "not reported")}`);
-  const items = (i.decisions ?? "")
+  const all = (i.decisions ?? "")
     .split("\n")
     .map((l) => oneLine(l.replace(/^\s*[-*]\s+/, "")))
-    .filter((l) => l !== "")
-    .slice(0, MAX_DECISIONS);
+    .filter((l) => l !== "");
+  const items = all.slice(0, MAX_DECISIONS);
+  const cut = all.length - items.length;
   if (items.length === 0) lines.push("Decisions: not reported");
   else if (items.length === 1) lines.push(`Decisions: ${items[0]}`);
   else lines.push("Decisions:", ...items.map((d) => `- ${d}`));
+  if (items.length > 1 && cut > 0) lines.push(`+${cut} more decisions`);
   lines.push(`Next: ${field(i.next, "none")}`);
   lines.push(`Split off: ${field(i.splitOff, "none")}`);
   if (i.reportAttached) lines.push("Report: report.html is attached to this ticket.");

@@ -66,13 +66,33 @@ describe("renderMergeComment", () => {
   });
   it("caps decisions at 3 and truncates long fields at 300 characters", () => {
     const t = renderMergeComment({ ...base, decisions: "a\nb\nc\nd", tests: "x".repeat(400) });
-    expect(t).not.toContain("- d");
+    expect(t).toContain(["Decisions:", "- a", "- b", "- c", "+1 more decisions"].join("\n"));
     const line = t.split("\n").find((l) => l.startsWith("Tests: "))!;
     expect(line.length).toBe("Tests: ".length + 300);
     expect(line.endsWith("...")).toBe(true);
   });
+  it("says how many decisions were cut after the third", () => {
+    const t = renderMergeComment({ ...base, decisions: "a\nb\nc\nd\ne" });
+    expect(t).toContain(["Decisions:", "- a", "- b", "- c", "+2 more decisions", "Next: none"].join("\n"));
+  });
+  it("keeps the single-decision label line when only one decision exists", () => {
+    expect(renderMergeComment({ ...base, decisions: "only one" })).toContain("\nDecisions: only one\nNext: none\n");
+  });
+  it("truncates by code point so an emoji at the cut is not split", () => {
+    const tests = "x".repeat(296) + "😀" + "y".repeat(50);
+    const t = renderMergeComment({ ...base, tests });
+    const line = t.split("\n").find((l) => l.startsWith("Tests: "))!;
+    expect(line).toBe("Tests: " + "x".repeat(296) + "😀...");
+    expect(Array.from(line.slice("Tests: ".length)).length).toBe(300);
+    expect(t).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])/);
+  });
   it("uses the part label in the headline", () => {
     expect(renderMergeComment({ ...base, part: "Part 2 of 3" }).split("\n")[0]).toBe(
+      "DGS-178 part merged, 2026-11-13 14:20 UTC+7 [07:20Z]: Part 2 of 3.",
+    );
+  });
+  it("does not double the period when the part label already ends with one", () => {
+    expect(renderMergeComment({ ...base, part: "Part 2 of 3." }).split("\n")[0]).toBe(
       "DGS-178 part merged, 2026-11-13 14:20 UTC+7 [07:20Z]: Part 2 of 3.",
     );
   });
