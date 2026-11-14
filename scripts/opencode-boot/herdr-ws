@@ -119,6 +119,7 @@ def audit(items):
             if not is_pane and grp == "agent":
                 try: pane = find(json.loads(run(["agent", "get", tgt]).stdout), "pane_id") or ""
                 except Exception: pane = ""
+            # ticket key prefixes: keep in step with KEY_PREFIXES in packages/cli/src/clickup/spaces.ts
             m = re.search(r"(?:dgs|ocl)-\d+", name, re.I) if own else None
             depot = os.environ.get("DIGISMITH_DEPOT_DIR") or os.path.join(os.path.expanduser("~"), ".digismith-depot")
             os.makedirs(os.path.join(depot, "drivers"), exist_ok=True)
