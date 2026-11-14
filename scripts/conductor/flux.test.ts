@@ -152,6 +152,11 @@ describe("pure readers", () => {
     expect(scanNoteInFlight(sec("No ticket in progress. DGS-9 parked."))).toBeUndefined();
     expect(scanNoteInFlight(`## a\n- DGS-1 in progress\n\n## Session end x (s) 2026\nHandoff: card x\n`)).toBeUndefined();
   });
+  it("scanNoteInFlight: OCL keys count like DGS keys", () => {
+    const sec = (line: string) => `## new\n- ${line}\n`;
+    expect(scanNoteInFlight(sec("OCL-106 in progress, builder running"))).toBe("OCL-106");
+    expect(scanNoteInFlight(sec("OCL-9 done."))).toBeUndefined();
+  });
 });
 
 describe("wake text", () => {

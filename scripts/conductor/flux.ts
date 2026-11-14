@@ -7,6 +7,9 @@ import { depotDir } from "../depot-dir.ts";
 import { findCardBySession, listCards, type SessionCard } from "../session-card.ts";
 import { extractBlock, parseStateBody, STATE_MARKER } from "./state-block.ts";
 import { iso7 } from "./state.ts";
+import { KEY_PREFIXES } from "../../packages/cli/src/clickup/spaces.ts";
+
+const NOTE_KEY = new RegExp(`\\b(?:${KEY_PREFIXES})-\\d+`);
 
 /** Run log folder under the depot, one <UTC+7 date>.jsonl per day (the DGS-434 proposal). */
 export const FLUX_RUN_LOG_DIR = ["runs", "conductor-flux"] as const;
@@ -190,7 +193,7 @@ export function scanNoteInFlight(text: string): string | undefined {
   const newer = lastHandoff >= 0 ? sections.slice(lastHandoff + 1) : sections.slice(-1);
   for (const s of newer) {
     for (const line of s.split("\n")) {
-      const k = /\bDGS-\d+/.exec(line);
+      const k = NOTE_KEY.exec(line);
       if (k && IN_FLIGHT.test(line) && !NOT_IN_FLIGHT.test(line)) return k[0];
     }
   }
