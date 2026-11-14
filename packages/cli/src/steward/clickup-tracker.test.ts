@@ -114,3 +114,9 @@ describe("two spaces", () => {
     expect(c.getSpaceFolders).toHaveBeenCalledWith("S1");
   });
 });
+
+describe("empty space list", () => {
+  it("is refused at construction", () => {
+    expect(() => new ClickUpTracker(client(), [])).toThrow(/at least one space id/);
+  });
+});

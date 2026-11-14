@@ -428,3 +428,10 @@ describe("two spaces", () => {
     expect(t).toMatchObject({ key: "OCL-107", mode: "Manual", signOff: "Jack" });
   });
 });
+
+describe("empty space list", () => {
+  it("is refused at construction", () => {
+    const { client } = fakeClient({ search: [] });
+    expect(() => new ClickUpLoTracker(client, [])).toThrow(/at least one space id/);
+  });
+});

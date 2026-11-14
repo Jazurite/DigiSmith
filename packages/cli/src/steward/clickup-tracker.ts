@@ -32,6 +32,7 @@ export class ClickUpTracker implements Tracker {
   constructor(client: ClickUpClient, spaceIds: string | string[]) {
     this.client = client;
     this.spaceIds = Array.isArray(spaceIds) ? spaceIds : [spaceIds];
+    if (this.spaceIds.length === 0) throw new Error("ClickUp tracker needs at least one space id");
   }
 
   private async taskOf(key: string): Promise<ClickUpTask> {
