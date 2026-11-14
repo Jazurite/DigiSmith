@@ -103,7 +103,7 @@
       <tr><td>Whole-branch review round 1</td><td>No findings</td></tr>
       <tr><td>Steward <code>started</code> on the OCL key (first factory build on an OCL key)</td><td>Printed <code>steward: OCL-106: claimed -&gt; in progress (start 2026-11-14)</code>. No refusal, no warn. It is a live write on OCL-106 before the merge (start date).</td></tr>
       <tr><td>Steward <code>review-started</code> on the OCL key</td><td>Printed <code>steward: OCL-106: in progress -&gt; review</code>. No refusal, no warn.</td></tr>
-      <tr><td><strong>Open question for Jack:</strong> a limit of 0</td><td>With <code>builder: 0</code> (or <code>reviewer</code>, <code>role</code>) the kind is blocked, so the scan claims nothing. The tests now pass under 0 and the parser accepts 0 (shape check allows 0 to 9). Whether a limit of 0 should stay valid, or be a parser problem, is Jack's call. Not changed here.</td></tr>
+      <tr><td>A worker limit of 0</td><td>Counts as valid: <code>config.yml</code> uses 0 to block a kind, the parser accepts 0 and the shape check allows 0 to 9. A Maestro technical call, not a question for Jack. Nothing changed.</td></tr>
     </tbody>
   </table>
   </div>
