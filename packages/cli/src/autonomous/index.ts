@@ -4,7 +4,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CommandModule } from "yargs";
-import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
+import { createClient } from "../clickup/lib.ts";
+import { ALL_SPACE_IDS } from "../clickup/spaces.ts";
 import { appendResolved, attentionViews, formatOpen, readOpen } from "./attention.ts";
 import { realGit, type Git } from "./gitx.ts";
 import { runMergeGate } from "./merge-gate.ts";
@@ -59,7 +60,7 @@ export function defaultDeps(): AutonomousDeps {
   const depot = join(homedir(), ".digismith-depot");
   let tracker: Tracker | null = null;
   return {
-    tracker: () => (tracker ??= new ClickUpLoTracker(createClient(), DIGISMITH_SPACE_ID)),
+    tracker: () => (tracker ??= new ClickUpLoTracker(createClient(), ALL_SPACE_IDS)),
     dir: autonomousDir(),
     ordersDir: join(depot, "sessions", "DigiSmith", "orders"),
     conductorsJson: join(depot, "conductors.json"),

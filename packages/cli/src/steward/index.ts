@@ -1,5 +1,6 @@
 import type { CommandModule } from "yargs";
-import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
+import { createClient } from "../clickup/lib.ts";
+import { ALL_SPACE_IDS } from "../clickup/spaces.ts";
 import { createDepotRegistry } from "../tokens/registry.ts";
 import { ClickUpTracker } from "./clickup-tracker.ts";
 import { claudeRunner } from "./model.ts";
@@ -15,7 +16,7 @@ export interface DepsOptions { quiet?: boolean; cwd?: string }
 export function defaultDeps(opts: DepsOptions = {}): EventDeps {
   const profile = readStewardProfile(opts.cwd ?? process.cwd());
   let tracker = null;
-  if (profile.tracker === "clickup") tracker = new ClickUpTracker(createClient(), DIGISMITH_SPACE_ID);
+  if (profile.tracker === "clickup") tracker = new ClickUpTracker(createClient(), ALL_SPACE_IDS);
   if (profile.tracker === "jira" && !opts.quiet) console.error("steward: the JIRA tracker is not built yet; nothing done");
   return {
     tracker,

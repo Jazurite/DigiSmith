@@ -3,7 +3,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CommandModule } from "yargs";
-import { createClient, DIGISMITH_SPACE_ID } from "../../clickup/lib.ts";
+import { createClient } from "../../clickup/lib.ts";
+import { ALL_SPACE_IDS } from "../../clickup/spaces.ts";
 import { readOpen } from "../attention.ts";
 import { realExec } from "../conductor.ts";
 import { fmtUtc7 } from "../clock.ts";
@@ -247,7 +248,7 @@ export function roleOfRun(run: string): string | null {
 
 export function defaultDirectorDeps(): DirectorDeps {
   let tracker: Tracker | null = null;
-  const t = (): Tracker => (tracker ??= new ClickUpLoTracker(createClient(), DIGISMITH_SPACE_ID));
+  const t = (): Tracker => (tracker ??= new ClickUpLoTracker(createClient(), ALL_SPACE_IDS));
   const dir = autonomousDir();
   const conductorsJson = join(process.env.DIGISMITH_DEPOT_DIR || join(homedir(), ".digismith-depot"), "conductors.json");
   const find = async (ticket: string) => {
