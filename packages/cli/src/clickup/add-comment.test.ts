@@ -175,6 +175,15 @@ describe("postComment", () => {
     await expect(postComment(client, "t1", "hello")).resolves.toEqual({ id: 77 });
     expect(client.addTaskComment).toHaveBeenCalledWith("t1", "hello");
   });
+  it("keeps a numeric comment id as the number it was sent as", async () => {
+    const client = {
+      addTaskComment: vi.fn().mockResolvedValue({ id: 77 }),
+      getTaskComments: vi.fn().mockResolvedValue([{ id: 77 }]),
+    } as unknown as ClickUpClient;
+    const created = await postComment(client, "t1", "hello");
+    expect(created.id).toBe(77);
+    expect(typeof created.id).toBe("number");
+  });
   it("throws when the read-back does not show the comment", async () => {
     const client = {
       addTaskComment: vi.fn().mockResolvedValue({ id: 77 }),

@@ -41,7 +41,7 @@ export function parseCommentArgv(argv: CommentArgv): CommentRequest {
 const label = (t: { id: string; custom_id?: string | null; name?: string }) => `${t.custom_id ?? t.id} (${t.id}) "${t.name ?? ""}"`;
 
 /** Posts a comment, then reads the task's comments back to confirm it. Throws (never re-sends) when the read-back fails or misses. */
-export async function postComment(client: ClickUpClient, taskId: string, text: string): Promise<{ id: string }> {
+export async function postComment(client: ClickUpClient, taskId: string, text: string): Promise<{ id: string | number }> {
   const created = await client.addTaskComment(taskId, text);
   let rows;
   try {
