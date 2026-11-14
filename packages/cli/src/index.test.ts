@@ -16,6 +16,7 @@ describe("buildCli", () => {
     expect(help).toMatch(/depot/);
     expect(help).toMatch(/tokens/);
     expect(help).toMatch(/steward/);
+    expect(help).toMatch(/guide/);
   });
 
   it("registers the autonomous command group", async () => {

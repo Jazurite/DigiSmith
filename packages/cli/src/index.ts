@@ -19,6 +19,7 @@ import runCommand from "./run/index.ts";
 import salvageCommand from "./salvage/index.ts";
 import oculusCommand from "./oculus/index.ts";
 import conductorCommand from "./conductor/index.ts";
+import guideCommand from "./guide/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -49,6 +50,7 @@ export function buildCli(argv: string[]): Argv {
     .command(salvageCommand)
     .command(oculusCommand)
     .command(conductorCommand)
+    .command(guideCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
