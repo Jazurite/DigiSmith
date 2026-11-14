@@ -58,7 +58,7 @@ export function renderMergeComment(i: MergeCommentInput): string {
   if (items.length === 0) lines.push("Decisions: not reported");
   else if (items.length === 1) lines.push(`Decisions: ${items[0]}`);
   else lines.push("Decisions:", ...items.map((d) => `- ${d}`));
-  if (items.length > 1 && cut > 0) lines.push(`+${cut} more decisions`);
+  if (items.length > 1 && cut > 0) lines.push(`+${cut} more ${cut === 1 ? "decision" : "decisions"}`);
   lines.push(`Next: ${field(i.next, "none")}`);
   lines.push(`Split off: ${field(i.splitOff, "none")}`);
   if (i.reportAttached) lines.push("Report: report.html is attached to this ticket.");

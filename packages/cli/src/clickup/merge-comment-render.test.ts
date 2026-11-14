@@ -66,7 +66,9 @@ describe("renderMergeComment", () => {
   });
   it("caps decisions at 3 and truncates long fields at 300 characters", () => {
     const t = renderMergeComment({ ...base, decisions: "a\nb\nc\nd", tests: "x".repeat(400) });
-    expect(t).toContain(["Decisions:", "- a", "- b", "- c", "+1 more decisions"].join("\n"));
+    expect(t.split("\n")).toContain("+1 more decision");
+    expect(t.split("\n")).not.toContain("+1 more decisions");
+    expect(t).toContain(["Decisions:", "- a", "- b", "- c"].join("\n"));
     const line = t.split("\n").find((l) => l.startsWith("Tests: "))!;
     expect(line.length).toBe("Tests: ".length + 300);
     expect(line.endsWith("...")).toBe(true);
