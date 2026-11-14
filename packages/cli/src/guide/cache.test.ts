@@ -79,4 +79,32 @@ describe("guide cache", () => {
     expect(fs.existsSync(path.join(guidesDir(env), "refresh.lock"))).toBe(false);
     expect(takeLock(t + 122_000, env)).toBe(true);
   });
+
+  it("two takeLock calls on a stale lock give exactly one winner", () => {
+    const t = Date.parse("2026-11-14T00:00:00Z");
+    takeLock(t, env);
+    const results = [takeLock(t + 200_000, env), takeLock(t + 200_000, env)];
+    expect(results.filter(Boolean)).toHaveLength(1);
+  });
+
+  it("two takeLock calls on a free lock give exactly one winner", () => {
+    const t = Date.parse("2026-11-14T00:00:00Z");
+    expect([takeLock(t, env), takeLock(t, env)]).toEqual([true, false]);
+  });
+
+  it("a lock timestamp in the future is stale", () => {
+    const t = Date.parse("2026-11-14T00:00:00Z");
+    takeLock(t + 3_600_000, env);
+    expect(takeLock(t, env)).toBe(true);
+  });
+
+  it("readIndex drops entries missing slug or name and keeps the rest", () => {
+    fs.mkdirSync(guidesDir(env), { recursive: true });
+    const good = index.guides[0];
+    fs.writeFileSync(
+      path.join(guidesDir(env), "index.json"),
+      JSON.stringify({ ...index, guides: [good, { ...good, slug: undefined }, { ...good, name: 5 }, null, "x"] }),
+    );
+    expect(readIndex(env)?.guides).toEqual([good]);
+  });
 });

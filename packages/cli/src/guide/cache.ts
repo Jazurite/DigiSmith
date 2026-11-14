@@ -50,7 +50,11 @@ export function readIndex(env: NodeJS.ProcessEnv = process.env): GuideIndex | un
     if (typeof data !== "object" || data === null) return undefined;
     const o = data as Record<string, unknown>;
     if (o.version !== 1 || !Array.isArray(o.guides)) return undefined;
-    return data as GuideIndex;
+    const guides = o.guides.filter(
+      (g): g is GuideIndexEntry =>
+        typeof g === "object" && g !== null && typeof (g as GuideIndexEntry).slug === "string" && typeof (g as GuideIndexEntry).name === "string",
+    );
+    return { ...(data as GuideIndex), guides };
   } catch {
     return undefined;
   }
@@ -80,17 +84,29 @@ function lockPath(env: NodeJS.ProcessEnv): string {
   return path.join(guidesDir(env), "refresh.lock");
 }
 
-/** True when the lock was taken (absent, unreadable or older than 2 minutes); false when a fresh lock exists. */
+function createExclusive(file: string, now: number): boolean {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  try {
+    fs.writeFileSync(file, String(now), { flag: "wx" });
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw err;
+  }
+}
+
+/** True when the lock was taken (absent, or stale: older than 2 minutes, unreadable or in the future); false when a live lock exists. */
 export function takeLock(now: number = Date.now(), env: NodeJS.ProcessEnv = process.env): boolean {
   const file = lockPath(env);
+  if (createExclusive(file, now)) return true;
   try {
     const started = Number(fs.readFileSync(file, "utf8").trim());
-    if (Number.isFinite(started) && now - started < LOCK_STALE_MS) return false;
+    if (Number.isFinite(started) && started <= now && now - started < LOCK_STALE_MS) return false;
   } catch {
-    // absent or unreadable: take it
+    // unreadable: treat as stale
   }
-  writeAtomic(file, String(now));
-  return true;
+  fs.rmSync(file, { force: true });
+  return createExclusive(file, now);
 }
 
 export function releaseLock(env: NodeJS.ProcessEnv = process.env): void {
