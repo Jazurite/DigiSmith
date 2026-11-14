@@ -29,12 +29,20 @@ describe("finishing merge-comment wiring", () => {
   });
   it("reads both pins in the merged event block, before cleanup", () => {
     const merged = option1.indexOf("dg steward event merged");
+    const blockStart = option1.lastIndexOf("Send the Steward the merge (DGS-551).", merged);
+    const blockEnd = option1.indexOf("Once the push succeeds, fire the `post-finish` lifecycle hook", merged);
     const cleanup = option1.indexOf("run the post-merge cleanup (Step 6)");
-    const base = option1.indexOf("refs/digismith/post-finish/<feature-branch>/base");
-    expect(base).toBeGreaterThan(-1);
-    expect(cleanup).toBeGreaterThan(-1);
-    expect(option1.indexOf("<pre-merge-sha>")).toBeLessThan(cleanup);
+    const headRead = option1.indexOf("git rev-parse refs/digismith/post-finish/<feature-branch>/head", blockStart);
+    const baseRead = option1.indexOf("git rev-parse refs/digismith/post-finish/<feature-branch>/base", blockStart);
     expect(merged).toBeGreaterThan(-1);
+    expect(blockStart).toBeGreaterThan(-1);
+    expect(blockEnd).toBeGreaterThan(merged);
+    expect(cleanup).toBeGreaterThan(blockEnd);
+    for (const at of [headRead, baseRead]) {
+      expect(at).toBeGreaterThan(blockStart);
+      expect(at).toBeLessThan(blockEnd);
+      expect(at).toBeLessThan(cleanup);
+    }
   });
   it("names the ledger line on a printed warn: and never blocks", () => {
     expect(option1).toContain("append `Merge comment: failed (<that line>)` to the ledger when one exists");

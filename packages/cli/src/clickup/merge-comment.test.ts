@@ -72,6 +72,7 @@ describe("gatherGit", () => {
   });
   it("refuses a ref that is not a hex sha", () => {
     expect(() => gatherGit(repo, "main; rm", head)).toThrow("not a commit sha");
+    expect(() => gatherGit(repo, " NOPE ", head)).toThrow('" NOPE " is not a commit sha');
   });
 });
 

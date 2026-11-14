@@ -21,7 +21,7 @@ function git(repo: string, args: string[]): string {
 export function gatherGit(repo: string, baseIn: string, headIn: string) {
   const base = baseIn.trim().toLowerCase();
   const head = headIn.trim().toLowerCase();
-  for (const s of [base, head]) if (!SHA.test(s)) throw new Error(`"${s}" is not a commit sha (7 to 40 hex characters)`);
+  for (const [raw, s] of [[baseIn, base], [headIn, head]]) if (!SHA.test(s)) throw new Error(`"${raw}" is not a commit sha (7 to 40 hex characters)`);
   const fullBase = git(repo, ["rev-parse", "--verify", `${base}^{commit}`]);
   const fullHead = git(repo, ["rev-parse", "--verify", `${head}^{commit}`]);
   const log = git(repo, ["log", "--no-merges", "--reverse", "--format=%h%x09%s", `${fullBase}..${fullHead}`]);
