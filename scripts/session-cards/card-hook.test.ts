@@ -7,7 +7,7 @@ import { endHook, readStarterEnv, startHook, touchHook } from "./card-hook.ts";
 import { findCardBySession, listCards } from "./cards.ts";
 import { writeIdentity } from "../identity.ts";
 import { main } from "./hook-cli.ts";
-import { readGuideIndexBlock } from "../guides/index-text.ts";
+import { buildGuideIndex, readGuideIndexBlock } from "../guides/index-text.ts";
 
 // A hook test must never spawn a real `dg`: the real function gets a fake spawn unless a test passes its own.
 vi.mock("../guides/index-text.ts", async (importOriginal) => {
@@ -237,16 +237,26 @@ describe("startHook identity branch (DGS-411)", () => {
         JSON.stringify({ version: 1, fetched_at: new Date().toISOString(), guides: [{ slug: "merge-a-ticket", kind: "guide", when: "when merging a ticket" }] }),
       );
     };
-    it("a Maestro context ends with the guide block, which starts with the header line", () => {
+    it("the context is the three identity lines, then the real guide block, exactly", () => {
       writeIdentity(record(), bare());
       writeCache();
-      const r = startHook({ session_id: "g1", cwd: repo }, bare(), { now: T0 });
-      const ctx = r.context!;
-      expect(ctx).toContain("[digismith identity]");
-      const block = ctx.slice(ctx.indexOf(HEADER));
-      expect(ctx.indexOf(HEADER)).toBeGreaterThan(0);
-      expect(ctx.endsWith(block)).toBe(true);
-      expect(block).toContain("merge-a-ticket — when merging a ticket");
+      const cache = fs.readFileSync(path.join(depot, "guides", "index.json"), "utf8");
+      const ctx = startHook({ session_id: "g1", cwd: repo }, bare(), { now: T0 }).context!;
+      const lines = ctx.split("\n");
+      expect(lines.slice(0, 3).join("\n")).toMatch(/^\[digismith identity\] .*\nNo other open session of this identity\.\nAny session of this identity/);
+      expect(lines[3]).toBe(HEADER);
+      expect(lines.slice(3).join("\n")).toBe(buildGuideIndex(cache, Date.now()));
+      expect(lines[lines.length - 1]).toBe("merge-a-ticket — when merging a ticket");
+    });
+    it("a known block is appended after the identity lines, nothing after it", () => {
+      writeIdentity(record(), bare());
+      const without = (() => {
+        vi.mocked(readGuideIndexBlock).mockImplementationOnce(() => undefined);
+        return startHook({ session_id: "s0", cwd: repo }, bare(), { now: T0 }).context!;
+      })();
+      vi.mocked(readGuideIndexBlock).mockImplementationOnce(() => "SENTINEL-BLOCK\nline two");
+      const ctx = startHook({ session_id: "s0", cwd: repo }, bare(), { now: T0 }).context!;
+      expect(ctx).toBe(`${without}\nSENTINEL-BLOCK\nline two`);
     });
     it("a worker env and a conductor env get no guide block", () => {
       writeIdentity(record(), bare());
