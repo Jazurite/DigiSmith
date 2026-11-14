@@ -52,6 +52,20 @@ describe("attach-record", () => {
     expect(log).toHaveBeenCalledWith("not a ClickUp key, skipped");
     expect(factory).not.toHaveBeenCalled();
   });
+  it("accepts an OCL key", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const getTaskByRef = vi.fn().mockResolvedValue({ id: "t1", attachments: [] });
+    await run({ getTaskByRef, uploadAttachment: vi.fn().mockResolvedValue({ id: "a1" }) } as never, { task: "OCL-105", file });
+    expect(getTaskByRef).toHaveBeenCalledWith("OCL-105");
+    expect(log).not.toHaveBeenCalledWith("not a ClickUp key, skipped");
+  });
+  it("still skips an unknown prefix", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const factory = vi.fn();
+    await handlerOf<{ task: string; file: string }>(createAttachRecordCommand(factory as never))({ task: "ABC-1", file });
+    expect(log).toHaveBeenCalledWith("not a ClickUp key, skipped");
+    expect(factory).not.toHaveBeenCalled();
+  });
   it("skips a missing file with exit 0", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     await run({} as never, { task: "DGS-9", file: join(dir, "nope.html") });

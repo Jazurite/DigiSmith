@@ -9,7 +9,7 @@ import { priceOf, taskUsage, windowBounds } from "../tokens/stamp.ts";
 import { readStamps } from "../tokens/stamps-store.ts";
 import { addCounts, emptyCounts, type Counts } from "../tokens/types.ts";
 
-const CLICKUP_KEY = /^DGS-\d+$/;
+import { isTicketKey } from "./spaces.ts";
 const failure = (msg: string) => `warn: ${msg.replace(/\s*\n\s*/g, " ")}`;
 const taskOrder = (a: string, b: string) => (a === "final" ? 1 : b === "final" ? -1 : Number(a) - Number(b) || a.localeCompare(b));
 
@@ -67,7 +67,7 @@ export function createTicketTotalCommand(clientFactory: () => ClickUpClient = cr
       process.exitCode = 0;
       try {
         const key = String(argv.task ?? "").trim();
-        if (!CLICKUP_KEY.test(key)) {
+        if (!isTicketKey(key)) {
           console.log("not a ClickUp key, skipped");
           return;
         }

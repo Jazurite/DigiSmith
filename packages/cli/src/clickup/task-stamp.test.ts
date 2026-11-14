@@ -34,11 +34,12 @@ function fake(opts: { existing?: { id: string; comment_text: string }[]; postFai
 }
 const run = (f: Fake, argv: Argv) => handlerOf<Argv>(createTaskStampCommand(() => f.client))({ task: KEY, planTask: "1", ledger, ...argv });
 
-function seed(opts: { sessions?: string[]; end1?: boolean; extra?: (reg: ReturnType<typeof createDepotRegistry>) => void } = {}) {
+function seed(opts: { sessions?: string[]; end1?: boolean; extra?: (reg: ReturnType<typeof createDepotRegistry>) => void; ticket?: string } = {}) {
+  const ticket = opts.ticket ?? KEY;
   const reg = createDepotRegistry(dir);
-  for (const s of opts.sessions ?? ["s1"]) reg.append({ kind: "session", ticket: KEY, session_id: s, source: "t", role: "worker", ts: "2026-11-02T09:00:00Z" });
-  reg.append({ kind: "task_start", ticket: KEY, task: "1", session_id: "s1", ts: "2026-11-02T10:00:00Z" });
-  if (opts.end1 !== false) reg.append({ kind: "task_end", ticket: KEY, task: "1", session_id: "s1", ts: "2026-11-02T10:05:00Z" });
+  for (const s of opts.sessions ?? ["s1"]) reg.append({ kind: "session", ticket, session_id: s, source: "t", role: "worker", ts: "2026-11-02T09:00:00Z" });
+  reg.append({ kind: "task_start", ticket, task: "1", session_id: "s1", ts: "2026-11-02T10:00:00Z" });
+  if (opts.end1 !== false) reg.append({ kind: "task_end", ticket, task: "1", session_id: "s1", ts: "2026-11-02T10:05:00Z" });
   opts.extra?.(reg);
   writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-11-02T10:01:00Z", input: 1000, output: 500 }]);
 }
@@ -155,6 +156,21 @@ describe("task-stamp", () => {
     expect(out(console.log as never)).toContain("not a ClickUp key, skipped");
     expect(f.getTaskByRef).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(0);
+  });
+
+  it("accepts an OCL key", async () => {
+    seed({ ticket: "OCL-105" });
+    const f = fake();
+    await run(f, { task: "OCL-105", yes: true });
+    expect(out(console.log as never)).not.toContain("not a ClickUp key");
+    expect(f.getTaskByRef).toHaveBeenCalledWith("OCL-105");
+  });
+
+  it("still skips an unknown prefix", async () => {
+    const f = fake({});
+    await run(f, { task: "ABC-1", yes: true });
+    expect(out(console.log as never)).toContain("not a ClickUp key, skipped");
+    expect(f.getTaskByRef).not.toHaveBeenCalled();
   });
 
   it("a client that throws on post gives one warn line, exit 1, no ledger line", async () => {

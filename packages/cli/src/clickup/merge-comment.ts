@@ -11,7 +11,7 @@ import { readAttached } from "../tokens/attachments-store.ts";
 import { commentBody } from "@digismith/clickup-client";
 import { printCall } from "./task-type-write.ts";
 
-const CLICKUP_KEY = /^DGS-\d+$/;
+import { isTicketKey } from "./spaces.ts";
 const SHA = /^[0-9a-f]{7,40}$/;
 
 function git(repo: string, args: string[]): string {
@@ -60,7 +60,7 @@ export function createMergeCommentCommand(clientFactory: () => ClickUpClient = c
       let gitHead = "";
       try {
         const key = String(argv.task ?? "").trim();
-        if (!CLICKUP_KEY.test(key)) { console.log("not a ClickUp key, skipped"); return; }
+        if (!isTicketKey(key)) { console.log("not a ClickUp key, skipped"); return; }
         const g = gatherGit(repo(), String(argv.base ?? ""), String(argv.head ?? ""));
         gitHead = g.head;
         const done = readPosted(key).find((r) => r.head === g.head);

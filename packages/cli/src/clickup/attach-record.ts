@@ -10,7 +10,7 @@ import { renderLedgerSummary } from "../tokens/ledger-summary.ts";
 import { runTable } from "../reviewer/table.ts";
 import { readAttached, recordAttached } from "../tokens/attachments-store.ts";
 
-const CLICKUP_KEY = /^DGS-\d+$/;
+import { isTicketKey } from "./spaces.ts";
 
 export interface AttachResult { lines: string[]; errorLines: string[]; failed: boolean }
 
@@ -53,7 +53,7 @@ export function createAttachRecordCommand(clientFactory: () => ClickUpClient = c
       process.exitCode = 0;
       try {
         const key = String(argv.task ?? "").trim();
-        if (!CLICKUP_KEY.test(key)) { console.log("not a ClickUp key, skipped"); return; }
+        if (!isTicketKey(key)) { console.log("not a ClickUp key, skipped"); return; }
         const kind = argv.kind as "reviews" | "ledger-summary" | undefined;
         if (kind) {
           if (argv.file) throw new Error("--file and --kind cannot be used together");

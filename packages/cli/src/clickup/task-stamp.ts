@@ -28,7 +28,7 @@ export interface TaskStampRequest {
   yes: boolean;
 }
 
-const CLICKUP_KEY = /^DGS-\d+$/;
+import { isTicketKey } from "./spaces.ts";
 const PLAN_TASK = /^(final|\d+)$/;
 
 /** Checks the flags, with no network call and no file read. */
@@ -148,7 +148,7 @@ export function createTaskStampCommand(clientFactory: () => ClickUpClient = crea
       process.exitCode = 0;
       try {
         const req = parseTaskStampArgv(argv as unknown as TaskStampArgv);
-        if (!CLICKUP_KEY.test(req.task)) {
+        if (!isTicketKey(req.task)) {
           console.log("not a ClickUp key, skipped");
           return;
         }

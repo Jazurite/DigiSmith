@@ -87,6 +87,20 @@ describe("merge-comment command", () => {
     expect(c.addTaskComment).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(0);
   });
+  it("accepts an OCL key", async () => {
+    const c = mockClient();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(createMergeCommentCommand(() => c, () => repo), { ...argv(), task: "OCL-105", yes: true });
+    expect(out(log)).not.toContain("not a ClickUp key");
+    expect(c.getTaskByRef).toHaveBeenCalledWith("OCL-105");
+  });
+  it("still skips an unknown prefix", async () => {
+    const c = mockClient();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(createMergeCommentCommand(() => c, () => repo), { ...argv(), task: "ABC-1", yes: true });
+    expect(out(log)).toContain("not a ClickUp key, skipped");
+    expect(c.getTaskByRef).not.toHaveBeenCalled();
+  });
   it("dry run prints the comment and sends nothing, with no client built", async () => {
     const factory = vi.fn();
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
