@@ -61,6 +61,7 @@ describe("findViolations on a fixture tree", () => {
     put("aspects/oculus/nexus/api/src/app.ts", `import "@digismith/scripture";`);
     put("aspects/oculus/src/salvage/ok.ts", `import "@digismith/scripture/run"; import "@digismith/clickup-client";`);
     put("aspects/oculus/src/salvage/deep.ts", `import "@digismith/scripture/secret";`);
+    put("packages/cli/src/tokens/dup.ts", `import "../salvage/index.ts"; import { y } from "../salvage/index.ts";`);
     put("node_modules/skip/index.ts", `import "@digismith/oculus";`);
   });
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -70,6 +71,7 @@ describe("findViolations on a fixture tree", () => {
       "aspects/oculus/nexus/api/src/app.ts -> @digismith/scripture",
       "aspects/oculus/src/salvage/deep.ts -> @digismith/scripture/secret",
       "packages/cli/src/tokens/bad.ts -> ../salvage/index.ts",
+      "packages/cli/src/tokens/dup.ts -> ../salvage/index.ts",
       "packages/cli/src/tokens/pkg.ts -> @digismith/oculus",
     ]);
   });

@@ -73,6 +73,7 @@ function targetZone(file: string, spec: string): { zone: Zone; rel: string } | n
 
 export function findViolations(root: string): Violation[] {
   const found: Violation[] = [];
+  const seen = new Set<string>();
   for (const file of listSources(root)) {
     const from = zoneOf(file);
     if (from === "other" || isTest(file)) continue;
@@ -83,7 +84,12 @@ export function findViolations(root: string): Violation[] {
         from === "oculus" &&
         ((t.rel.startsWith("aspects/scripture/") && file.startsWith("aspects/oculus/")) ||
           (/^@digismith\/scripture\//.test(t.rel) && !SCRIPTURE_EXPORTS.includes(t.rel.split("/")[2]?.replace(/\.[a-z]+$/, ""))));
-      if (!ALLOWED[from].includes(t.zone) || deep) found.push({ file, spec, from, to: t.zone });
+      if (!ALLOWED[from].includes(t.zone) || deep) {
+        const v: Violation = { file, spec, from, to: t.zone };
+        if (seen.has(keyOf(v))) continue;
+        seen.add(keyOf(v));
+        found.push(v);
+      }
     }
   }
   return found;
