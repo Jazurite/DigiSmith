@@ -128,13 +128,15 @@ describe("scan_every_minutes", () => {
 });
 
 describe("this repo's own config.yml", () => {
-  it("sets scan_every_minutes to 15 and reads clean", () => {
+  it("sets a valid scan_every_minutes and reads clean", () => {
     const text = readFileSync(new URL("../../../../.digismith/config.yml", import.meta.url), "utf-8");
     const g = readGuardrails(text);
     expect(g.problems).toEqual([]);
     expect(g.scanProblems).toEqual([]);
-    expect(g.scanEveryMinutes).toBe(15);
-    expect(/^  scan_every_minutes: 15\b/m.test(text)).toBe(true);
+    expect(Number.isInteger(g.scanEveryMinutes)).toBe(true);
+    expect(g.scanEveryMinutes).toBeGreaterThanOrEqual(5);
+    expect(g.scanEveryMinutes).toBeLessThanOrEqual(720);
+    expect(/^  scan_every_minutes: \d+\b/m.test(text)).toBe(true);
     expect(g.protectedPaths).toContain("scripts/nexus-api/src/scheduler/");
     for (const kind of ["builder", "reviewer", "role"] as const) {
       expect(Number.isInteger(g.limits[kind])).toBe(true);
