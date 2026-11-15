@@ -10,5 +10,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.ts", "packages/cli/src/**/*.ts"]
+  "include": ["scripts/**/*.ts", "packages/cli/src/**/*.ts", "aspects/**/*.ts", "libs/**/*.ts"]
 }

@@ -3,6 +3,9 @@ packages:
   - "scripts/nexus-api"
   - "scripts/nexus-shared"
   - "scripts/nexus-web"
+  - "aspects/*"
+  - "libs/*"
+  - "aspects/oculus/nexus/*"
 allowBuilds:
   esbuild: true
   "@parcel/watcher": false
