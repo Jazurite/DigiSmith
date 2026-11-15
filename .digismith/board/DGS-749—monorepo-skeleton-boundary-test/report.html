@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspace skeleton and boundary test — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Workspace skeleton and boundary test — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-11-15</span>
+    <span>Ticket: <strong>DGS-749</strong></span>
+    <span>Commit range: <code>a936a07d..42212e8b</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#verification">Verification and handoff</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Monorepo move 1 of 9. The repo now has the pnpm workspace globs, two empty package shells (<code>@digismith/scripture</code>, <code>@digismith/oculus</code>) and a boundary checker with a ratchet test. The checker sorts every non-test <code>.ts</code> file into a zone and reports each import that breaks the direction rule. The test compares the report to a KNOWN list of today's 8 Scripture-to-Oculus imports. Nothing moved: no rename, no delete, no change under <code>packages/</code>.</p>
+  <p>Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (4 tasks; Tasks 1 and 2 were built and reviewed as one unit, Task 3 had its own implementer and review, Task 4 is hand-off notes with no code) → a final whole-branch review, plus 2 minor fix commits made without a re-review.</p>
+  <p>Reference documents: the <a href="spec.md">design spec</a> and the <a href="plan.md">implementation plan</a>. Review table: <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Task 1</div><h4>Write the boundary test (red)</h4><p>Test file with the zone map, import reader, fixture tree and the KNOWN ratchet (8 imports).</p></div>
+    <div class="card"><div class="tag">Task 2</div><h4>Write the checker (green)</h4><p><code>zoneOf</code>, <code>findViolations</code>, <code>keyOf</code>, <code>importsOf</code>, <code>listSources</code> and the zone constants.</p></div>
+    <div class="card"><div class="tag">Task 3</div><h4>Shells and workspace globs</h4><p>Two <code>package.json</code> shells, three workspace globs (<code>aspects/*</code>, <code>libs/*</code>, <code>aspects/oculus/nexus/*</code>) and two <code>tsconfig.json</code> include entries.</p></div>
+    <div class="card"><div class="tag">Task 4</div><h4>Hand off to the conductor</h4><p>Notes in this report: depot sparse-checkout step, two follow-ups, stale-baseline flag.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code> in role mode: fresh implementer subagent per task, task reviews started by the Maestro.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Tasks 1 and 2</td><td>Test (red), then checker (green), commit <code>5b20d237</code>. The checker and test are byte-identical to the plan blocks at that commit (<code>cmp</code>).</td><td>Approved, clean (3 minors: 1 fixed, 2 accepted)</td><td>F2 regex also reads comments and strings (accepted); F3 unguarded <code>split("/")[2]</code> (accepted)</td></tr>
+    <tr><td>Task 3</td><td>Shells, globs, tsconfig include; dedupe fix <code>309a205b</code>; shells <code>0cf056f2</code>.</td><td>Approved, clean (1 minor, fixed)</td><td>none</td></tr>
+    <tr><td>Task 4</td><td>Hand-off notes (this report).</td><td>No review (no code)</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge (opus, round 1): no Critical or Important findings, 2 Minor, both accepted with a record. Full table: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>The checker and test differ from the master plan block by the dedupe set and the <code>dup.ts</code> fixture (commits <code>309a205b</code>, <code>42212e8b</code>).</td><td>Accepted, intended. DGS-745's later tasks must treat the repo file, not the master plan block, as the source of the checker.</td></tr>
+    <tr><td>Minor</td><td>Commit titles have no <code>(DGS-749)</code> tail.</td><td>Accepted, intended. Branch commits avoid the ticket key so the factory scan does not read the ticket as merged before the merge. The merge carries the key through the report commit and the bump.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="verification">
+  <h2>Verification and handoff</h2>
+  <ul>
+    <li>Baseline before the change: 354 files, 5940 tests. After: root suite 355 files, 5944 tests, all passed (fork pool of 2). Full <code>packages/cli</code> suite: 221 files, 3600 tests, all passed.</li>
+    <li><code>tsc -p tsconfig.build.json --noEmit</code> in <code>packages/cli</code>: exit 0.</li>
+    <li><code>pnpm install --frozen-lockfile</code>: exit 0. <code>git diff --quiet pnpm-lock.yaml</code>: exit 0 (the lockfile does not change).</li>
+    <li><code>pnpm ls -r --depth -1</code> shows <code>@digismith/scripture@0.0.0</code> and <code>@digismith/oculus@0.1.0</code>.</li>
+    <li>The 8 KNOWN keys: <code>packages/cli/src/index.ts</code> to <code>./autonomous/index.ts</code>, <code>./autonomous/director/command.ts</code>, <code>./salvage/index.ts</code>, <code>./oculus/index.ts</code>, <code>./conductor/index.ts</code>; <code>packages/cli/src/run/index.ts</code> to <code>./limit-check.ts</code>, <code>./limit.ts</code>; <code>scripts/conductor/idle-check.ts</code> to <code>./state.ts</code>.</li>
+    <li>Branch: 0 behind origin/main, 4 commits ahead. Protected paths touched: none (changed files: two shells, <code>pnpm-workspace.yaml</code>, <code>tsconfig.json</code>, two files in <code>scripts/boundaries/</code>).</li>
+    <li><strong>Conductor step after the merge:</strong> <code>git -C ~/.digismith-depot/repo sparse-checkout set packages aspects libs</code>, then <code>git -C ~/.digismith-depot/repo sparse-checkout list</code>. Expected: <code>packages</code>, <code>aspects</code>, <code>libs</code>. The Builder ran nothing in the depot.</li>
+    <li><strong>Follow-up (a):</strong> a ticket to change the depot clone pattern. <code>packages/cli/src/depot/clone/lib.ts:44</code> writes only <code>packages</code> into the sparse-checkout file. It must change before DGS-745 Task 2 merges.</li>
+    <li><strong>Follow-up (b), for DGS-745 Task 8:</strong> <code>aspects/oculus/nexus/web/**</code> needs an entry in the vitest exclude list (today <code>**/scripts/nexus-web/**</code>), and the root <code>tsconfig.json</code> <code>include</code> needs a look.</li>
+    <li><strong>Stale baseline:</strong> DGS-745 Task 3, Task 5 and its Global Constraints still say Scripture 1.82.0. The plugin is 1.87.0 on 2026-11-15 (spec D2).</li>
+  </ul>
+  <h3>Deviations</h3>
+  <ul>
+    <li>Tasks 1 and 2 ran as one unit: Task 1 ends red and uncommitted, so there was no diff to review for it alone.</li>
+    <li>Commit titles have no <code>(DGS-749)</code> suffix (see the final review table).</li>
+    <li>The two minor fixes (<code>309a205b</code>, <code>42212e8b</code>) went in without a re-review, on the Maestro's order.</li>
+    <li>Load was 4.7 at the start of the root suite run (plan: under 4); the run used a fork pool of 2.</li>
+    <li>The ticket pack used <code>spec.md</code> for <code>--ticket-file</code> and <code>--spec</code> (the folder has no <code>ticket.md</code>).</li>
+    <li>The report was rendered in-session (no offload to a third-party model). The history hook parser was not found in the repo, so the structure was checked by hand against the template (Ticket strong line, Date span, <code>section id="summary"</code>).</li>
+    <li>Steward events: <code>started</code> printed <code>steward: DGS-749: claimed -&gt; in progress</code>; <code>review-started</code> printed <code>steward: DGS-749: in progress -&gt; review</code>. No refusal, no <code>warn:</code>.</li>
+  </ul>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">5b20d237</span> feat: add boundary checker and ratchet test</li>
+    <li><span class="sha">309a205b</span> fix(boundaries): deduplicate violation keys</li>
+    <li><span class="sha">0cf056f2</span> feat: add workspace skeleton and package shells</li>
+    <li><span class="sha">42212e8b</span> fix(boundaries): compute violation key once</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-749—monorepo-skeleton-boundary-test/report.html</footer>
+
+</body>
+</html>
