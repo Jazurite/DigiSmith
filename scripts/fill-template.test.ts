@@ -10,6 +10,10 @@ const INVESTIGATION_TEMPLATE = fs.readFileSync(
   "skills/generate-comment/templates/investigation-update.md",
   "utf-8",
 );
+const REVIEW_TEMPLATE = fs.readFileSync(
+  "skills/generate-comment/templates/engineering-review.md",
+  "utf-8",
+);
 const TEAMS_TEMPLATE = fs.readFileSync(
   "skills/generate-comment/templates/teams-review-request.md",
   "utf-8",
@@ -162,5 +166,38 @@ describe("fillTemplateFile", () => {
     });
     expect(result.markdown).toContain("### 📣 Progress Update – 1/1");
     expect(result.headingPrefix).toBe("📣 Progress Update");
+  });
+
+  it("fills the real engineering-review.md template end to end", () => {
+    const result = fillTemplate(REVIEW_TEMPLATE, {
+      date: "27/11",
+      "pr-line": "[EMKT-854: Deploy shopify-storefront](https://github.com/emma-sleep/shopify-storefront/pull/8) by @[Linh Van Vu](7ac31de2)",
+      verified: "- **DEV** is up and protected by Azure AD SSO\n- **PROD** is protected by the same SSO",
+      screenshots: "N/A",
+      "next-steps": "- All good, @[Linh Van Vu](7ac31de2), approved to proceed. Nice work! 🚀",
+    });
+    expect(result.markdown).toBe(
+      [
+        "### 🧪 Engineering reviewed 27/11",
+        "",
+        "---",
+        "",
+        "For PR [EMKT-854: Deploy shopify-storefront](https://github.com/emma-sleep/shopify-storefront/pull/8) by @[Linh Van Vu](7ac31de2)",
+        "",
+        "#### ✅ Verified",
+        "",
+        "- **DEV** is up and protected by Azure AD SSO",
+        "- **PROD** is protected by the same SSO",
+        "",
+        "🖼️ Screenshots:",
+        "",
+        "N/A",
+        "",
+        "#### 🎯 Next Steps",
+        "",
+        "- All good, @[Linh Van Vu](7ac31de2), approved to proceed. Nice work! 🚀",
+      ].join("\n"),
+    );
+    expect(result.headingPrefix).toBe("🧪 Engineering reviewed");
   });
 });
