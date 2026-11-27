@@ -25,23 +25,23 @@ directly by Jack.
 
 ## Prerequisites
 
-`skills/generate-comment/templates/` must contain the three shipped
+`skills/generate-comment/templates/` must contain the four shipped
 templates: `progress-update.md`, `investigation-update.md`,
-`teams-review-request.md`.
+`engineering-review.md`, `teams-review-request.md`.
 
 ## Process
 
 ### Step 1: Determine Template Type
 
 The caller passes the type directly (`progress-update`,
-`investigation-update`, or `teams-review-request`) whenever it already
+`investigation-update`, `engineering-review`, or `teams-review-request`) whenever it already
 knows which one it needs. If invoked without a type specified, ask
 directly via `AskUserQuestion` — never guess: "Progress Update,
-Investigation Update, or Teams Review Request?"
+Investigation Update, Engineering Review, or Teams Review Request?"
 
 ### Step 1.5: Check Technical Voice
 
-Only when the template type (determined in Step 1) is `progress-update` or `investigation-update`
+Only when the template type (determined in Step 1) is `progress-update`, `investigation-update` or `engineering-review`
 — skip this step entirely for `teams-review-request`, which drafts no prose this step would apply to.
 
 Before drafting any bullet content in Steps 2 or 3 below, check `technical_voice` for the repo
@@ -224,6 +224,28 @@ identifier or technical term, write it as plain text without backticks.
 
 Compute the `date` placeholder the same way as Step 2.
 
+### Step 3.5: Gather Content — Engineering Review
+
+Only for template type `engineering-review`. Use it when Jack reviews
+another engineer's PR and posts the result on that engineer's ticket.
+
+- `pr-line` — one line: `[<Key>: <PR title>](<PR url>) by @[<Name>](<accountId>)`.
+  Get the title and URL with `gh pr view <number> -R <owner/repo> --json title,url`.
+  Resolve the author's `accountId` the same way as Step 2. No clear match →
+  stop and ask.
+- `verified` — 1-6 bullets, each `- **<Area>** <what was checked and the result>`.
+  Only facts checked this session (CI, rendered manifests, live URLs, config).
+  Write every URL as a `[text](url)` link, never bare, so the ADF output
+  carries a link mark.
+- `screenshots` — same collect, confirm and upload flow as Step 2.
+- `next-steps` — friendly, never a verdict word ("approved", "rejected" as a
+  judgement heading). Default when nothing is blocking:
+  `- All good, @[<Name>](<accountId>), approved to proceed. Nice work! 🚀`.
+  When a fix is needed, one bullet per ask, addressed to the author.
+  Ask Jack before including follow-up fixes; he may keep them out of the comment.
+
+Same Markdown subset as Step 2. Compute `date` the same way as Step 2.
+
 ### Step 4: Gather Content — Teams Review Request
 
 Only for template type `teams-review-request`.
@@ -297,8 +319,8 @@ Write the gathered placeholders to a scratch JSON file (e.g.
 node --experimental-strip-types <digismith-repo>/scripts/fill-template.ts --template <digismith-repo>/skills/generate-comment/templates/<type>.md --data /tmp/generate-comment-data-<type>.json
 ```
 
-`<type>` is `progress-update`, `investigation-update`, or
-`teams-review-request`, matching Step 1's determination. Parse the
+`<type>` is `progress-update`, `investigation-update`,
+`engineering-review`, or `teams-review-request`, matching Step 1's determination. Parse the
 printed JSON (`{"markdown": "...", "headingPrefix": "..."}`) from stdout.
 
 ### Step 6: Return
@@ -312,7 +334,7 @@ itself; that's each caller's own job.
 
 | Case | Disposition |
 |---|---|
-| Unrecognized template type requested | Stop, report the valid types (`progress-update`, `investigation-update`, `teams-review-request`), don't guess |
+| Unrecognized template type requested | Stop, report the valid types (`progress-update`, `investigation-update`, `engineering-review`, `teams-review-request`), don't guess |
 | `fill-template.ts` fails (template file missing/unreadable) | Stop, report the failure plainly, no fabricated draft |
 | A mentioned name doesn't resolve to exactly one JIRA account (Progress/Investigation only) | Stop and ask for clarification. Never guess an `accountId` |
 | No PR found for the current branch (Teams, direct-invoke case) | Ask directly for the PR title and URL rather than guessing |
@@ -327,6 +349,7 @@ itself; that's each caller's own job.
 | 1.5 | Only for `progress-update`/`investigation-update`. Check `technical_voice` (default `on`); when `on`, apply `ste100-writing` + companions (minus the list/paragraph-limit rules, which the ADF Markdown subset already governs) to Steps 2-3's bullets. Step 4's `ask-line` always stays verbatim |
 | 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, screenshots (collect, confirm, `upload-attachment`, `![alt](media:<mediaId>)` tokens; `N/A` when none or no key), today's date |
 | 3 | Investigation Update content: root cause (checked + found, merged), proposed fix, next steps (own actions + needs, role/mention resolution), today's date |
+| 3.5 | Engineering Review content: PR line with author mention, verified bullets (links as `[text](url)`), screenshots, friendly next steps, today's date |
 | 4 | Teams Review Request content: scope, PR info, reviewer names via `digismith:preferences`, ask line |
 | 5 | Fill the template via `fill-template.ts`, parse the returned JSON |
 | 6 | Return `{markdown, headingPrefix}` to the caller — never post or send |
